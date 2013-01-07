@@ -1,0 +1,5 @@
+* List binary packages in debian/control
+* review patches in ruby1.9.1 and check which ones belong here
+* review other bits from ruby1.9.1 that should be useful here
+* Alternatives handling: postinst, prerm
+* review debian/* in general
