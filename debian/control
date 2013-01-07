@@ -1,0 +1,20 @@
+Source: ruby2.0
+Section: unknown
+Priority: extra
+Maintainer: Antonio Terceiro <terceiro@debian.org>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev
+Standards-Version: 3.9.3
+Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: git://git.debian.org/collab-maint/ruby2.0.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/ruby2.0.git;a=summary
+
+Package: ruby2.0
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>
+
+Package: ruby2.0-doc
+Architecture: all
+Description: documentation for ruby2.0
+ <insert long description, indented with spaces>
