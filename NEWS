@@ -1,0 +1,454 @@
+# -*- rdoc -*-
+
+= NEWS for Ruby 2.0.0
+
+This document is a list of user visible feature changes made between
+releases except for bug fixes.
+
+Note that each entry is kept so brief that no reason behind or
+reference information is supplied with.  For a full list of changes
+with all sufficient information, see the ChangeLog file.
+
+== Changes since the 1.9.3 release
+
+=== C API updates
+* NUM2SHORT() and NUM2USHORT() added. They are similar to NUM2INT, but short.
+* rb_newobj_of() and NEWOBJ_OF() added. They create a new object of a given class.
+
+=== Library updates (outstanding ones only)
+
+* builtin classes
+
+  * Array
+    * added method:
+      * added Array#bsearch for binary search.
+    * incompatible changes:
+      * random parameter of Array#shuffle! and Array#sample now
+        will be called with one argument, maximum value.
+      * when given Range arguments, Array#values_at now returns nil for each
+        value that is out-of-range.
+
+  * Enumerable
+    * added method:
+      * added Enumerable#lazy method for lazy enumeration.
+
+  * Enumerator
+    * added method:
+      * added Enumerator#size for lazy size evaluation.
+    * extended method:
+      * Enumerator.new accept an argument for lazy size evaluation.
+
+  * ENV
+    * aliased method:
+      * ENV.to_h is a new alias for ENV.to_hash
+
+  * Fiber
+    * incompatible changes:
+      * Fiber#resume cannot resume a fiber which invokes "Fiber#transfer".
+
+  * File
+    * extended method:
+      * File.fnmatch? now expands braces in the pattern if
+        File::FNM_EXTGLOB option is given.
+
+  * GC
+    * improvements:
+      * introduced the bitmap marking which suppresses to copy a memory page
+        with Copy-on-Write.
+      * introduced the non-recursive marking which avoids unexpected stack overflow.
+
+  * GC::Profiler
+    * added method:
+      * added GC::Profiler.raw_data which returns raw profile data for GC.
+
+  * Hash
+    * added method:
+      * added Hash#to_h as explicit conversion method, like Array#to_a.
+    * extended method:
+      * Hash#default_proc= can be passed nil to clear the default proc.
+
+  * IO
+    * deprecated methods:
+      * IO#lines, #bytes, #chars and #codepoints are deprecated.
+
+  * Kernel
+    * added method:
+      * added Kernel#Hash conversion method like Array() or Float().
+      * added Kernel#__dir__ which returns a current dirname.
+      * added Kernel#caller_locations which returns an array of
+        frame information objects.
+    * extended method:
+      * Kernel#warn accepts multiple args in like puts.
+      * Kernel#caller accepts second optional argument `n' which specify
+        required caller size.
+      * Kernel#to_enum and enum_for accept a block for lazy size evaluation.
+    * incompatible changes:
+      * system() and exec() closes non-standard file descriptors
+        (The default of :close_others option is changed to true by default.)
+      * respond_to? against a protected method now returns false unless
+        the second argument is true.
+      * __callee__ has returned to the original behavior, and now
+        returns the called name but not the original name in an
+        aliased method.
+      * Kernel#inspect does not call #to_s anymore
+        (it used to call redefined #to_s).
+
+  * LoadError
+    * added method:
+      * added LoadError#path method to return the file name that could not be
+        loaded.
+
+  * Module
+    * added method:
+      * added Module#prepend which is similar to Module#include,
+        however a method in the prepended module overrides the
+        corresponding method in the prepending module.
+      * added Module#refine, which extends a class or module locally.
+        [experimental]
+    * extended method:
+      * Module#define_method accepts a UnboundMethod from a Module.
+      * Module#const_get accepts a qualified constant string, e.g.
+        Object.const_get("Foo::Bar::Baz")
+
+  * Mutex
+    * added method:
+      * added Mutex#owned? which returns the mutex is held by current
+        thread or not. [experimental]
+    * incompatible changes:
+      * Mutex#lock, Mutex#unlock, Mutex#try_lock, Mutex#synchronize
+        and Mutex#sleep are no longer allowed to be used from trap handler
+        and raise a ThreadError in such case.
+      * Mutex#sleep may spurious wakeup. Check after wakeup.
+
+  * NilClass
+    * added method:
+      * added nil.to_h which returns {}
+
+  * Process
+    * added method:
+      * added getsid for getting session id (unix only).
+
+  * Range
+    * added method:
+      * added Range#size for lazy size evaluation.
+      * added Range#bsearch for binary search.
+
+  * RubyVM (MRI specific)
+    * added Environment variables to specify stack usage:
+      * RUBY_THREAD_VM_STACK_SIZE: vm stack size used at thread creation.
+        default: 128KB (32bit CPU) or 256KB (64bit CPU).
+      * RUBY_THREAD_MACHINE_STACK_SIZE: machine stack size used at thread
+        creation. default: 512KB or 1024KB.
+      * RUBY_FIBER_VM_STACK_SIZE: vm stack size used at fiber creation.
+        default: 64KB or 128KB.
+      * RUBY_FIBER_MACHINE_STACK_SIZE: machine stack size used at fiber
+        creation. default: 256KB or 256KB.
+      These variables are checked only at launched time.
+    * added constant DEFAULT_PARAMS to get above default parameters.
+
+  * Signal
+    * added method:
+      * added Signal.signame which returns signal name
+
+    * incompatible changes:
+      * Signal.trap raises ArgumentError when :SEGV, :BUS, :ILL, :FPE, :VTALRM
+        are specified.
+
+  * String
+    * added method:
+      * added String#b returning a copied string whose encoding is ASCII-8BIT.
+    * change return value:
+      * String#lines now returns an array instead of an enumerator.
+      * String#chars now returns an array instead of an enumerator.
+      * String#codepoints now returns an array instead of an enumerator.
+      * String#bytes now returns an array instead of an enumerator.
+
+  * Struct
+    * added method:
+      * added Struct#to_h returning values with keys corresponding to the
+        instance variable names.
+
+  * Thread
+    * added method:
+      * added Thread#thread_variable_get for getting thread local variables
+        (these are different than Fiber local variables).
+      * added Thread#thread_variable_set for setting thread local variables.
+      * added Thread#thread_variables for getting a list of the thread local
+        variable keys.
+      * added Thread#thread_variable? for testing to see if a particular thread
+        variable has been set.
+      * added Thread#backtrace_locations which returns similar information of
+        Kernel#caller_locations.
+    * incompatible changes:
+      * Thread#join and Thread#value now raises a ThreadError if target thread
+        is the current or main thread.
+
+  * Time
+    * change return value:
+      * Time#to_s returned encoding defaults to US-ASCII but automatically
+        transcodes to Encoding.default_internal if it is set.
+
+  * TracePoint
+    * new class. This class is replacement of set_trace_func.
+      Easy to use and efficient implementation.
+
+  * toplevel
+    * added method:
+      * added main.define_method which defines a global function.
+      * added main.using, which imports refinements into the current file or
+        eval string. [experimental]
+
+* cgi
+  * Add HTML5 tag maker.
+  * CGI#header has been renamed to CGI#http_header and
+    aliased to CGI#header.
+  * When HTML5 tagmaker called, overwrite CGI#header,
+    CGI#header function is to create a <header> element.
+
+* iconv
+  * Iconv has been removed. Use String#encode instead.
+
+* io/wait
+  * new features:
+    * added IO#wait_writable method.
+    * added IO#wait_readable method as alias of IO#wait.
+
+* net/http
+  * new features:
+    * Proxies are now automatically detected from the http_proxy environment
+      variable.  See Net::HTTP::new for details.
+    * gzip and deflate compression are now requested for all requests by
+      default.  See Net::HTTP for details.
+    * SSL sessions are now reused across connections for a single instance.
+      This speeds up connection by using a previously negotiated session.
+    * Requests may be created from a URI which sets the request_uri and host
+      header of the request (but does not change the host connected to).
+    * Responses contain the URI requested which allows easier implementation of
+      redirect following.
+  * new methods:
+    * Net::HTTP#local_host
+    * Net::HTTP#local_host=
+    * Net::HTTP#local_port
+    * Net::HTTP#local_port=
+  * extended method:
+    * Net::HTTP#connect uses local_host and local_port if specified.
+
+* net/imap
+  * new methods:
+    * Net::IMAP.default_port
+    * Net::IMAP.default_imap_port
+    * Net::IMAP.default_tls_port
+    * Net::IMAP.default_ssl_port
+    * Net::IMAP.default_imaps_port
+
+* objspace
+  * new method:
+    * ObjectSpace.reachable_objects_from(obj)
+
+* openssl
+  * Consistently raise an error when trying to encode nil values. All instances
+    of OpenSSL::ASN1::Primitive now raise TypeError when calling to_der on an
+    instance whose value is nil. All instances of OpenSSL::ASN1::Constructive
+    raise NoMethodError in the same case. Constructing such values is still
+    permitted.
+  * TLS 1.1 & 1.2 support by setting OpenSSL::SSL::SSLContext#ssl_version to
+    :TLSv1_2, :TLSv1_2_server, :TLSv1_2_client or :TLSv1_1, :TLSv1_1_server
+    :TLSv1_1_client. The version being effectively used can be queried
+    with OpenSSL::SSL#ssl_version. Furthermore, it is also possible to
+    blacklist the new TLS versions with OpenSSL::SSL:OP_NO_TLSv1_1 and
+    OpenSSL::SSL::OP_NO_TLSv1_2.
+  * Added OpenSSL::SSL::SSLContext#renegotiation_cb. A user-defined callback
+    may be set which gets called whenever a new handshake is negotiated. This
+    also allows to programmatically decline (client) renegotiation attempts.
+  * Support for "0/n" splitting of records as BEAST mitigation via
+    OpenSSL::SSL::OP_DONT_INSERT_EMPTY_FRAGMENTS.
+  * The default options for OpenSSL::SSL::SSLContext have changed to
+    OpenSSL::SSL::OP_ALL & ~OpenSSL::SSL::OP_DONT_INSERT_EMPTY_FRAGMENTS
+    instead of OpenSSL::SSL::OP_ALL only. This enables the countermeasure for
+    the BEAST attack by default.
+  * OpenSSL requires passwords for decrypting PEM-encoded files to be at least
+    four characters long. This led to awkward situations where an export with
+    a password with fewer than four characters was possible, but accessing the
+    file afterwards failed. OpenSSL::PKey::RSA, OpenSSL::PKey::DSA and
+    OpenSSL::PKey::EC therefore now enforce the same check when exporting a
+    private key to PEM with a password - it has to be at least four characters
+    long.
+  * SSL/TLS support for the Next Protocol Negotiation extension. Supported
+    with OpenSSL 1.0.1 and higher.
+  * OpenSSL::OPENSSL_FIPS allows client applications to detect whether OpenSSL
+    is FIPS-enabled. OpenSSL.fips_mode= allows turning on and off FIPS mode
+    manually in order to adapt to situations where FIPS mode would be an
+    explicit requirement.
+  * Authenticated Encryption with Associated Data (AEAD) is supported via
+    Cipher#auth_data= and Cipher#auth_tag/Cipher#auth_tag=. 
+    Currently (OpenSSL 1.0.1c), only GCM mode is supported.
+
+* ostruct
+  * new methods:
+    * OpenStruct#[], []=
+    * OpenStruct#each_pair
+    * OpenStruct#eql?
+    * OpenStruct#hash
+    * OpenStruct#to_h converts the struct to a hash.
+  * extended method:
+    * OpenStruct.new also accepts an OpenStruct / Struct.
+
+* pathname
+  * extended method:
+    * Pathname#find returns an enumerator if no block is given.
+
+* rake
+  * rake has been updated to version 0.9.5.
+
+    This version is backwards-compatible with previous rake versions and
+    contains many bug fixes.
+
+    See
+    http://rake.rubyforge.org/doc/release_notes/rake-0_9_5_rdoc.html for a list
+    of changes in rake 0.9.3, 0.9.4 and 0.9.5.
+
+* rdoc
+  * rdoc has been updated to version 4.0
+
+    This version is largely backwards-compatible with previous rdoc versions.
+    The most notable change is an update to the ri data format (ri data must
+    be regenerated for gems shared across rdoc versions).  Further API changes
+    are internal and won't affect most users.
+
+    See https://github.com/rdoc/rdoc/blob/master/History.rdoc for a list of
+    changes in rdoc 4.0.
+
+* resolv
+  * new methods:
+    * Resolv::DNS#timeouts=
+    * Resolv::DNS::Config#timeouts=
+
+* rexml
+  * REXML::Document#write supports Hash arguments.
+  * REXML::Document#write supports new :encoding option. It changes
+    XML document encoding. Without :encoding option, encoding in
+    XML declaration is used for XML document encoding.
+
+* RubyGems
+  * Updated to 2.0.0.preview2
+
+    RubyGems 2.0.0 features the following improvements:
+
+    * Improved support for default gems shipping with ruby 2.0.0+
+    * A gem can have arbitrary metadata through Gem::Specification#metadata
+    * `gem search` now defaults to --remote and is anchored like gem list.
+    * Added --document to replace --rdoc and --ri.  Use --no-document to
+      disable documentation, --document=rdoc to only generate rdoc.
+    * Only ri-format documentation is generated by default.
+    * `gem server` uses RDoc::Servlet from RDoc 4.0 to generate HTML
+      documentation.
+
+    For an expanded list of updates and bug fixes see:
+    https://github.com/rubygems/rubygems/blob/master/History.txt
+
+* shellwords
+    * Shellwords#shellescape() now stringifies the given object using to_s.
+    * Shellwords#shelljoin() accepts non-string objects in the given
+      array, each of which is stringified using to_s.
+
+* stringio
+  * deprecated methods:
+    * StringIO#lines, #bytes, #chars and #codepoints are deprecated.
+
+* syslog
+  * Added Syslog::Logger which provides a Logger API atop Syslog.
+  * Syslog::Priority, Syslog::Level, Syslog::Option and Syslog::Macros
+    are introduced for easy detection of available constants on a
+    running system.
+
+* tmpdir
+  * incompatible changes:
+    * Dir.mktmpdir uses FileUtils.remove_entry instead of
+      FileUtils.remove_entry_secure.  This means that applications should not
+      change the permission of the created temporary directory to make
+      accessible from other users.
+
+* yaml
+  * Syck has been removed.  YAML now completely depends on libyaml being
+    installed.
+
+* zlib
+  * Added streaming support for Zlib::Inflate and Zlib::Deflate.  This allows
+    processing of a stream without the use of large amounts of memory.
+  * Added support for the new deflate strategies Zlib::RLE and Zlib::FIXED.
+  * Zlib streams are now processed without the GVL.  This allows gzip, zlib and
+    deflate streams to be processed in parallel.
+  * deprecated methods:
+    * Zlib::GzipReader#lines and #bytes are deprecated.
+
+=== Language changes
+
+  * Added %i and %I for symbol list creation (similar to %w and %W).
+
+  * Default source encoding is changed to UTF-8. (was US-ASCII)
+
+=== Compatibility issues (excluding feature bug fixes)
+
+  * Array#values_at
+
+    See above.
+
+  * String#lines
+  * String#chars
+  * String#codepoints
+  * String#bytes
+
+    These methods no longer return an Enumerator, although passing a
+    block is still supported for backwards compatibility.
+
+    Code like str.lines.with_index(1) { |line, lineno| ... } no longer
+    works because str.lines returns an array.  Replace lines with
+    each_line in such cases.
+
+  * IO#lines
+  * IO#chars
+  * IO#codepoints
+  * IO#bytes
+  * ARGF#lines
+  * ARGF#chars
+  * ARGF#codepoints
+  * ARGF#bytes
+  * StringIO#lines
+  * StringIO#chars
+  * StringIO#codepoints
+  * StringIO#bytes
+  * Zlib::GzipReader#lines
+  * Zlib::GzipReader#bytes
+
+    These methods are deprecated in favor of each_line, each_byte,
+    each_char and each_codepoint.
+
+  * Signal.trap
+
+    See above.
+
+  * Merge Onigmo.
+    https://github.com/k-takata/Onigmo
+
+  * The :close_others option is true by default for system() and exec().
+    Also, the close-on-exec flag is set by default for all new file descriptors.
+    This means file descriptors doesn't inherit to spawned process unless
+    explicitly requested such as system(..., fd=>fd).
+
+  * Kernel#respond_to? against a protected method now returns false
+    unless the second argument is true.
+
+  * Dir.mktmpdir in lib/tmpdir.rb
+
+    See above.
+
+  * OpenStruct new methods can conflict with custom attributes named
+    "each_pair", "eql?", "hash" or "to_h".
+
+  * Thread#join, Thread#value
+
+    See above.
+
+  * Mutex#lock, Mutex#unlock, Mutex#try_lock, Mutex#synchronize and Mutex#sleep
+
+    See above.
