@@ -16,6 +16,18 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
+configure_options += --program-suffix=2.0
+configure_options += --with-soname=ruby-2.0
+configure_options += --enable-shared
+configure_options += --with-baseruby=/usr/bin/ruby2.0
+configure_options += --with-sitedir='/usr/local/lib/site_ruby'
+
+# the following are ignored by ./configure, but used by some extconf.rb scripts
+configure_options += --enable-ipv6
+configure_options += --with-dbm-type=gdbm_compat
 
 %:
 	dh $@  --with autotools-dev
+
+override_dh_auto_configure:
+	dh_auto_configure -- $(configure_options)
