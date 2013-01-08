@@ -3,3 +3,102 @@
 * review other bits from ruby1.9.1 that should be useful here
 * Alternatives handling: postinst, prerm
 * review debian/* in general
+* lintian errors/warnings:
+
+E: libruby2.0: binary-or-shlib-defines-rpath usr/lib/ruby/2.0.0/x86_64-linux/tcltklib.so /usr/lib
+E: libruby2.0: copyright-contains-dh_make-todo-boilerplate
+E: ruby2.0: copyright-contains-dh_make-todo-boilerplate
+E: ruby2.0-dev: copyright-contains-dh_make-todo-boilerplate
+E: ruby2.0-doc: copyright-contains-dh_make-todo-boilerplate
+E: libruby2.0: description-is-dh_make-template
+E: ruby2.0: description-is-dh_make-template
+E: ruby2.0-dev: description-is-dh_make-template
+E: ruby2.0-doc: description-is-dh_make-template
+E: libruby2.0: helper-templates-in-copyright
+E: ruby2.0: helper-templates-in-copyright
+E: ruby2.0-dev: helper-templates-in-copyright
+E: ruby2.0-doc: helper-templates-in-copyright
+E: libruby2.0: possible-gpl-code-linked-with-openssl
+E: libruby2.0: ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.0.0/gems/rake-0.9.6/bin/rake
+E: libruby2.0: ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.0.0/gems/rdoc-4.0.0.preview3.1/bin/rdoc
+E: libruby2.0: ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.0.0/gems/rdoc-4.0.0.preview3.1/bin/ri
+E: libruby2.0: ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.0.0/gems/test-unit-2.0.0.0/bin/testrb
+E: ruby2.0: section-is-dh_make-template
+E: ruby2.0-dev: section-is-dh_make-template
+E: ruby2.0-doc: section-is-dh_make-template
+W: libruby2.0: bad-homepage <insert the upstream URL, if relevant>
+W: ruby2.0: bad-homepage <insert the upstream URL, if relevant>
+W: ruby2.0-dev: bad-homepage <insert the upstream URL, if relevant>
+W: ruby2.0-doc: bad-homepage <insert the upstream URL, if relevant>
+W: ruby2.0: binary-without-manpage usr/bin/erb2.0
+W: ruby2.0: binary-without-manpage usr/bin/gem2.0
+W: ruby2.0: binary-without-manpage usr/bin/irb2.0
+W: ruby2.0: binary-without-manpage usr/bin/rake2.0
+W: ruby2.0: binary-without-manpage usr/bin/rdoc2.0
+W: ruby2.0: binary-without-manpage usr/bin/ri2.0
+W: ruby2.0: binary-without-manpage usr/bin/ruby2.0
+W: ruby2.0: binary-without-manpage usr/bin/testrb2.0
+W: libruby2.0: copyright-has-url-from-dh_make-boilerplate
+W: ruby2.0: copyright-has-url-from-dh_make-boilerplate
+W: ruby2.0-dev: copyright-has-url-from-dh_make-boilerplate
+W: ruby2.0-doc: copyright-has-url-from-dh_make-boilerplate
+W: libruby2.0: embedded-javascript-library usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/js/jquery.js
+W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/date_core.so
+W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/digest/rmd160.so
+W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/dl.so
+W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/fiddle.so
+W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/readline.so
+W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/sdbm.so
+W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/stringio.so
+W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/tkutil.so
+W: libruby2.0: hardening-no-relro usr/lib/libruby-2.0.so.2.0.0
+W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/digest/md5.so
+W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/digest/rmd160.so
+W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/digest/sha1.so
+W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/digest/sha2.so
+W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/fiddle.so
+W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/openssl.so
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/add.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/arrow_up.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/brick_link.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/brick.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/bug.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/bullet_black.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/bullet_toggle_minus.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/bullet_toggle_plus.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/date.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/delete.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/find.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/loadingAnimation.gif
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/macFFBgHack.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/package.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/page_green.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/page_white_text.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/page_white_width.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/plugin.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/ruby.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/tag_blue.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/tag_green.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/transparent.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/wrench_orange.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/wrench.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/zoom.png
+W: ruby2.0-doc: manpage-has-errors-from-man usr/share/man/man1/ri2.0.1.gz  .Nm name ... (#88)
+W: libruby2.0: new-package-should-close-itp-bug
+W: ruby2.0: new-package-should-close-itp-bug
+W: ruby2.0-dev: new-package-should-close-itp-bug
+W: ruby2.0-doc: new-package-should-close-itp-bug
+W: libruby2.0: package-name-doesnt-match-sonames libruby-2.0-2.0
+W: ruby2.0: readme-debian-contains-debmake-template
+W: ruby2.0 source: bad-homepage <insert the upstream URL, if relevant>
+W: ruby2.0 source: dh-make-template-in-source debian/ruby2.0.doc-base.EX
+W: ruby2.0 source: superfluous-clutter-in-homepage <insert the upstream URL, if relevant>
+W: libruby2.0: superfluous-clutter-in-homepage <insert the upstream URL, if relevant>
+W: ruby2.0: superfluous-clutter-in-homepage <insert the upstream URL, if relevant>
+W: ruby2.0-dev: superfluous-clutter-in-homepage <insert the upstream URL, if relevant>
+W: ruby2.0-doc: superfluous-clutter-in-homepage <insert the upstream URL, if relevant>
+W: libruby2.0: wrong-bug-number-in-closes l3:#nnnn
+W: ruby2.0: wrong-bug-number-in-closes l3:#nnnn
+W: ruby2.0-dev: wrong-bug-number-in-closes l3:#nnnn
+W: ruby2.0-doc: wrong-bug-number-in-closes l3:#nnnn
+W: ruby2.0-doc: wrong-section-according-to-package-name ruby2.0-doc => doc
