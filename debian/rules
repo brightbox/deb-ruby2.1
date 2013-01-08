@@ -17,6 +17,7 @@
 export DH_OPTIONS
 
 configure_options += --program-suffix=2.0
+configure_options += --with-soname=ruby-2.0
 configure_options += --enable-shared
 configure_options += --disable-rpath
 configure_options += --with-baseruby=/usr/bin/ruby2.0
