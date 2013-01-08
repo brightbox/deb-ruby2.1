@@ -14,8 +14,9 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: <insert up to 60 chars description>
  <insert long description, indented with spaces>
 
-Package: ruby2.0-doc
-Architecture: all
+Package: libruby2.0
+Section: libs
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: <insert up to 60 chars description>
  <insert long description, indented with spaces>
@@ -26,8 +27,8 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: <insert up to 60 chars description>
  <insert long description, indented with spaces>
 
-Package: libruby2.0
-Section: libs
-Architecture: any
+Package: ruby2.0-doc
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: <insert up to 60 chars description>
  <insert long description, indented with spaces>
