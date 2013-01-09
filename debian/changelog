@@ -1,5 +1,5 @@
 ruby2.0 (2.0.0~rc1-1) unstable; urgency=low
 
-  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+  * Initial release (Closes: #697703)
 
  -- Antonio Terceiro <terceiro@debian.org>  Mon, 07 Jan 2013 14:48:51 -0300
