@@ -1,2 +1,3 @@
-/usr/share/ri/* /usr/share/ri/
-/usr/share/man/*
+/usr/share/ri
+/usr/share/man
+/usr/share/doc/ruby/capi/html /usr/share/doc/ruby-2.0-doc/

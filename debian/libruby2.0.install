@@ -1,2 +1,3 @@
-/usr/lib/libruby-2.0.so.*
-/usr/lib/ruby/* /usr/lib/ruby/
+/usr/lib
+/usr/include
+/usr/local/lib
