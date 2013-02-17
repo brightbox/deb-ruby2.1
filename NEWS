@@ -74,7 +74,8 @@ with all sufficient information, see the ChangeLog file.
   * Kernel
     * added method:
       * added Kernel#Hash conversion method like Array() or Float().
-      * added Kernel#__dir__ which returns a current dirname.
+      * added Kernel#__dir__ which returns the absolute path of the
+        directory of the file from which this method is called.
       * added Kernel#caller_locations which returns an array of
         frame information objects.
     * extended method:
@@ -123,6 +124,11 @@ with all sufficient information, see the ChangeLog file.
   * NilClass
     * added method:
       * added nil.to_h which returns {}
+
+  * Proc
+    * incompatible change:
+      * removed Proc#== so two procs are == only when they are
+        the same object.
 
   * Process
     * added method:
@@ -185,8 +191,7 @@ with all sufficient information, see the ChangeLog file.
 
   * Time
     * change return value:
-      * Time#to_s returned encoding defaults to US-ASCII but automatically
-        transcodes to Encoding.default_internal if it is set.
+      * Time#to_s now returns US-ASCII encoding instead of BINARY.
 
   * TracePoint
     * new class. This class is replacement of set_trace_func.
@@ -205,8 +210,19 @@ with all sufficient information, see the ChangeLog file.
   * When HTML5 tagmaker called, overwrite CGI#header,
     CGI#header function is to create a <header> element.
 
+* CSV
+  * Removed CSV::dump and CSV::load to protect users from dangerous
+    serialization vulnerability
+
 * iconv
   * Iconv has been removed. Use String#encode instead.
+
+* io/console
+  * new methods:
+    * added IO#cooked which sets the terminal to cooked mode within the given block.
+    * added IO#cooked! which sets the terminal to cooked.
+  * extended method:
+    * IO#raw, IO#raw!, and IO#getch accept keyword arguments, :min and :time.
 
 * io/wait
   * new features:
@@ -280,7 +296,7 @@ with all sufficient information, see the ChangeLog file.
     manually in order to adapt to situations where FIPS mode would be an
     explicit requirement.
   * Authenticated Encryption with Associated Data (AEAD) is supported via
-    Cipher#auth_data= and Cipher#auth_tag/Cipher#auth_tag=. 
+    Cipher#auth_data= and Cipher#auth_tag/Cipher#auth_tag=.
     Currently (OpenSSL 1.0.1c), only GCM mode is supported.
 
 * ostruct
@@ -307,16 +323,25 @@ with all sufficient information, see the ChangeLog file.
     http://rake.rubyforge.org/doc/release_notes/rake-0_9_5_rdoc.html for a list
     of changes in rake 0.9.3, 0.9.4 and 0.9.5.
 
-* rdoc
-  * rdoc has been updated to version 4.0
+* RDoc
+  * RDoc has been updated to version 4.0
 
     This version is largely backwards-compatible with previous rdoc versions.
     The most notable change is an update to the ri data format (ri data must
     be regenerated for gems shared across rdoc versions).  Further API changes
     are internal and won't affect most users.
 
-    See https://github.com/rdoc/rdoc/blob/master/History.rdoc for a list of
-    changes in rdoc 4.0.
+    Notable changes include:
+
+    * Page support for ri.  Try `ri ruby:` for a list of pages in ruby or
+      `ri ruby:syntax/literals` for the syntax documentation for literals.
+
+      This also works for gems such as `ri rspec:README` for the rspec gem's
+      README file.
+    * Markdown support.  See ri RDoc::Markdown for details.
+
+    See https://github.com/rdoc/rdoc/blob/master/History.rdoc for a full list
+    of changes in rdoc 4.0.
 
 * resolv
   * new methods:
@@ -371,6 +396,8 @@ with all sufficient information, see the ChangeLog file.
 * yaml
   * Syck has been removed.  YAML now completely depends on libyaml being
     installed.
+  * libyaml is now bundled with ruby, for cases where the library is not
+    installed locally.
 
 * zlib
   * Added streaming support for Zlib::Inflate and Zlib::Deflate.  This allows
@@ -382,6 +409,8 @@ with all sufficient information, see the ChangeLog file.
     * Zlib::GzipReader#lines and #bytes are deprecated.
 
 === Language changes
+
+  * Added keyword arguments.
 
   * Added %i and %I for symbol list creation (similar to %w and %W).
 
@@ -422,6 +451,11 @@ with all sufficient information, see the ChangeLog file.
 
     These methods are deprecated in favor of each_line, each_byte,
     each_char and each_codepoint.
+
+  * Proc#==
+
+    This method was removed. Two procs are == only when they are
+    the same object.
 
   * Signal.trap
 

@@ -2,7 +2,7 @@
 
   vm.c -
 
-  $Author: nobu $
+  $Author: ktsj $
 
   Copyright (C) 2004-2007 Koichi Sasada
 
@@ -183,6 +183,18 @@ vm_set_main_stack(rb_thread_t *th, VALUE iseqval)
     if (bind && iseq->local_size > 0) {
 	bind->env = rb_vm_make_env_object(th, th->cfp);
     }
+}
+
+rb_control_frame_t *
+rb_vm_get_binding_creatable_next_cfp(rb_thread_t *th, const rb_control_frame_t *cfp)
+{
+    while (!RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, cfp)) {
+	if (cfp->iseq) {
+	    return (rb_control_frame_t *)cfp;
+	}
+	cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+    }
+    return 0;
 }
 
 rb_control_frame_t *
@@ -541,7 +553,7 @@ void
 rb_vm_stack_to_heap(rb_thread_t *th)
 {
     rb_control_frame_t *cfp = th->cfp;
-    while ((cfp = rb_vm_get_ruby_level_next_cfp(th, cfp)) != 0) {
+    while ((cfp = rb_vm_get_binding_creatable_next_cfp(th, cfp)) != 0) {
 	rb_vm_make_env_object(th, cfp);
 	cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
     }
@@ -1414,7 +1426,7 @@ rb_iseq_eval_main(VALUE iseqval)
 }
 
 int
-rb_vm_control_frame_id_and_class(rb_control_frame_t *cfp, ID *idp, VALUE *klassp)
+rb_vm_control_frame_id_and_class(const rb_control_frame_t *cfp, ID *idp, VALUE *klassp)
 {
     rb_iseq_t *iseq = cfp->iseq;
     if (!iseq && cfp->me) {
@@ -1930,6 +1942,7 @@ th_init(rb_thread_t *th, VALUE self)
     th->errinfo = Qnil;
     th->last_status = Qnil;
     th->waiting_fd = -1;
+    th->root_svar = Qnil;
 
 #if OPT_CALL_THREADED_CODE
     th->retval = Qundef;
@@ -1949,6 +1962,7 @@ ruby_thread_init(VALUE self)
 
     th->top_wrapper = 0;
     th->top_self = rb_vm_top_self();
+    th->root_svar = Qnil;
     return self;
 }
 

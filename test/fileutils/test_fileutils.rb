@@ -1,4 +1,4 @@
-# $Id: test_fileutils.rb 36756 2012-08-21 11:32:18Z eregon $
+# $Id: test_fileutils.rb 39015 2013-02-02 03:54:00Z mame $
 
 require 'fileutils'
 require_relative 'fileasserts'
@@ -237,6 +237,22 @@ class TestFileUtils
     assert_equal(File.stat('tmp/cptmp').mode,
                  File.stat('tmp/cptmp2').mode,
                  bug4507)
+  end
+
+  def test_cp_preserve_permissions_dir
+    bug7246 = '[ruby-core:48603]'
+    mkdir 'tmp/cptmp'
+    mkdir 'tmp/cptmp/d1'
+    chmod 0745, 'tmp/cptmp/d1'
+    mkdir 'tmp/cptmp/d2'
+    chmod 0700, 'tmp/cptmp/d2'
+    cp_r 'tmp/cptmp', 'tmp/cptmp2', :preserve => true
+    assert_equal(File.stat('tmp/cptmp/d1').mode,
+                 File.stat('tmp/cptmp2/d1').mode,
+                 bug7246)
+    assert_equal(File.stat('tmp/cptmp/d2').mode,
+                 File.stat('tmp/cptmp2/d2').mode,
+                 bug7246)
   end
 
   def test_cp_symlink
@@ -970,6 +986,27 @@ class TestFileUtils
     assert_equal 0510, File.stat('tmp/dir/dir').mode & 0777
     assert_equal 0500, File.stat('tmp/dir/dir/file').mode & 0777
     chmod_R 0700, 'tmp/dir'   # to remove
+  end if have_file_perm?
+
+  def test_chmod_verbose
+    check_singleton :chmod
+
+    r, w = IO.pipe
+    stderr_back = $stderr
+    read, $stderr = IO.pipe
+    th = Thread.new { read.read }
+
+    touch 'tmp/a'
+    chmod 0700, 'tmp/a', verbose: true
+    assert_equal 0700, File.stat('tmp/a').mode & 0777
+    chmod 0500, 'tmp/a', verbose: true
+    assert_equal 0500, File.stat('tmp/a').mode & 0777
+
+    $stderr.close
+    lines = th.value.lines.map {|l| l.chomp }
+    assert_equal(["chmod 700 tmp/a", "chmod 500 tmp/a"], lines)
+  ensure
+    $stderr = stderr_back if stderr_back
   end if have_file_perm?
 
   # FIXME: How can I test this method?

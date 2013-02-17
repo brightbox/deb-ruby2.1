@@ -1,6 +1,8 @@
 require 'test/unit'
 require 'delegate'
 require 'timeout'
+require 'bigdecimal'
+require_relative 'envutil'
 
 class TestRange < Test::Unit::TestCase
   def test_range_string
@@ -356,6 +358,28 @@ class TestRange < Test::Unit::TestCase
     assert_equal 42, (1..42).each.size
   end
 
+  def test_bsearch_typechecks_return_values
+    assert_raise(TypeError) do
+      (1..42).bsearch{ "not ok" }
+    end
+    assert_equal (1..42).bsearch{}, (1..42).bsearch{false}
+  end
+
+  def test_bsearch_with_no_block
+    enum = (42...666).bsearch
+    assert_nil enum.size
+    assert_equal 200, enum.each{|x| x >= 200 }
+  end
+
+  def test_bsearch_for_other_numerics
+    assert_raise(TypeError) {
+      (Rational(-1,2)..Rational(9,4)).bsearch
+    }
+    assert_raise(TypeError) {
+      (BigDecimal('0.5')..BigDecimal('2.25')).bsearch
+    }
+  end
+
   def test_bsearch_for_fixnum
     ary = [3, 4, 7, 9, 12]
     assert_equal(0, (0...ary.size).bsearch {|i| ary[i] >= 2 })
@@ -422,6 +446,82 @@ class TestRange < Test::Unit::TestCase
     assert_in_delta(7.0, (0.0..10).bsearch {|x| 7.0 - x })
   end
 
+  def check_bsearch_values(range, search)
+    from, to = range.begin, range.end
+    cmp = range.exclude_end? ? :< : :<=
+
+    # (0) trivial test
+    r = Range.new(to, from, range.exclude_end?).bsearch do |x|
+      fail "#{to}, #{from}, #{range.exclude_end?}, #{x}"
+    end
+    assert_equal nil, r
+
+    r = (to...to).bsearch do
+      fail
+    end
+    assert_equal nil, r
+
+    # prepare for others
+    yielded = []
+    r = range.bsearch do |val|
+      yielded << val
+      val >= search
+    end
+
+    # (1) log test
+    max = case from
+          when Float then 65
+          when Integer then Math.log(to-from+(range.exclude_end? ? 0 : 1), 2).to_i + 1
+          end
+    assert yielded.size <= max
+
+    # (2) coverage test
+    expect =  if search < from
+                from
+              elsif search.send(cmp, to)
+                search
+              else
+                nil
+              end
+    assert_equal expect, r
+
+    # (3) uniqueness test
+    assert_equal nil, yielded.uniq!
+
+    # (4) end of range test
+    case
+    when range.exclude_end?
+      assert !yielded.include?(to)
+      assert r != to
+    when search >= to
+      assert yielded.include?(to)
+      assert_equal search == to ? to : nil, r
+    end
+
+    # start of range test
+    if search <= from
+      assert yielded.include?(from)
+      assert_equal from, r
+    end
+
+    # (5) out of range test
+    yielded.each do |val|
+      assert from <= val && val.send(cmp, to)
+    end
+  end
+
+  def test_range_bsearch_for_floats
+    ints   = [-1 << 100, -123456789, -42, -1, 0, 1, 42, 123456789, 1 << 100]
+    floats = [-Float::INFINITY, -Float::MAX, -42.0, -4.2, -Float::EPSILON, -Float::MIN, 0.0, Float::MIN, Float::EPSILON, Math::PI, 4.2, 42.0, Float::MAX, Float::INFINITY]
+
+    [ints, floats].each do |values|
+      values.combination(2).to_a.product(values).each do |(from, to), search|
+        check_bsearch_values(from..to, search)
+        check_bsearch_values(from...to, search)
+      end
+    end
+  end
+
   def test_bsearch_for_bignum
     bignum = 2**100
     ary = [3, 4, 7, 9, 12]
@@ -435,5 +535,16 @@ class TestRange < Test::Unit::TestCase
     assert_equal(nil, (bignum...bignum+ary.size).bsearch {|i| false })
 
     assert_raise(TypeError) { ("a".."z").bsearch {} }
+  end
+
+  def test_bsearch_with_mathn
+    assert_separately ['-r', 'mathn'], %q{
+      msg = '[ruby-core:25740]'
+      answer = (1..(1 << 100)).bsearch{|x|
+        assert_predicate(x, :integer?, msg)
+        x >= 42
+      }
+      assert_equal(42, answer, msg)
+    }
   end
 end

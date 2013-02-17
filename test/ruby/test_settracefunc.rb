@@ -397,6 +397,42 @@ class TestSetTraceFunc < Test::Unit::TestCase
     assert_equal(self, ok, bug3921)
   end
 
+  def assert_security_error_safe4(block)
+    assert_raise(SecurityError) do
+      block.call
+    end
+  end
+
+  def test_set_safe4
+    func = proc do
+      $SAFE = 4
+      set_trace_func(lambda {|*|})
+    end
+    assert_security_error_safe4(func)
+  end
+
+  def test_thread_set_safe4
+    th = Thread.start {sleep}
+    func = proc do
+      $SAFE = 4
+      th.set_trace_func(lambda {|*|})
+    end
+    assert_security_error_safe4(func)
+  ensure
+    th.kill
+  end
+
+  def test_thread_add_safe4
+    th = Thread.start {sleep}
+    func = proc do
+      $SAFE = 4
+      th.add_trace_func(lambda {|*|})
+    end
+    assert_security_error_safe4(func)
+  ensure
+    th.kill
+  end
+
   class << self
     define_method(:method_added, Module.method(:method_added))
   end
@@ -886,5 +922,52 @@ class TestSetTraceFunc < Test::Unit::TestCase
     rescue
       assert_equal([:b_call, :b_return], ary, bug_7668)
     end
+  end
+
+  def test_trace_point_enable_safe4
+    tp = TracePoint.new {}
+    func = proc do
+      $SAFE = 4
+      tp.enable
+    end
+    assert_security_error_safe4(func)
+  end
+
+  def test_trace_point_disable_safe4
+    tp = TracePoint.new {}
+    func = proc do
+      $SAFE = 4
+      tp.disable
+    end
+    assert_security_error_safe4(func)
+  end
+
+  def test_trace_point_binding_in_ifunc
+    bug7774 = '[ruby-dev:46908]'
+    src = %q{
+      tp = TracePoint.new(:raise) do |tp|
+        tp.binding
+      end
+      tp.enable do
+        obj = Object.new
+        class << obj
+          include Enumerable
+          def each
+            yield 1
+          end
+        end
+        %s
+      end
+    }
+    assert_normal_exit src % %q{obj.zip({}) {}}, bug7774
+    assert_normal_exit src % %q{
+      require 'continuation'
+      begin
+        c = nil
+        obj.sort_by {|x| callcc {|c2| c ||= c2 }; x }
+        c.call
+      rescue RuntimeError
+      end
+    }, bug7774
   end
 end

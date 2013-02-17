@@ -2,7 +2,7 @@
 
   string.c -
 
-  $Author: glass $
+  $Author: zzak $
   created at: Mon Aug  9 17:12:58 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -3531,7 +3531,7 @@ rb_str_aset(VALUE str, VALUE indx, VALUE val)
  *  <code>Fixnum</code> will raise an <code>IndexError</code> if the value is
  *  out of range; the <code>Range</code> form will raise a
  *  <code>RangeError</code>, and the <code>Regexp</code> and <code>String</code>
- *  forms will silently ignore the assignment.
+ *  will raise an <code>IndexError</code> on negative match.
  */
 
 static VALUE

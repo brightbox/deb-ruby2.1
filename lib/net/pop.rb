@@ -15,7 +15,7 @@
 # NOTE: You can find Japanese version of this document at:
 # http://www.ruby-lang.org/ja/man/html/net_pop.html
 #
-#   $Id: pop.rb 37671 2012-11-16 06:37:06Z glass $
+#   $Id: pop.rb 39017 2013-02-02 04:32:25Z zzak $
 #
 # See Net::POP3 for documentation.
 #
@@ -41,8 +41,6 @@ module Net
   # Unexpected response from the server.
   class POPBadResponse < POPError; end
 
-  #
-  # = Net::POP3
   #
   # == What is This Library?
   #
@@ -197,7 +195,7 @@ module Net
   class POP3 < Protocol
 
     # svn revision of this library
-    Revision = %q$Revision: 37671 $.split[1]
+    Revision = %q$Revision: 39017 $.split[1]
 
     #
     # Class Parameters
@@ -717,9 +715,9 @@ module Net
   end   # class POP3
 
   # class aliases
-  POP = POP3
-  POPSession  = POP3
-  POP3Session = POP3
+  POP = POP3 # :nodoc:
+  POPSession  = POP3 # :nodoc:
+  POP3Session = POP3 # :nodoc:
 
   #
   # This class is equivalent to POP3, except that it uses APOP authentication.

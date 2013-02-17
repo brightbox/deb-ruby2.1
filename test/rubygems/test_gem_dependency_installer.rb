@@ -500,16 +500,21 @@ class TestGemDependencyInstaller < Gem::TestCase
     util_setup_gems
 
     FileUtils.mv @a1_gem, @tempdir
+    FileUtils.mv @b1_gem, @tempdir
+
+    inst = Gem::Installer.new @a1.file_name
+    inst.install
+
     gemhome2 = File.join @tempdir, 'gemhome2'
     Dir.mkdir gemhome2
     inst = nil
 
     Dir.chdir @tempdir do
       inst = Gem::DependencyInstaller.new :install_dir => gemhome2
-      inst.install 'a'
+      inst.install 'b'
     end
 
-    assert_equal %w[a-1], inst.installed_gems.map { |s| s.full_name }
+    assert_equal %w[a-1 b-1], inst.installed_gems.map { |s| s.full_name }
 
     assert File.exist?(File.join(gemhome2, 'specifications', @a1.spec_name))
     assert File.exist?(File.join(gemhome2, 'cache', @a1.file_name))
@@ -794,8 +799,35 @@ class TestGemDependencyInstaller < Gem::TestCase
     assert_equal Gem::Source.new(@gem_repo), s.source
   end
 
+  def test_find_spec_by_name_and_version_bad_gem
+    FileUtils.touch 'rdoc.gem'
+
+    inst = Gem::DependencyInstaller.new
+
+    e = assert_raises Gem::Package::FormatError do
+      inst.find_spec_by_name_and_version 'rdoc.gem'
+    end
+
+    full_path = File.join @tempdir, 'rdoc.gem'
+    assert_equal "package metadata is missing in #{full_path}", e.message
+  end
+
   def test_find_spec_by_name_and_version_directory
     Dir.mkdir 'rdoc'
+
+    inst = Gem::DependencyInstaller.new
+
+    e = assert_raises Gem::SpecificGemNotFoundException do
+      inst.find_spec_by_name_and_version 'rdoc'
+    end
+
+    assert_equal "Could not find a valid gem 'rdoc' (>= 0) " +
+                 "locally or in a repository",
+                 e.message
+  end
+
+  def test_find_spec_by_name_and_version_file
+    FileUtils.touch 'rdoc'
 
     inst = Gem::DependencyInstaller.new
 

@@ -104,7 +104,13 @@ class TestRequire < Test::Unit::TestCase
   end
 
   def test_require_with_unc
-    assert(system(File.expand_path(EnvUtil.rubybin).sub(/\A(\w):/, '//127.0.0.1/\1$/'), "-rabbrev", "-e0"))
+    ruby = File.expand_path(EnvUtil.rubybin).sub(/\A(\w):/, '//127.0.0.1/\1$/')
+    skip "local drive #$1: is not shared" unless File.exist?(ruby)
+    pid = nil
+    assert_nothing_raised {pid = spawn(ruby, "-rabbrev", "-e0")}
+    ret, status = Process.wait2(pid)
+    assert_equal(pid, ret)
+    assert_predicate(status, :success?)
   end if /mswin|mingw/ =~ RUBY_PLATFORM
 
   def test_require_twice
@@ -603,5 +609,28 @@ class TestRequire < Test::Unit::TestCase
         INPUT
       }
     }
+  end
+
+  def test_require_with_loaded_features_pop
+    bug7530 = '[ruby-core:50645]'
+    script = Tempfile.new(%w'bug-7530- .rb')
+    script.close
+    assert_in_out_err([{"RUBYOPT" => nil}, "-", script.path], <<-INPUT, %w(:ok), [], bug7530)
+      PATH = ARGV.shift
+      THREADS = 2
+      ITERATIONS_PER_THREAD = 1000
+
+      THREADS.times.map {
+        Thread.new do
+          ITERATIONS_PER_THREAD.times do
+            require PATH
+            $".pop
+          end
+        end
+      }.each(&:join)
+      p :ok
+    INPUT
+  ensure
+    script.close(true) if script
   end
 end

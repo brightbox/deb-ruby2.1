@@ -384,7 +384,7 @@ module Net   #:nodoc:
   class HTTP < Protocol
 
     # :stopdoc:
-    Revision = %q$Revision: 38546 $.split[1]
+    Revision = %q$Revision: 39141 $.split[1]
     HTTPVersion = '1.1'
     begin
       require 'zlib'
@@ -496,8 +496,8 @@ module Net   #:nodoc:
     #   require 'net/http'
     #   require 'uri'
     #
-    #   HTTP.post_form URI('http://www.example.com/search.cgi'),
-    #                  { "q" => "ruby", "max" => "50" }
+    #   Net::HTTP.post_form URI('http://www.example.com/search.cgi'),
+    #                       { "q" => "ruby", "max" => "50" }
     #
     def HTTP.post_form(url, params)
       req = Post.new(url)

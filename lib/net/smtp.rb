@@ -14,7 +14,7 @@
 # NOTE: You can find Japanese version of this document at:
 # http://www.ruby-lang.org/ja/man/html/net_smtp.html
 #
-# $Id: smtp.rb 35464 2012-04-24 12:55:13Z mame $
+# $Id: smtp.rb 39018 2013-02-02 04:37:45Z zzak $
 #
 # See Net::SMTP for documentation.
 #
@@ -65,8 +65,6 @@ module Net
     include SMTPError
   end
 
-  #
-  # = Net::SMTP
   #
   # == What is This Library?
   #
@@ -172,7 +170,7 @@ module Net
   #
   class SMTP
 
-    Revision = %q$Revision: 35464 $.split[1]
+    Revision = %q$Revision: 39018 $.split[1]
 
     # The default SMTP port number, 25.
     def SMTP.default_port
@@ -1056,6 +1054,6 @@ module Net
 
   end   # class SMTP
 
-  SMTPSession = SMTP
+  SMTPSession = SMTP # :nodoc:
 
 end

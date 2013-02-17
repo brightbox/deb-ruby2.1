@@ -2,7 +2,7 @@
 
   error.c -
 
-  $Author: nobu $
+  $Author: marcandre $
   created at: Mon Aug  9 16:11:34 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -1390,7 +1390,7 @@ syserr_eqq(VALUE self, VALUE exc)
  *
  *  <em>raises the exception:</em>
  *
- *     TypeError: can't convert String into Integer
+ *     TypeError: no implicit conversion of String into Integer
  *
  */
 

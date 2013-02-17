@@ -526,12 +526,14 @@ public
   # If +remove_destination+ is true, this method removes each destination file before copy.
   #
   def copy_entry(src, dest, preserve = false, dereference_root = false, remove_destination = false)
-    Entry_.new(src, nil, dereference_root).traverse do |ent|
+    Entry_.new(src, nil, dereference_root).wrap_traverse(proc do |ent|
       destent = Entry_.new(dest, ent.rel, false)
       File.unlink destent.path if remove_destination && File.file?(destent.path)
       ent.copy destent.path
+    end, proc do |ent|
+      destent = Entry_.new(dest, ent.rel, false)
       ent.copy_metadata destent.path if preserve
-    end
+    end)
   end
 
   define_command(:copy_entry)
@@ -996,6 +998,10 @@ private
     mode.is_a?(String) ? symbolic_modes_to_i(mode, path) : mode
   end
 
+  def mode_to_s(mode)  #:nodoc:
+    mode.is_a?(String) ? mode : "%o" % mode
+  end
+
 public
 
   #
@@ -1034,7 +1040,7 @@ public
   def chmod(mode, list, options = {})
     fu_check_options options, OPT_TABLE['chmod']
     list = fu_list(list)
-    fu_output_message sprintf('chmod %o %s', mode, list.join(' ')) if options[:verbose]
+    fu_output_message sprintf('chmod %s %s', mode_to_s(mode), list.join(' ')) if options[:verbose]
     return if options[:noop]
     list.each do |path|
       Entry_.new(path).chmod(fu_mode(mode, path))
@@ -1055,9 +1061,9 @@ public
   def chmod_R(mode, list, options = {})
     fu_check_options options, OPT_TABLE['chmod_R']
     list = fu_list(list)
-    fu_output_message sprintf('chmod -R%s %o %s',
+    fu_output_message sprintf('chmod -R%s %s %s',
                               (options[:force] ? 'f' : ''),
-                              mode, list.join(' ')) if options[:verbose]
+                              mode_to_s(mode), list.join(' ')) if options[:verbose]
     return if options[:noop]
     list.each do |root|
       Entry_.new(root).traverse do |ent|
@@ -1534,6 +1540,16 @@ private
         end
       end
       yield self
+    end
+
+    def wrap_traverse(pre, post)
+      pre.call self
+      if directory?
+        entries.each do |ent|
+          ent.wrap_traverse pre, post
+        end
+      end
+      post.call self
     end
 
   private

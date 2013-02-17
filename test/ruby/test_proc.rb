@@ -64,7 +64,7 @@ class TestProc < Test::Unit::TestCase
     assert_equal(1, proc{|x|}.arity)
     assert_equal(0, proc{|x=1|}.arity)
     assert_equal(2, proc{|x, y|}.arity)
-    assert_equal(0, proc{|x=0, y|}.arity)
+    assert_equal(1, proc{|x=0, y|}.arity)
     assert_equal(0, proc{|x=0, y=0|}.arity)
     assert_equal(1, proc{|x, y=0|}.arity)
     assert_equal(-2, proc{|x, *y|}.arity)
@@ -268,6 +268,13 @@ class TestProc < Test::Unit::TestCase
 
     assert_equal(3, result[0])
     assert_equal(self, result[1])
+  end
+
+  def test_curry_optional_params
+    obj = Object.new
+    def obj.foo(a, b=42); end
+    assert_raise(ArgumentError) { obj.method(:foo).to_proc.curry(3) }
+    assert_raise(ArgumentError) { ->(a, b=42){}.curry(3) }
   end
 
   def test_dup_clone

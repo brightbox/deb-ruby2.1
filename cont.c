@@ -15,7 +15,7 @@
 #include "gc.h"
 #include "eval_intern.h"
 
-#if ((defined(_WIN32) && _WIN32_WINNT >= 0x0400) || (defined(HAVE_GETCONTEXT) && defined(HAVE_SETCONTEXT))) && !defined(__NetBSD__) && !defined(__sun) && !defined(FIBER_USE_NATIVE)
+#if ((defined(_WIN32) && _WIN32_WINNT >= 0x0400) || (defined(HAVE_GETCONTEXT) && defined(HAVE_SETCONTEXT))) && !defined(__NetBSD__) && !defined(__sun) && !defined(__ia64) && !defined(FIBER_USE_NATIVE)
 #define FIBER_USE_NATIVE 1
 
 /* FIBER_USE_NATIVE enables Fiber performance improvement using system
@@ -512,6 +512,8 @@ cont_restore_thread(rb_context_t *cont)
     th->protect_tag = sth->protect_tag;
     th->errinfo = sth->errinfo;
     th->first_proc = sth->first_proc;
+    th->root_lep = sth->root_lep;
+    th->root_svar = sth->root_svar;
 }
 
 #if FIBER_USE_NATIVE

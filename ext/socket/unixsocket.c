@@ -13,6 +13,7 @@
 #ifdef HAVE_SYS_UN_H
 struct unixsock_arg {
     struct sockaddr_un *sockaddr;
+    socklen_t sockaddrlen;
     int fd;
 };
 
@@ -21,13 +22,14 @@ unixsock_connect_internal(VALUE a)
 {
     struct unixsock_arg *arg = (struct unixsock_arg *)a;
     return (VALUE)rsock_connect(arg->fd, (struct sockaddr*)arg->sockaddr,
-			        (socklen_t)sizeof(*arg->sockaddr), 0);
+			        arg->sockaddrlen, 0);
 }
 
 VALUE
 rsock_init_unixsock(VALUE sock, VALUE path, int server)
 {
     struct sockaddr_un sockaddr;
+    socklen_t sockaddrlen;
     int fd, status;
     rb_io_t *fptr;
 
@@ -44,14 +46,16 @@ rsock_init_unixsock(VALUE sock, VALUE path, int server)
             RSTRING_LEN(path), (int)sizeof(sockaddr.sun_path));
     }
     memcpy(sockaddr.sun_path, RSTRING_PTR(path), RSTRING_LEN(path));
+    sockaddrlen = rsock_unix_sockaddr_len(path);
 
     if (server) {
-        status = bind(fd, (struct sockaddr*)&sockaddr, (socklen_t)sizeof(sockaddr));
+        status = bind(fd, (struct sockaddr*)&sockaddr, sockaddrlen);
     }
     else {
 	int prot;
 	struct unixsock_arg arg;
 	arg.sockaddr = &sockaddr;
+	arg.sockaddrlen = sockaddrlen;
 	arg.fd = fd;
         status = (int)rb_protect(unixsock_connect_internal, (VALUE)&arg, &prot);
 	if (prot) {
@@ -62,7 +66,7 @@ rsock_init_unixsock(VALUE sock, VALUE path, int server)
 
     if (status < 0) {
 	close(fd);
-	rb_sys_fail_str(path);
+	rb_sys_fail_str(rb_inspect(path));
     }
 
     if (server) {
@@ -116,8 +120,10 @@ unix_path(VALUE sock)
     if (NIL_P(fptr->pathv)) {
 	struct sockaddr_un addr;
 	socklen_t len = (socklen_t)sizeof(addr);
+	socklen_t len0 = len;
 	if (getsockname(fptr->fd, (struct sockaddr*)&addr, &len) < 0)
 	    rb_sys_fail(0);
+        if (len0 < len) len = len0;
 	fptr->pathv = rb_obj_freeze(rsock_unixpath_str(&addr, len));
     }
     return rb_str_dup(fptr->pathv);
@@ -420,11 +426,13 @@ unix_addr(VALUE sock)
     rb_io_t *fptr;
     struct sockaddr_un addr;
     socklen_t len = (socklen_t)sizeof addr;
+    socklen_t len0 = len;
 
     GetOpenFile(sock, fptr);
 
     if (getsockname(fptr->fd, (struct sockaddr*)&addr, &len) < 0)
 	rb_sys_fail("getsockname(2)");
+    if (len0 < len) len = len0;
     return rsock_unixaddr(&addr, len);
 }
 
@@ -446,11 +454,13 @@ unix_peeraddr(VALUE sock)
     rb_io_t *fptr;
     struct sockaddr_un addr;
     socklen_t len = (socklen_t)sizeof addr;
+    socklen_t len0 = len;
 
     GetOpenFile(sock, fptr);
 
     if (getpeername(fptr->fd, (struct sockaddr*)&addr, &len) < 0)
 	rb_sys_fail("getpeername(2)");
+    if (len0 < len) len = len0;
     return rsock_unixaddr(&addr, len);
 }
 

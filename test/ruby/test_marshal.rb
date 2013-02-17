@@ -62,8 +62,8 @@ class TestMarshal < Test::Unit::TestCase
 
   def test_struct_invalid_members
     TestMarshal.const_set :StructInvalidMembers, Struct.new(:a)
-    Marshal.load("\004\bIc&TestMarshal::StructInvalidMembers\006:\020__members__\"\bfoo")
     assert_raise(TypeError, "[ruby-dev:31759]") {
+      Marshal.load("\004\bIc&TestMarshal::StructInvalidMembers\006:\020__members__\"\bfoo")
       TestMarshal::StructInvalidMembers.members
     }
   end
@@ -336,7 +336,9 @@ class TestMarshal < Test::Unit::TestCase
       re = Tempfile.open("marshal_regexp") do |f|
         f.binmode.write("\x04\bI/\x00\x00\x06:\rencoding\"\rUS-ASCII")
         f.close
-        Marshal.load(f.open.binmode)
+        re2 = Marshal.load(f.open.binmode)
+        f.close(true)
+        re2
       end
       assert_equal(//, re)
     end
@@ -515,6 +517,49 @@ class TestMarshal < Test::Unit::TestCase
       assert_same(c, c2)
       assert(!c.tainted?, bug7325)
       assert(!c.untrusted?, bug7325)
+    end
+  end
+
+  class Bug7627 < Struct.new(:bar)
+    attr_accessor :foo
+
+    def marshal_dump; 'dump'; end  # fake dump data
+    def marshal_load(*); end       # do nothing
+  end
+
+  def test_marshal_dump_struct_ivar
+    bug7627 = '[ruby-core:51163]'
+    obj = Bug7627.new
+    obj.foo = '[Bug #7627]'
+
+    dump   = Marshal.dump(obj)
+    loaded = Marshal.load(dump)
+
+    assert_equal(obj, loaded, bug7627)
+    assert_nil(loaded.foo, bug7627)
+  end
+
+  def test_class_ivar
+    assert_raise(TypeError) {Marshal.load("\x04\x08Ic\x1bTestMarshal::TestClass\x06:\x0e@ivar_bug\"\x08bug")}
+    assert_raise(TypeError) {Marshal.load("\x04\x08IM\x1bTestMarshal::TestClass\x06:\x0e@ivar_bug\"\x08bug")}
+    assert_not_operator(TestClass, :instance_variable_defined?, :@bug)
+  end
+
+  def test_module_ivar
+    assert_raise(TypeError) {Marshal.load("\x04\x08Im\x1cTestMarshal::TestModule\x06:\x0e@ivar_bug\"\x08bug")}
+    assert_raise(TypeError) {Marshal.load("\x04\x08IM\x1cTestMarshal::TestModule\x06:\x0e@ivar_bug\"\x08bug")}
+    assert_not_operator(TestModule, :instance_variable_defined?, :@bug)
+  end
+
+  class TestForRespondToFalse
+    def respond_to?(a)
+      false
+    end
+  end
+
+  def test_marshal_respond_to_arity
+    assert_nothing_raised(ArgumentError, '[Bug #7722]') do
+      Marshal.dump(TestForRespondToFalse.new)
     end
   end
 end

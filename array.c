@@ -2,7 +2,7 @@
 
   array.c -
 
-  $Author: nobu $
+  $Author: usa $
   created at: Fri Aug  6 09:46:12 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -2438,6 +2438,7 @@ rb_ary_bsearch(VALUE ary)
     int smaller = 0, satisfied = 0;
     VALUE v, val;
 
+    RETURN_ENUMERATOR(ary, 0, 0);
     while (low < high) {
 	mid = low + ((high - low) / 2);
 	val = rb_ary_entry(ary, mid);
@@ -2461,7 +2462,9 @@ rb_ary_bsearch(VALUE ary)
 	    }
 	}
 	else {
-	    smaller = RTEST(v);
+	    rb_raise(rb_eTypeError, "wrong argument type %s"
+		" (must be numeric, true, false or nil)",
+		rb_obj_classname(v));
 	}
 	if (smaller) {
 	    high = mid;
@@ -3047,7 +3050,8 @@ take_items(VALUE obj, long n)
     result = rb_ary_new2(n);
     args[0] = result; args[1] = (VALUE)n;
     if (rb_check_block_call(obj, idEach, 0, 0, take_i, (VALUE)args) == Qundef)
-	Check_Type(obj, T_ARRAY);
+        rb_raise(rb_eTypeError, "wrong argument type %s (must respond to :each)",
+            rb_obj_classname(obj));
     return result;
 }
 
@@ -3799,7 +3803,7 @@ ary_recycle_hash(VALUE hash)
  *  Returns a new array that is a copy of the original array, removing any
  *  items that also appear in +other_ary+.
  *
- *  It compares elements using their hash (returned by the Object#hash method).
+ *  It compares elements using their #hash and #eql? methods for efficiency.
  *
  *     [ 1, 1, 2, 2, 3, 3, 4, 5 ] - [ 1, 2, 4 ]  #=>  [ 3, 3, 5 ]
  *
@@ -3830,6 +3834,8 @@ rb_ary_diff(VALUE ary1, VALUE ary2)
  *
  *  Set Intersection --- Returns a new array containing elements common to the
  *  two arrays, excluding any duplicates.
+ *
+ *  It compares elements using their #hash and #eql? methods for efficiency.
  *
  *     [ 1, 1, 3, 5 ] & [ 1, 2, 3 ]                 #=> [ 1, 3 ]
  *     [ 'a', 'b', 'b', 'z' ] & [ 'a', 'b', 'c' ]   #=> [ 'a', 'b' ]
@@ -3870,6 +3876,8 @@ rb_ary_and(VALUE ary1, VALUE ary2)
  *
  *  Set Union --- Returns a new array by joining +ary+ with +other_ary+,
  *  excluding any duplicates.
+ *
+ *  It compares elements using their #hash and #eql? methods for efficiency.
  *
  *     [ "a", "b", "c" ] | [ "c", "d", "a" ]    #=> [ "a", "b", "c", "d" ]
  *
@@ -3919,6 +3927,8 @@ push_value(st_data_t key, st_data_t val, st_data_t ary)
  *
  *  If a block is given, it will use the return value of the block for
  *  comparison.
+ *
+ *  It compares values using their #hash and #eql? methods for efficiency.
  *
  *  Returns +nil+ if no changes are made (that is, no duplicates are found).
  *
@@ -3982,8 +3992,7 @@ rb_ary_uniq_bang(VALUE ary)
  *
  *  If a block is given, it will use the return value of the block for comparison.
  *
- *  It compares elements using their hash (provided by the Object#hash method)
- *  then compares hashes with Object#eql?.
+ *  It compares values using their #hash and #eql? methods for efficiency.
  *
  *     a = [ "a", "a", "b", "b", "c" ]
  *     a.uniq   # => ["a", "b", "c"]

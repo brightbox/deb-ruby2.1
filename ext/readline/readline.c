@@ -2,13 +2,13 @@
 
   readline.c - GNU Readline module
 
-  $Author: nobu $
+  $Author: shugo $
   created at: Wed Jan 20 13:59:32 JST 1999
 
   Copyright (C) 1997-2008  Shugo Maeda
   Copyright (C) 2008-2009  TAKAO Kouji
 
-  $Id: readline.c 36895 2012-09-04 00:57:31Z nobu $
+  $Id: readline.c 39002 2013-02-01 05:37:29Z shugo $
 
   Contact:
    - TAKAO Kouji <kouji at takao7 dot net> (current maintainer)
@@ -48,7 +48,7 @@ static VALUE mReadline;
 
 #define EDIT_LINE_LIBRARY_VERSION "EditLine wrapper"
 #ifndef USE_INSERT_IGNORE_ESCAPE
-# if !defined(HAVE_EDITLINE_READLINE_H) && defined(HAVE_RL_PROMPT_START_IGNORE) && defined(HAVE_RL_PROMPT_END_IGNORE)
+# if !defined(HAVE_EDITLINE_READLINE_H) && defined(RL_PROMPT_START_IGNORE) && defined(RL_PROMPT_END_IGNORE)
 #  define USE_INSERT_IGNORE_ESCAPE 1
 # else
 #  define USE_INSERT_IGNORE_ESCAPE 0

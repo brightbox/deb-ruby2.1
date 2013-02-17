@@ -656,6 +656,12 @@ class Gem::Specification
 
       @@all = specs.values
 
+      # After a reset, make sure already loaded specs
+      # are still marked as activated.
+      specs = {}
+      Gem.loaded_specs.each_value{|s| specs[s] = true}
+      @@all.each{|s| s.activated = true if specs[s]}
+
       _resort!
     end
     @@all
@@ -898,7 +904,7 @@ class Gem::Specification
       raise Gem::Exception, "YAML data doesn't evaluate to gem specification"
     end
 
-    spec.instance_eval { @specification_version ||= NONEXISTENT_SPECIFICATION_VERSION }
+    spec.specification_version ||= NONEXISTENT_SPECIFICATION_VERSION
     spec.reset_nil_attributes_to_default
 
     spec

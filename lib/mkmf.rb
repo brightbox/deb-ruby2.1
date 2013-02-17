@@ -46,15 +46,33 @@ end
 # library.
 module MakeMakefile
 
+  ##
+  # The makefile configuration using the defaults from when ruby was built.
+
   CONFIG = RbConfig::MAKEFILE_CONFIG
   ORIG_LIBPATH = ENV['LIB']
 
+  ##
+  # Extensions for files compiled with a C compiler
+
   C_EXT = %w[c m]
+
+  ##
+  # Extensions for files complied with a C++ compiler
+
   CXX_EXT = %w[cc mm cxx cpp]
   if File::FNM_SYSCASE.zero?
     CXX_EXT.concat(%w[C])
   end
+
+  ##
+  # Extensions for source files
+
   SRC_EXT = C_EXT + CXX_EXT
+
+  ##
+  # Extensions for header files
+
   HDR_EXT = %w[h hpp]
   $static = nil
   $config_h = '$(arch_hdrdir)/ruby/config.h'
@@ -199,14 +217,19 @@ module MakeMakefile
 
   topdir = File.dirname(File.dirname(__FILE__))
   path = File.expand_path($0)
-  $extmk = path[0, topdir.size+1] == topdir+"/"
-  $extmk &&= %r"\A(?:ext|enc|tool|test(?:/.+)?)\z" =~ File.dirname(path[topdir.size+1..-1])
-  $extmk &&= true
+  until (dir = File.dirname(path)) == path
+    if File.identical?(dir, topdir)
+      $extmk = true if %r"\A(?:ext|enc|tool|test)\z" =~ File.basename(path)
+      break
+    end
+    path = dir
+  end
+  $extmk ||= false
   if not $extmk and File.exist?(RbConfig::CONFIG["rubyhdrdir"] + "/ruby/ruby.h")
     $hdrdir = CONFIG["rubyhdrdir"]
     $topdir = $hdrdir
     $top_srcdir = $hdrdir
-    $arch_hdrdir = "$(hdrdir)/$(arch)"
+    $arch_hdrdir = CONFIG["rubyarchhdrdir"]
   elsif File.exist?(($hdrdir = ($top_srcdir ||= topdir) + "/include")  + "/ruby.h")
     $topdir ||= RbConfig::CONFIG["topdir"]
     $arch_hdrdir = "$(extout)/include/$(arch)"
@@ -246,17 +269,15 @@ module MakeMakefile
 
   def merge_libs(*libs)
     libs.inject([]) do |x, y|
-      xy = x & y
-      xn = yn = 0
       y = y.inject([]) {|ary, e| ary.last == e ? ary : ary << e}
       y.each_with_index do |v, yi|
-        if xy.include?(v)
-          xi = [x.index(v), xn].max()
-          x[xi, 1] = y[yn..yi]
-          xn, yn = xi + (yi - yn + 1), yi + 1
+        if xi = x.rindex(v)
+          x[(xi+1)..-1] = merge_libs(y[(yi+1)..-1], x[(xi+1)..-1])
+          x[xi, 0] = y[0...yi]
+          break
         end
-      end
-      x.concat(y[yn..-1] || [])
+      end and x.concat(y)
+      x
     end
   end
 
@@ -608,12 +629,12 @@ SRC
 
   def try_constant(const, headers = nil, opt = "", &b)
     includes = cpp_include(headers)
+    neg = try_static_assert("#{const} < 0", headers, opt)
     if CROSS_COMPILING
-      if try_static_assert("#{const} > 0", headers, opt)
-        # positive constant
-      elsif try_static_assert("#{const} < 0", headers, opt)
-        neg = true
+      if neg
         const = "-(#{const})"
+      elsif try_static_assert("#{const} > 0", headers, opt)
+        # positive constant
       elsif try_static_assert("#{const} == 0", headers, opt)
         return 0
       else
@@ -641,8 +662,17 @@ SRC
       src = %{#{includes}
 #include <stdio.h>
 /*top*/
-int conftest_const = (int)(#{const});
-int main() {printf("%d\\n", conftest_const); return 0;}
+typedef#{neg ? '' : ' unsigned'}
+#ifdef PRI_LL_PREFIX
+#define PRI_CONFTEST_PREFIX PRI_LL_PREFIX
+LONG_LONG
+#else
+#define PRI_CONFTEST_PREFIX "l"
+long
+#endif
+conftest_type;
+conftest_type conftest_const = (conftest_type)(#{const});
+int main() {printf("%"PRI_CONFTEST_PREFIX"#{neg ? 'd' : 'u'}\\n", conftest_const); return 0;}
 }
       begin
         if try_link0(src, opt, &b)
@@ -1202,7 +1232,7 @@ SRC
 
   # :stopdoc:
   STRING_OR_FAILED_FORMAT = "%s"
-  def STRING_OR_FAILED_FORMAT.%(x)
+  def STRING_OR_FAILED_FORMAT.%(x) # :nodoc:
     x ? super : "failed"
   end
 
@@ -1759,6 +1789,7 @@ srcdir = #{srcdir.gsub(/\$\((srcdir)\)|\$\{(srcdir)\}/) {mkintpath(CONFIG[$1||$2
 topdir = #{mkintpath($extmk ? CONFIG["topdir"] : $topdir).unspace}
 hdrdir = #{mkintpath(CONFIG["hdrdir"]).unspace}
 arch_hdrdir = #{$arch_hdrdir.quote}
+PATH_SEPARATOR = #{CONFIG['PATH_SEPARATOR']}
 VPATH = #{vpath.join(CONFIG['PATH_SEPARATOR'])}
 }
     if $extmk
@@ -1823,9 +1854,11 @@ LDSHAREDXX = #{config_string('LDSHAREDXX') || '$(LDSHARED)'}
 AR = #{CONFIG['AR']}
 EXEEXT = #{CONFIG['EXEEXT']}
 
-RUBY_BASE_NAME = #{CONFIG['RUBY_BASE_NAME']}
-RUBY_INSTALL_NAME = #{CONFIG['RUBY_INSTALL_NAME']}
-RUBY_SO_NAME = #{CONFIG['RUBY_SO_NAME']}
+}
+    CONFIG.each do |key, val|
+      mk << "#{key} = #{val}\n" if /^RUBY.*NAME/ =~ key
+    end
+    mk << %{
 arch = #{CONFIG['arch']}
 sitearch = #{CONFIG['sitearch']}
 ruby_version = #{RbConfig::CONFIG['ruby_version']}
@@ -1879,7 +1912,7 @@ all install static install-so install-rb: Makefile
 RULES
   end
 
-  def each_compile_rules
+  def each_compile_rules # :nodoc:
     vpath_splat = /\$\(\*VPATH\*\)/
     COMPILE_RULES.each do |rule|
       if vpath_splat =~ rule
@@ -2402,16 +2435,43 @@ MESSAGE
   config_string('COMMON_HEADERS') do |s|
     Shellwords.shellwords(s).each {|w| hdr << "#include <#{w}>"}
   end
+
+  ##
+  # Common headers for ruby C extensions
+
   COMMON_HEADERS = hdr.join("\n")
+
+  ##
+  # Common libraries for ruby C extensions
+
   COMMON_LIBS = config_string('COMMON_LIBS', &split) || []
+
+  ##
+  # make compile rules
 
   COMPILE_RULES = config_string('COMPILE_RULES', &split) || %w[.%s.%s:]
   RULE_SUBST = config_string('RULE_SUBST')
+
+  ##
+  # Command which will compile C files in the generated Makefile
+
   COMPILE_C = config_string('COMPILE_C') || '$(CC) $(INCFLAGS) $(CPPFLAGS) $(CFLAGS) $(COUTFLAG)$@ -c $<'
+
+  ##
+  # Command which will compile C++ files in the generated Makefile
+
   COMPILE_CXX = config_string('COMPILE_CXX') || '$(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) $(COUTFLAG)$@ -c $<'
+
+  ##
+  # Command which will compile a program in order to test linking a library
+
   TRY_LINK = config_string('TRY_LINK') ||
     "$(CC) #{OUTFLAG}conftest#{$EXEEXT} $(INCFLAGS) $(CPPFLAGS) " \
     "$(CFLAGS) $(src) $(LIBPATH) $(LDFLAGS) $(ARCH_FLAG) $(LOCAL_LIBS) $(LIBS)"
+
+  ##
+  # Command which will link a shared library
+
   LINK_SO = (config_string('LINK_SO') || "").sub(/^$/) do
     if CONFIG["DLEXT"] == $OBJEXT
       "ld $(DLDFLAGS) -r -o $@ $(OBJS)\n"
@@ -2420,14 +2480,30 @@ MESSAGE
       "$(LIBPATH) $(DLDFLAGS) $(LOCAL_LIBS) $(LIBS)"
     end
   end
+
+  ##
+  # Argument which will add a library path to the linker
+
   LIBPATHFLAG = config_string('LIBPATHFLAG') || ' -L%s'
   RPATHFLAG = config_string('RPATHFLAG') || ''
+
+  ##
+  # Argument which will add a library to the linker
+
   LIBARG = config_string('LIBARG') || '-l%s'
+
+  ##
+  # A C main function which does no work
+
   MAIN_DOES_NOTHING = config_string('MAIN_DOES_NOTHING') || 'int main(void) {return 0;}'
   UNIVERSAL_INTS = config_string('UNIVERSAL_INTS') {|s| Shellwords.shellwords(s)} ||
     %w[int short long long\ long]
 
   sep = config_string('BUILD_FILE_SEPARATOR') {|s| ":/=#{s}" if s != "/"} || ""
+
+  ##
+  # Makefile rules that will clean the extension build directory
+
   CLEANINGS = "
 clean-static::
 clean-rb-default::
