@@ -2,7 +2,7 @@
 
   objspace.c - ObjectSpace extender for MRI.
 
-  $Author: ko1 $
+  $Author: nari $
   created at: Wed Jun 17 07:39:17 2009
 
   NOTE: This extension library is not expected to exist except C Ruby.
@@ -730,8 +730,8 @@ collect_values(st_data_t key, st_data_t value, st_data_t data)
  *  you can check the type of internal object with `type' method.
  *
  *  If `obj' is instance of `ObjectSpace::InternalObjectWrapper'
- *  class, then this method retuns all reachalbe object from
- *  an interna object, which is pointed by `obj'.
+ *  class, then this method returns all reachable object from
+ *  an internal object, which is pointed by `obj'.
  *
  *  With this method, you can find memory leaks.
  *

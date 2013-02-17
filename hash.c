@@ -2,7 +2,7 @@
 
   hash.c -
 
-  $Author: zzak $
+  $Author: charliesome $
   created at: Mon Nov 22 18:51:18 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -2566,15 +2566,6 @@ env_keys(void)
     return ary;
 }
 
-/*
- * call-seq:
- *   ENV.each_key { |name| } -> Hash
- *   ENV.each_key            -> Enumerator
- *
- * Yields each environment variable name.
- *
- * An Enumerator is returned if no block is given.
- */
 static VALUE
 rb_env_size(VALUE ehash)
 {
@@ -2593,6 +2584,15 @@ rb_env_size(VALUE ehash)
     return LONG2FIX(cnt);
 }
 
+/*
+ * call-seq:
+ *   ENV.each_key { |name| } -> Hash
+ *   ENV.each_key            -> Enumerator
+ *
+ * Yields each environment variable name.
+ *
+ * An Enumerator is returned if no block is given.
+ */
 static VALUE
 env_each_key(VALUE ehash)
 {
@@ -2713,6 +2713,7 @@ env_reject_bang(VALUE ehash)
 
     RETURN_SIZED_ENUMERATOR(ehash, 0, 0, rb_env_size);
     keys = env_keys();	/* rb_secure(4); */
+    RBASIC(keys)->klass = 0;
     for (i=0; i<RARRAY_LEN(keys); i++) {
 	VALUE val = rb_f_getenv(Qnil, RARRAY_PTR(keys)[i]);
 	if (!NIL_P(val)) {
@@ -2816,6 +2817,7 @@ env_select_bang(VALUE ehash)
 
     RETURN_SIZED_ENUMERATOR(ehash, 0, 0, rb_env_size);
     keys = env_keys();	/* rb_secure(4); */
+    RBASIC(keys)->klass = 0;
     for (i=0; i<RARRAY_LEN(keys); i++) {
 	VALUE val = rb_f_getenv(Qnil, RARRAY_PTR(keys)[i]);
 	if (!NIL_P(val)) {

@@ -2,7 +2,7 @@
 
   compar.c -
 
-  $Author: marcandre $
+  $Author: zzak $
   created at: Thu Aug 26 14:39:48 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -54,6 +54,9 @@ cmp_failed(void)
  *  Compares two objects based on the receiver's <code><=></code>
  *  method, returning true if it returns 0. Also returns true if
  *  _obj_ and _other_ are the same object.
+ *
+ *  Even if _obj_ <=> _other_ raised an exception, the exception
+ *  is ignoread and returns false.
  */
 
 static VALUE

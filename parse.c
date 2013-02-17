@@ -12417,9 +12417,7 @@ parser_regx_options(struct parser_params *parser)
 static void
 dispose_string(VALUE str)
 {
-    /* TODO: should use another API? */
-    if (RBASIC(str)->flags & RSTRING_NOEMBED)
-	xfree(RSTRING_PTR(str));
+    rb_str_free(str);
     rb_gc_force_recycle(str);
 }
 
@@ -15903,7 +15901,9 @@ local_push_gen(struct parser_params *parser, int inherit_dvars)
     local->prev = lvtbl;
     local->args = vtable_alloc(0);
     local->vars = vtable_alloc(inherit_dvars ? DVARS_INHERIT : DVARS_TOPSCOPE);
-    local->used = !inherit_dvars && RTEST(ruby_verbose) ? vtable_alloc(0) : 0;
+    local->used = !(inherit_dvars &&
+		    (ifndef_ripper(compile_for_eval || e_option_supplied(parser))+0)) &&
+	RTEST(ruby_verbose) ? vtable_alloc(0) : 0;
     lvtbl = local;
 }
 

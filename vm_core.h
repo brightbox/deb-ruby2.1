@@ -2,7 +2,7 @@
 
   vm_core.h -
 
-  $Author: charliesome $
+  $Author: nobu $
   created at: 04/01/01 19:41:38 JST
 
   Copyright (C) 2004-2007 Koichi Sasada
@@ -225,7 +225,7 @@ struct rb_iseq_struct {
     ID *local_table;		/* must free */
     int local_table_size;
 
-    /* method, class frame: sizeof(vars) + 1, block frame: sizeof(vars) */
+    /* sizeof(vars) + 1 */
     int local_size;
 
     struct iseq_inline_cache_entry *ic_entries;
@@ -306,6 +306,7 @@ struct rb_iseq_struct {
 
     /* misc */
     ID defined_method_id;	/* for define_method */
+    rb_num_t flip_cnt;
 
     /* used at compile time */
     struct iseq_compile_data *compile_data;
@@ -418,7 +419,7 @@ typedef struct rb_vm_struct {
 #define RUBY_VM_FIBER_MACHINE_STACK_SIZE_MIN  (  16 * 1024 * sizeof(VALUE)) /*   64 KB or  128 KB */
 
 #ifndef VM_DEBUG_BP_CHECK
-#define VM_DEBUG_BP_CHECK 1
+#define VM_DEBUG_BP_CHECK 0
 #endif
 
 typedef struct rb_control_frame_struct {
@@ -842,10 +843,12 @@ void rb_thread_wakeup_timer_thread(void);
 int ruby_thread_has_gvl_p(void);
 typedef int rb_backtrace_iter_func(void *, VALUE, int, VALUE);
 rb_control_frame_t *rb_vm_get_ruby_level_next_cfp(rb_thread_t *th, const rb_control_frame_t *cfp);
+rb_control_frame_t *rb_vm_get_binding_creatable_next_cfp(rb_thread_t *th, const rb_control_frame_t *cfp);
 int rb_vm_get_sourceline(const rb_control_frame_t *);
 VALUE rb_name_err_mesg_new(VALUE obj, VALUE mesg, VALUE recv, VALUE method);
 void rb_vm_stack_to_heap(rb_thread_t *th);
 void ruby_thread_init_stack(rb_thread_t *th);
+int rb_vm_control_frame_id_and_class(const rb_control_frame_t *cfp, ID *idp, VALUE *klassp);
 
 void rb_gc_mark_machine_stack(rb_thread_t *th);
 

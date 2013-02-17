@@ -326,21 +326,25 @@ version.  If you're viewing Ruby's documentation, include the version of ruby.
 
       search_index << name
 
-      comment = case type
-                when :gem
-                  gemspec = path.gsub(%r%/doc/([^/]*?)/ri$%,
-                                      '/specifications/\1.gemspec')
+      case type
+      when :gem
+        gemspec = path.gsub(%r%/doc/([^/]*?)/ri$%,
+                            '/specifications/\1.gemspec')
 
-                  spec = Gem::Specification.load gemspec
+        spec = Gem::Specification.load gemspec
 
-                  spec.summary
-                when :system then
-                  'Documentation for the Ruby standard library'
-                when :site then
-                  'Documentation for non-gem libraries'
-                when :home then
-                  'Documentation from your home directory'
-                end
+        path    = spec.full_name
+        comment = spec.summary
+      when :system then
+        path    = 'ruby'
+        comment = 'Documentation for the Ruby standard library'
+      when :site then
+        path    = 'site'
+        comment = 'Documentation for non-gem libraries'
+      when :home then
+        path    = 'home'
+        comment = 'Documentation from your home directory'
+      end
 
       info << [name, '', path, '', comment]
     end
@@ -387,8 +391,12 @@ version.  If you're viewing Ruby's documentation, include the version of ruby.
 
   def store_for source_name
     case source_name
+    when 'home' then
+      RDoc::Store.new RDoc::RI::Paths.home_dir, :home
     when 'ruby' then
       RDoc::Store.new RDoc::RI::Paths.system_dir, :system
+    when 'site' then
+      RDoc::Store.new RDoc::RI::Paths.site_dir, :site
     else
       ri_dir, type = ri_paths.find do |dir, dir_type|
         next unless dir_type == :gem
@@ -396,7 +404,8 @@ version.  If you're viewing Ruby's documentation, include the version of ruby.
         source_name == dir[%r%/([^/]*)/ri$%, 1]
       end
 
-      raise "could not find ri documentation for #{source_name}" unless
+      raise RDoc::Error,
+            "could not find ri documentation for #{source_name}" unless
         ri_dir
 
       RDoc::Store.new ri_dir, type

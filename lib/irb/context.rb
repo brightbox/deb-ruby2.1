@@ -1,7 +1,7 @@
 #
 #   irb/context.rb - irb context
 #   	$Release Version: 0.9.6$
-#   	$Revision: 38643 $
+#   	$Revision: 39048 $
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --
@@ -161,8 +161,22 @@ module IRB
     attr_accessor :prompt_c
     # See IRB@Customizing+the+IRB+Prompt for more information.
     attr_accessor :prompt_n
-    # Can be either the deafult <code>IRB.conf[:AUTO_INDENT]</code>, or the
+    # Can be either the default <code>IRB.conf[:AUTO_INDENT]</code>, or the
     # mode set by #prompt_mode=
+    #
+    # To enable auto-indentation in irb:
+    #
+    #     IRB.conf[:AUTO_INDENT] = true
+    #
+    # or
+    #
+    #     irb_context.auto_indent_mode = true
+    #
+    # or
+    #
+    #     IRB.CurrentContext.auto_indent_mode = true
+    #
+    # See IRB@Configuration for more information.
     attr_accessor :auto_indent_mode
     # The format of the return statement, set by #prompt_mode= using the
     # +:RETURN+ of the +mode+ passed to set the current #prompt_mode.

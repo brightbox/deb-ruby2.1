@@ -4,9 +4,7 @@ require 'continuation'
 require_relative './envutil'
 
 class TestFiber < Test::Unit::TestCase
-if false
   def test_normal
-    f = Fiber.current
     assert_equal(:ok2,
       Fiber.new{|e|
         assert_equal(:ok1, e)
@@ -79,7 +77,7 @@ if false
       f.resume
     }
     assert_raise(RuntimeError){
-      f = Fiber.new{
+      Fiber.new{
         @c = callcc{|c| @c = c}
       }.resume
       @c.call # cross fiber callcc
@@ -279,13 +277,12 @@ if false
       puts :ng # unreachable.
     EOS
   end
-end
 
   def invoke_rec script, vm_stack_size, machine_stack_size, use_length = true
     env = {}
     env['RUBY_FIBER_VM_STACK_SIZE'] = vm_stack_size.to_s if vm_stack_size
     env['RUBY_FIBER_MACHINE_STACK_SIZE'] = machine_stack_size.to_s if machine_stack_size
-    out, = EnvUtil.invoke_ruby([env, '-e', script], '', true, true)
+    out, err = EnvUtil.invoke_ruby([env, '-e', script], '', true, true)
     use_length ? out.length : out
   end
 
@@ -300,25 +297,49 @@ end
     assert(h_default[:fiber_machine_stack_size] <= h_large[:fiber_machine_stack_size])
 
     # check VM machine stack size
-    script = 'def rec; print "."; rec; end; Fiber.new{rec}.resume'
+    script = '$stdout.sync=true; def rec; print "."; rec; end; Fiber.new{rec}.resume'
     size_default = invoke_rec script, nil, nil
-    assert(size_default > 0, size_default.to_s)
+    assert_operator(size_default, :>, 0)
     size_0 = invoke_rec script, 0, nil
-    assert(size_default > size_0, [size_default, size_0].inspect)
+    assert_operator(size_default, :>, size_0)
     size_large = invoke_rec script, 1024 * 1024 * 10, nil
-    assert(size_default < size_large, [size_default, size_large].inspect)
+    assert_operator(size_default, :<, size_large)
 
     return if /mswin|mingw/ =~ RUBY_PLATFORM
 
     # check machine stack size
     # Note that machine stack size may not change size (depend on OSs)
-    script = 'def rec; print "."; 1.times{1.times{1.times{rec}}}; end; Fiber.new{rec}.resume'
+    script = '$stdout.sync=true; def rec; print "."; 1.times{1.times{1.times{rec}}}; end; Fiber.new{rec}.resume'
     vm_stack_size = 1024 * 1024
     size_default = invoke_rec script, vm_stack_size, nil
     size_0 = invoke_rec script, vm_stack_size, 0
-    assert(size_default >= size_0, [size_default, size_0].inspect)
+    assert_operator(size_default, :>=, size_0)
     size_large = invoke_rec script, vm_stack_size, 1024 * 1024 * 10
-    assert(size_default <= size_large, [size_default, size_large].inspect)
+    assert_operator(size_default, :<=, size_large)
+  end
+
+  def test_separate_lastmatch
+    bug7678 = '[ruby-core:51331]'
+    /a/ =~ "a"
+    m1 = $~
+    m2 = nil
+    Fiber.new do
+      /b/ =~ "b"
+      m2 = $~
+    end.resume
+    assert_equal("b", m2[0])
+    assert_equal(m1, $~, bug7678)
+  end
+
+  def test_separate_lastline
+    bug7678 = '[ruby-core:51331]'
+    $_ = s1 = "outer"
+    s2 = nil
+    Fiber.new do
+      s2 = "inner"
+    end.resume
+    assert_equal("inner", s2)
+    assert_equal(s1, $_, bug7678)
   end
 end
 

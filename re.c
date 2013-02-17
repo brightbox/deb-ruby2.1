@@ -2,7 +2,7 @@
 
   re.c -
 
-  $Author: nobu $
+  $Author: marcandre $
   created at: Mon Aug  9 18:24:49 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -2667,12 +2667,7 @@ reg_operand(VALUE s, int check)
 	return rb_sym_to_s(s);
     }
     else {
-	VALUE tmp = rb_check_string_type(s);
-	if (check && NIL_P(tmp)) {
-	    rb_raise(rb_eTypeError, "can't convert %s to String",
-		     rb_obj_classname(s));
-	}
-	return tmp;
+	return (check ? rb_str_to_str : rb_check_string_type)(s);
     }
 }
 
@@ -2889,9 +2884,9 @@ rb_reg_match_m(int argc, VALUE *argv, VALUE re)
 
 /*
  *  call-seq:
- *     Regexp.new(string, [options [, lang]])        -> regexp
+ *     Regexp.new(string, [options [, kcode]])        -> regexp
  *     Regexp.new(regexp)                            -> regexp
- *     Regexp.compile(string, [options [, lang]])    -> regexp
+ *     Regexp.compile(string, [options [, kcode]])    -> regexp
  *     Regexp.compile(regexp)                        -> regexp
  *
  *  Constructs a new regular expression from +pattern+, which can be either a
@@ -2903,7 +2898,8 @@ rb_reg_match_m(int argc, VALUE *argv, VALUE re)
  *  <em>or</em>-ed together.  Otherwise, if +options+ is not
  *  +nil+ or +false+, the regexp will be case insensitive.
  *
- *  When the +lang+ parameter is `n' or `N' sets the regexp no encoding.
+ *  When the +kcode+ parameter is `n' or `N' sets the regexp no encoding.
+ *  It means that the regexp is for binary strings.
  *
  *    r1 = Regexp.new('^a-z+:\\s+\w+') #=> /^a-z+:\s+\w+/
  *    r2 = Regexp.new('cat', true)     #=> /cat/i

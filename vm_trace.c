@@ -443,6 +443,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
 static VALUE
 set_trace_func(VALUE obj, VALUE trace)
 {
+    rb_secure(4);
+
     rb_remove_event_hook(call_trace_func);
 
     if (NIL_P(trace)) {
@@ -479,6 +481,8 @@ static VALUE
 thread_add_trace_func_m(VALUE obj, VALUE trace)
 {
     rb_thread_t *th;
+
+    rb_secure(4);
     GetThreadPtr(obj, th);
     thread_add_trace_func(th, trace);
     return trace;
@@ -498,6 +502,8 @@ static VALUE
 thread_set_trace_func_m(VALUE obj, VALUE trace)
 {
     rb_thread_t *th;
+
+    rb_secure(4);
     GetThreadPtr(obj, th);
     rb_threadptr_remove_event_hook(th, call_trace_func, Qundef);
 
@@ -688,8 +694,6 @@ rb_tracearg_event(rb_trace_arg_t *trace_arg)
     return ID2SYM(get_event_id(trace_arg->event));
 }
 
-int rb_vm_control_frame_id_and_class(rb_control_frame_t *cfp, ID *idp, VALUE *klassp);
-
 static void
 fill_path_and_lineno(rb_trace_arg_t *trace_arg)
 {
@@ -759,7 +763,8 @@ VALUE
 rb_tracearg_binding(rb_trace_arg_t *trace_arg)
 {
     rb_control_frame_t *cfp;
-    cfp = rb_vm_get_ruby_level_next_cfp(trace_arg->th, trace_arg->cfp);
+    cfp = rb_vm_get_binding_creatable_next_cfp(trace_arg->th, trace_arg->cfp);
+
     if (cfp) {
 	return rb_binding_new_with_cfp(trace_arg->th, cfp);
     }
@@ -937,7 +942,10 @@ tp_call_trace(VALUE tpval, rb_trace_arg_t *trace_arg)
 VALUE
 rb_tracepoint_enable(VALUE tpval)
 {
-    rb_tp_t *tp = tpptr(tpval);
+    rb_tp_t *tp;
+
+    rb_secure(4);
+    tp = tpptr(tpval);
 
     if (tp->target_th) {
 	rb_thread_add_event_hook2(tp->target_th->self, (rb_event_hook_func_t)tp_call_trace, tp->events, tpval,
@@ -954,7 +962,10 @@ rb_tracepoint_enable(VALUE tpval)
 VALUE
 rb_tracepoint_disable(VALUE tpval)
 {
-    rb_tp_t *tp = tpptr(tpval);
+    rb_tp_t *tp;
+
+    rb_secure(4);
+    tp = tpptr(tpval);
 
     if (tp->target_th) {
 	rb_thread_remove_event_hook_with_data(tp->target_th->self, (rb_event_hook_func_t)tp_call_trace, tpval);

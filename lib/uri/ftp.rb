@@ -2,7 +2,7 @@
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
 # License:: You can redistribute it and/or modify it under the same term as Ruby.
-# Revision:: $Id: ftp.rb 36852 2012-08-30 00:22:11Z naruse $
+# Revision:: $Id: ftp.rb 39014 2013-02-02 03:31:56Z zzak $
 #
 # See URI for general documentation
 #
@@ -45,16 +45,11 @@ module URI
     #  ';type='
     TYPECODE_PREFIX = ';type='.freeze
 
-    # alternate initialization
-    # Creates a new URI::FTP object.
-    #
-    # Unlike build(), this method does not escape the path component as
-    # required by RFC1738; instead it is treated as per RFC2396.
-    #
-    # Arguments are user, password, host, port, path, typecode,
-    # and arg_check, in that order.
     def self.new2(user, password, host, port, path,
-                  typecode = nil, arg_check = true)
+                  typecode = nil, arg_check = true) # :nodoc:
+      # Do not use this method!  Not tested.  [Bug #7301]
+      # This methods remains just for compatibility,
+      # Keep it undocumented until the active maintainer is assigned.
       typecode = nil if typecode.size == 0
       if typecode && !TYPECODE.include?(typecode)
         raise ArgumentError,

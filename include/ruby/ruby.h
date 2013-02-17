@@ -2,7 +2,7 @@
 
   ruby/ruby.h -
 
-  $Author: ko1 $
+  $Author: nobu $
   created at: Thu Jun 10 14:26:32 JST 1993
 
   Copyright (C) 1993-2008 Yukihiro Matsumoto
@@ -699,7 +699,11 @@ VALUE rb_newobj_of(VALUE, VALUE);
 struct RBasic {
     VALUE flags;
     VALUE klass;
-};
+}
+#ifdef __GNUC__
+    __attribute__((aligned(sizeof(VALUE))))
+#endif
+;
 
 #define ROBJECT_EMBED_LEN_MAX 3
 struct RObject {

@@ -2,7 +2,7 @@
 
   eval.c -
 
-  $Author: shugo $
+  $Author: nobu $
   created at: Thu Jun 10 14:22:17 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -129,7 +129,7 @@ ruby_finalize_1(void)
 
 /** Runs the VM finalization processes.
  *
- * <code>END{}</code> and procs registered by <code>Kernel.#at_ext</code> are
+ * <code>END{}</code> and procs registered by <code>Kernel.#at_exit</code> are
  * executed here. See the Ruby language spec for more details.
  *
  * @note This function is allowed to raise an exception if an error occurred.
@@ -805,6 +805,8 @@ rb_ensure(VALUE (*b_proc)(ANYARGS), VALUE data1, VALUE (*e_proc)(ANYARGS), VALUE
 {
     int state;
     volatile VALUE result = Qnil;
+    volatile VALUE errinfo;
+    rb_thread_t *const th = GET_THREAD();
 
     PUSH_TAG();
     if ((state = EXEC_TAG()) == 0) {
@@ -813,7 +815,9 @@ rb_ensure(VALUE (*b_proc)(ANYARGS), VALUE data1, VALUE (*e_proc)(ANYARGS), VALUE
     POP_TAG();
     /* TODO: fix me */
     /* retval = prot_tag ? prot_tag->retval : Qnil; */     /* save retval */
+    errinfo = th->errinfo;
     (*e_proc) (data2);
+    th->errinfo = errinfo;
     if (state)
 	JUMP_TAG(state);
     return result;
@@ -1505,8 +1509,10 @@ rb_f_callee_name(void)
  *  call-seq:
  *     __dir__         -> string
  *
- *  Returns the value of <code>File.dirname(__FILE__)</code>
+ *  Returns the canonicalized absolute path of the directory of the file from
+ *  which this method is called. It means symlinks in the path is resolved.
  *  If <code>__FILE__</code> is <code>nil</code>, it returns <code>nil</code>.
+ *  The return value equals to <code>File.dirname(File.realpath(__FILE__))</code>.
  *
  */
 static VALUE

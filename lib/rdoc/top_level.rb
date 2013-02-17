@@ -187,6 +187,7 @@ class RDoc::TopLevel < RDoc::Context
 
   ##
   # Dumps this TopLevel for use by ri.  See also #marshal_load
+
   def marshal_dump
     [
       MARSHAL_VERSION,
@@ -226,7 +227,7 @@ class RDoc::TopLevel < RDoc::Context
 
   def page_name
     basename = File.basename @relative_name
-    basename =~ /\.[^.]*$/
+    basename =~ /\.(rb|rdoc|txt|md)$/i
 
     $` || basename
   end

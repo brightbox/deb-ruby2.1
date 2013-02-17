@@ -5,6 +5,19 @@
 # See LICENSE.txt for permissions.
 #++
 
+require 'rbconfig'
+
+module Gem
+  VERSION = '2.0.0.rc.2'
+end
+
+# Must be first since it unloads the prelude from 1.9.2
+require 'rubygems/compatibility'
+
+require 'rubygems/defaults'
+require 'rubygems/deprecate'
+require 'rubygems/errors'
+
 ##
 # RubyGems is the Ruby standard for publishing and managing third party
 # libraries.
@@ -91,22 +104,12 @@
 #
 # (If your name is missing, PLEASE let us know!)
 #
+# See {LICENSE.txt}[rdoc-ref:lib/rubygems/LICENSE.txt] for permissions.
+#
 # Thanks!
 #
 # -The RubyGems Team
 
-require 'rbconfig'
-
-module Gem
-  VERSION = '2.0.0.preview3.1'
-end
-
-# Must be first since it unloads the prelude from 1.9.2
-require 'rubygems/compatibility'
-
-require 'rubygems/defaults'
-require 'rubygems/deprecate'
-require 'rubygems/errors'
 
 module Gem
   RUBYGEMS_DIR = File.dirname File.expand_path(__FILE__)
@@ -207,7 +210,7 @@ module Gem
 
         begin
           while true
-            path = GEM_DEP_FILES.find { |f| File.exists?(f) }
+            path = GEM_DEP_FILES.find { |f| File.file?(f) }
 
             if path
               path = File.join here, path
@@ -226,7 +229,9 @@ module Gem
         end
       end
 
-      return unless File.exists? path
+      path.untaint
+
+      return unless File.file? path
 
       rs = Gem::RequestSet.new
       rs.load_gemdeps path
@@ -368,29 +373,6 @@ module Gem
     # TODO: raise "no"
     paths.path
   end
-
-  ##
-  # Expand each partial gem path with each of the required paths specified
-  # in the Gem spec.  Each expanded path is yielded.
-
-  def self.each_load_path(partials)
-    partials.each do |gp|
-      base = File.basename gp
-      specfn = File.join(dir, "specifications", "#{base}.gemspec")
-      if File.exists? specfn
-        spec = eval(File.read(specfn))
-        spec.require_paths.each do |rp|
-          yield File.join(gp,rp)
-        end
-      else
-        filename = File.join(gp, 'lib')
-        yield(filename) if File.exists? filename
-      end
-    end
-  end
-
-  private_class_method :each_load_path
-
 
   ##
   # Quietly ensure the named Gem directory contains all the proper

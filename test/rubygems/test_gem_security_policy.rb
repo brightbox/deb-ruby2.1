@@ -31,8 +31,10 @@ class TestGemSecurityPolicy < Gem::TestCase
     @sha1 = OpenSSL::Digest::SHA1
     @trust_dir = Gem::Security.trust_dir.dir # HACK use the object
 
+    @no        = Gem::Security::NoSecurity
     @almost_no = Gem::Security::AlmostNoSecurity
     @low       = Gem::Security::LowSecurity
+    @medium    = Gem::Security::MediumSecurity
     @high      = Gem::Security::HighSecurity
 
     @chain = Gem::Security::Policy.new(
@@ -84,6 +86,14 @@ class TestGemSecurityPolicy < Gem::TestCase
     assert @chain.check_chain chain, Time.now
   end
 
+  def test_check_chain_empty_chain
+    e = assert_raises Gem::Security::Exception do
+      @chain.check_chain [], Time.now
+    end
+
+    assert_equal 'empty signing chain', e.message
+  end
+
   def test_check_chain_invalid
     chain = [PUBLIC_CERT, CHILD_CERT, INVALIDCHILD_CERT]
 
@@ -94,6 +104,14 @@ class TestGemSecurityPolicy < Gem::TestCase
     assert_equal "invalid signing chain: " +
                  "certificate #{INVALIDCHILD_CERT.subject} " +
                  "was not issued by #{CHILD_CERT.subject}", e.message
+  end
+
+  def test_check_chain_no_chain
+    e = assert_raises Gem::Security::Exception do
+      @chain.check_chain nil, Time.now
+    end
+
+    assert_equal 'missing signing chain', e.message
   end
 
   def test_check_cert
@@ -134,8 +152,26 @@ class TestGemSecurityPolicy < Gem::TestCase
     assert @low.check_cert(CHILD_CERT, PUBLIC_CERT, Time.now)
   end
 
+  def test_check_cert_no_signer
+    e = assert_raises Gem::Security::Exception do
+      @high.check_cert(nil, nil, Time.now)
+    end
+
+    assert_equal 'missing signing certificate', e.message
+  end
+
   def test_check_key
     assert @almost_no.check_key(PUBLIC_CERT, PRIVATE_KEY)
+  end
+
+  def test_check_key_no_signer
+    assert @almost_no.check_key(nil, nil)
+
+    e = assert_raises Gem::Security::Exception do
+      @high.check_key(nil, nil)
+    end
+
+    assert_equal 'missing key or signature', e.message
   end
 
   def test_check_key_wrong_key
@@ -151,6 +187,14 @@ class TestGemSecurityPolicy < Gem::TestCase
     chain = [PUBLIC_CERT, CHILD_CERT, INVALIDCHILD_CERT]
 
     assert @chain.check_root chain, Time.now
+  end
+
+  def test_check_root_empty_chain
+    e = assert_raises Gem::Security::Exception do
+      @chain.check_root [], Time.now
+    end
+
+    assert_equal 'missing root certificate', e.message
   end
 
   def test_check_root_invalid_signer
@@ -177,6 +221,14 @@ class TestGemSecurityPolicy < Gem::TestCase
                  e.message
   end
 
+  def test_check_root_no_chain
+    e = assert_raises Gem::Security::Exception do
+      @chain.check_root nil, Time.now
+    end
+
+    assert_equal 'missing signing chain', e.message
+  end
+
   def test_check_trust
     Gem::Security.trust_dir.trust_cert PUBLIC_CERT
 
@@ -189,6 +241,14 @@ class TestGemSecurityPolicy < Gem::TestCase
     assert @high.check_trust [PUBLIC_CERT, CHILD_CERT], @sha1, @trust_dir
   end
 
+  def test_check_trust_empty_chain
+    e = assert_raises Gem::Security::Exception do
+      @chain.check_trust [], @sha1, @trust_dir
+    end
+
+    assert_equal 'missing root certificate', e.message
+  end
+
   def test_check_trust_mismatch
     Gem::Security.trust_dir.trust_cert PUBLIC_CERT
 
@@ -198,6 +258,14 @@ class TestGemSecurityPolicy < Gem::TestCase
 
     assert_equal "trusted root certificate #{PUBLIC_CERT.subject} checksum " +
                  "does not match signing root certificate checksum", e.message
+  end
+
+  def test_check_trust_no_chain
+    e = assert_raises Gem::Security::Exception do
+      @chain.check_trust nil, @sha1, @trust_dir
+    end
+
+    assert_equal 'missing signing chain', e.message
   end
 
   def test_check_trust_no_trust
@@ -220,73 +288,108 @@ class TestGemSecurityPolicy < Gem::TestCase
   def test_verify
     Gem::Security.trust_dir.trust_cert PUBLIC_CERT
 
-    assert @almost_no.verify [PUBLIC_CERT]
+    assert @almost_no.verify [PUBLIC_CERT], nil, *dummy_signatures
   end
 
   def test_verify_chain_signatures
     Gem::Security.trust_dir.trust_cert PUBLIC_CERT
 
-    data = digest 'hello'
-    digest    = { 'SHA1' => { 0 => data } }
-    signature = { 0 => sign(data, PRIVATE_KEY) }
-
-    assert @high.verify [PUBLIC_CERT], nil, digest, signature
+    assert @high.verify [PUBLIC_CERT], nil, *dummy_signatures
   end
 
   def test_verify_chain_key
-    assert @almost_no.verify [PUBLIC_CERT], PRIVATE_KEY
+    @almost_no.verify [PUBLIC_CERT], PRIVATE_KEY, *dummy_signatures
+  end
+
+  def test_verify_no_digests
+    Gem::Security.trust_dir.trust_cert PUBLIC_CERT
+
+    _, signatures = dummy_signatures
+
+    e = assert_raises Gem::Security::Exception do
+      @almost_no.verify [PUBLIC_CERT], nil, {}, signatures
+    end
+
+    assert_equal 'no digests provided (probable bug)', e.message
+  end
+
+  def test_verify_no_digests_no_security
+    Gem::Security.trust_dir.trust_cert PUBLIC_CERT
+
+    _, signatures = dummy_signatures
+
+    e = assert_raises Gem::Security::Exception do
+      @no.verify [PUBLIC_CERT], nil, {}, signatures
+    end
+
+    assert_equal 'missing digest for 0', e.message
+  end
+
+  def test_verify_not_enough_signatures
+    Gem::Security.trust_dir.trust_cert PUBLIC_CERT
+
+    digests, signatures = dummy_signatures
+
+    data = digest 'goodbye'
+
+    signatures[1] = PRIVATE_KEY.sign @sha1.new, data.digest
+
+    e = assert_raises Gem::Security::Exception do
+      @almost_no.verify [PUBLIC_CERT], nil, digests, signatures
+    end
+
+    assert_equal 'missing digest for 1', e.message
+  end
+
+  def test_verify_wrong_digest_type
+    Gem::Security.trust_dir.trust_cert PUBLIC_CERT
+
+    sha512 = OpenSSL::Digest::SHA512
+
+    data = sha512.new
+    data << 'hello'
+
+    digests    = { 'SHA512' => { 0 => data } }
+    signature  = PRIVATE_KEY.sign sha512.new, data.digest
+    signatures = { 0 => signature }
+
+    e = assert_raises Gem::Security::Exception do
+      @almost_no.verify [PUBLIC_CERT], nil, digests, signatures
+    end
+
+    assert_equal 'no digests provided (probable bug)', e.message
   end
 
   def test_verify_signatures_chain
-    data = digest 'hello'
-    digest    = { 'SHA1' => { 0 => data } }
-    signature = { 0 => sign(data, CHILD_KEY) }
-
     @spec.cert_chain = [PUBLIC_CERT, CHILD_CERT]
 
-    assert @chain.verify_signatures @spec, digest, signature
+    assert @chain.verify_signatures @spec, *dummy_signatures(CHILD_KEY)
   end
 
   def test_verify_signatures_data
-    data = digest 'hello'
-    digest    = { 'SHA1' => { 0 => data } }
-    signature = { 0 => sign(data) }
-
     @spec.cert_chain = [PUBLIC_CERT]
 
-    @almost_no.verify_signatures @spec, digest, signature
+    @almost_no.verify_signatures @spec, *dummy_signatures
   end
 
   def test_verify_signatures_root
-    data = digest 'hello'
-    digest    = { 'SHA1' => { 0 => data } }
-    signature = { 0 => sign(data, CHILD_KEY) }
-
     @spec.cert_chain = [PUBLIC_CERT, CHILD_CERT]
 
-    assert @root.verify_signatures @spec, digest, signature
+    assert @root.verify_signatures @spec, *dummy_signatures(CHILD_KEY)
   end
 
   def test_verify_signatures_signer
-    data = digest 'hello'
-    digest    = { 'SHA1' => { 0 => data } }
-    signature = { 0 => sign(data) }
-
     @spec.cert_chain = [PUBLIC_CERT]
 
-    assert @low.verify_signatures @spec, digest, signature
+    assert @low.verify_signatures @spec, *dummy_signatures
   end
 
   def test_verify_signatures_trust
     Gem::Security.trust_dir.trust_cert PUBLIC_CERT
 
-    data = digest 'hello'
-    digest    = { 'SHA1' => { 0 => data } }
-    signature = { 0 => sign(data, PRIVATE_KEY) }
-
     @spec.cert_chain = [PUBLIC_CERT]
 
-    assert @high.verify_signatures @spec, digest, signature
+    assert @high.verify_signatures @spec, *dummy_signatures
   end
 
   def test_verify_signatures
@@ -370,6 +473,15 @@ class TestGemSecurityPolicy < Gem::TestCase
 
   def sign data, key = PRIVATE_KEY
     key.sign @sha1.new, data.digest
+  end
+
+  def dummy_signatures key = PRIVATE_KEY
+    data = digest 'hello'
+
+    digests    = { 'SHA1' => { 0 => data } }
+    signatures = { 0 => sign(data, key) }
+
+    return digests, signatures
   end
 
 end

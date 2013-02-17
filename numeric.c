@@ -2,7 +2,7 @@
 
   numeric.c -
 
-  $Author: nobu $
+  $Author: marcandre $
   created at: Fri Aug 13 18:33:09 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -227,6 +227,7 @@ coerce_rescue(VALUE *x)
 	     RSTRING_PTR(v):
 	     rb_obj_classname(x[1]),
 	     rb_obj_classname(x[0]));
+
     return Qnil;		/* dummy */
 }
 
@@ -238,7 +239,14 @@ do_coerce(VALUE *x, VALUE *y, int err)
 
     a[0] = *x; a[1] = *y;
 
-    ary = rb_rescue(coerce_body, (VALUE)a, err?coerce_rescue:0, (VALUE)a);
+    if (!rb_respond_to(*y, id_coerce)) {
+	if (err) {
+	    coerce_rescue(a);
+	}
+	return FALSE;
+    }
+
+    ary = rb_rescue(coerce_body, (VALUE)a, err ? coerce_rescue : 0, (VALUE)a);
     if (!RB_TYPE_P(ary, T_ARRAY) || RARRAY_LEN(ary) != 2) {
 	if (err) {
 	    rb_raise(rb_eTypeError, "coerce must return [x, y]");
@@ -2931,7 +2939,7 @@ int_pow(long x, unsigned long y)
  *  be negative or fractional.
  *
  *    2 ** 3      #=> 8
- *    2 ** -1     #=> 0.5
+ *    2 ** -1     #=> (1/2)
  *    2 ** 0.5    #=> 1.4142135623731
  */
 
@@ -2943,6 +2951,13 @@ fix_pow(VALUE x, VALUE y)
     if (FIXNUM_P(y)) {
 	long b = FIX2LONG(y);
 
+	if (a == 1) return INT2FIX(1);
+	if (a == -1) {
+	    if (b % 2 == 0)
+		return INT2FIX(1);
+	    else
+		return INT2FIX(-1);
+	}
 	if (b < 0)
 	    return rb_funcall(rb_rational_raw1(x), rb_intern("**"), 1, y);
 
@@ -2952,27 +2967,18 @@ fix_pow(VALUE x, VALUE y)
 	    if (b > 0) return INT2FIX(0);
 	    return DBL2NUM(INFINITY);
 	}
-	if (a == 1) return INT2FIX(1);
-	if (a == -1) {
-	    if (b % 2 == 0)
-		return INT2FIX(1);
-	    else
-		return INT2FIX(-1);
-	}
 	return int_pow(a, b);
     }
     switch (TYPE(y)) {
       case T_BIGNUM:
-
-	if (negative_int_p(y))
-	    return rb_funcall(rb_rational_raw1(x), rb_intern("**"), 1, y);
-
-	if (a == 0) return INT2FIX(0);
 	if (a == 1) return INT2FIX(1);
 	if (a == -1) {
 	    if (int_even_p(y)) return INT2FIX(1);
 	    else return INT2FIX(-1);
 	}
+	if (negative_int_p(y))
+	    return rb_funcall(rb_rational_raw1(x), rb_intern("**"), 1, y);
+	if (a == 0) return INT2FIX(0);
 	x = rb_int2big(FIX2LONG(x));
 	return rb_big_pow(x, y);
       case T_FLOAT:
@@ -3822,18 +3828,93 @@ Init_Numeric(void)
     rb_undef_alloc_func(rb_cFloat);
     rb_undef_method(CLASS_OF(rb_cFloat), "new");
 
+    /*
+     *  Represents the rounding mode for floating point addition.
+     *
+     *  Usually defaults to 1, rounding to the nearest number.
+     *
+     *  Other modes include:
+     *
+     *  -1::	Indeterminable
+     *	0::	Rounding towards zero
+     *	1::	Rounding to the nearest number
+     *	2::	Rounding towards positive infinity
+     *	3::	Rounding towards negative infinity
+     */
     rb_define_const(rb_cFloat, "ROUNDS", INT2FIX(FLT_ROUNDS));
+    /*
+     *	The base of the floating point, or number of unique digits used to
+     *	represent the number.
+     *
+     *  Usually defaults to 2 on most systems, which would represent a base-10 decimal.
+     */
     rb_define_const(rb_cFloat, "RADIX", INT2FIX(FLT_RADIX));
+    /*
+     * The number of base digits for the +double+ data type.
+     *
+     * Usually defaults to 53.
+     */
     rb_define_const(rb_cFloat, "MANT_DIG", INT2FIX(DBL_MANT_DIG));
+    /*
+     *	The number of decimal digits in a double-precision floating point.
+     *
+     *	Usually defaults to 15.
+     */
     rb_define_const(rb_cFloat, "DIG", INT2FIX(DBL_DIG));
+    /*
+     *	The smallest posable exponent value in a double-precision floating
+     *	point.
+     *
+     *	Usually defaults to -1021.
+     */
     rb_define_const(rb_cFloat, "MIN_EXP", INT2FIX(DBL_MIN_EXP));
+    /*
+     *	The largest possible exponent value in a double-precision floating
+     *	point.
+     *
+     *	Usually defaults to 1024.
+     */
     rb_define_const(rb_cFloat, "MAX_EXP", INT2FIX(DBL_MAX_EXP));
+    /*
+     *	The smallest negative exponent in a double-precision floating point
+     *	where 10 raised to this power minus 1.
+     *
+     *	Usually defaults to -307.
+     */
     rb_define_const(rb_cFloat, "MIN_10_EXP", INT2FIX(DBL_MIN_10_EXP));
+    /*
+     *	The largest positive exponent in a double-precision floating point where
+     *	10 raised to this power minus 1.
+     *
+     *	Usually defaults to 308.
+     */
     rb_define_const(rb_cFloat, "MAX_10_EXP", INT2FIX(DBL_MAX_10_EXP));
+    /*
+     *	The smallest positive integer in a double-precision floating point.
+     *
+     *	Usually defaults to 2.2250738585072014e-308.
+     */
     rb_define_const(rb_cFloat, "MIN", DBL2NUM(DBL_MIN));
+    /*
+     *	The largest possible integer in a double-precision floating point number.
+     *
+     *	Usually defaults to 1.7976931348623157e+308.
+     */
     rb_define_const(rb_cFloat, "MAX", DBL2NUM(DBL_MAX));
+    /*
+     *	The difference between 1 and the smallest double-precision floating
+     *	point number.
+     *
+     *	Usually defaults to 2.2204460492503131e-16.
+     */
     rb_define_const(rb_cFloat, "EPSILON", DBL2NUM(DBL_EPSILON));
+    /*
+     *	An expression representing positive infinity.
+     */
     rb_define_const(rb_cFloat, "INFINITY", DBL2NUM(INFINITY));
+    /*
+     *	An expression representing a value which is "not a number".
+     */
     rb_define_const(rb_cFloat, "NAN", DBL2NUM(NAN));
 
     rb_define_method(rb_cFloat, "to_s", flo_to_s, 0);

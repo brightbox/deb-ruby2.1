@@ -906,6 +906,11 @@ class TestRegexp < Test::Unit::TestCase
     assert_warning(/duplicated/) { Regexp.new('[\u1000-\u2000\u3042-\u3046\u3044]') }
     assert_warning(/duplicated/) { Regexp.new('[\u3044\u3041-\u3047]') }
     assert_warning(/duplicated/) { Regexp.new('[\u3042\u3044\u3046\u3041-\u3047]') }
+
+    bug7471 = '[ruby-core:50344]'
+    EnvUtil.verbose_warning do
+      assert_warning(/\A\z/, bug7471) { Regexp.new('[\D]') =~ "\u3042" }
+    end
   end
 
   def test_property_warn
@@ -923,5 +928,12 @@ class TestRegexp < Test::Unit::TestCase
     bug6853 = '[ruby-core:47115]'
     # use Regexp.new instead of literal to ignore a parser warning.
     check(Regexp.new('[0-1-\\s]'), [' ', '-'], ['2', 'a'], bug6853)
+  end
+
+  def test_error_message_on_failed_conversion
+    bug7539 = '[ruby-core:50733]'
+    assert_equal false, /x/=== 42
+    err = assert_raise(TypeError){ Regexp.quote(42) }
+    assert_equal 'no implicit conversion of Fixnum into String', err.message, bug7539
   end
 end

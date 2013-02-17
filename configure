@@ -628,19 +628,33 @@ BUILTIN_ENCOBJS
 USE_RUBYGEMS
 MANTYPE
 NROFF
+vendorarchhdrdir
+sitearchhdrdir
+rubyarchhdrdir
 vendorhdrdir
 sitehdrdir
 rubyhdrdir
 UNIVERSAL_INTS
 UNIVERSAL_ARCHNAMES
 configure_args
+vendorarchdir
+vendorlibdir
 vendordir
+sitearchdir
+sitelibdir
 sitedir
+rubyarchdir
+rubylibdir
 ruby_version
 sitearch
 arch
+sitearchincludedir
+archincludedir
+sitearchlibdir
+archlibdir
 RI_BASE_NAME
 ridir
+rubyarchprefix
 rubylibprefix
 MAKEFILES
 PLATFORM_DIR
@@ -786,6 +800,7 @@ host_os
 host_vendor
 host_cpu
 host
+RUBY_VERSION_NAME
 RUBYW_BASE_NAME
 RUBY_BASE_NAME
 build_os
@@ -864,15 +879,22 @@ enable_install_rdoc
 enable_install_capi
 enable_dln
 enable_debug_env
+enable_multiarch
 with_rubylibprefix
+with_rubyarchprefix
 with_ridir
 with_ruby_version
 with_sitedir
+with_sitearchdir
 with_vendordir
+with_vendorarchdir
 with_search_path
 with_rubyhdrdir
+with_rubyarchhdrdir
 with_sitehdrdir
+with_sitearchhdrdir
 with_vendorhdrdir
+with_vendorarchhdrdir
 with_mantype
 enable_rubygems
 with_ruby_pc
@@ -1522,6 +1544,7 @@ Optional Features:
   --disable-install-capi  do not install C API documents during install
   --disable-dln           disable dynamic link feature
   --enable-debug-env      enable RUBY_DEBUG environment variable
+  --enable-multiarch      enable multiarch compatible directories
   --disable-rubygems      disable rubygems by default
 
 Optional Packages:
@@ -1548,19 +1571,37 @@ Optional Packages:
   --with-soname=SONAME    base name of shared library
   --with-rubylibprefix=DIR
                           prefix for ruby libraries [[LIBDIR/RUBY_BASE_NAME]]
+  --with-rubyarchprefix=DIR
+                          prefix for architecture dependent ruby libraries
+                          [[RUBYLIBPREFIX/ARCH]]
   --with-ridir=DIR        ri documentation [[DATAROOTDIR/ri]]
   --with-ruby-version=STR ruby version string for version specific directories
                           [[full]] (full|minor|STR)
   --with-sitedir=DIR      site libraries in DIR [[RUBY_LIB_PREFIX/site_ruby]],
                           "no" to disable site directory
+  --with-arch-sitedir=DIR architecture dependent site libraries in DIR
+                          [[SITEDIR/SITEARCH]], "no" to disable site directory
   --with-vendordir=DIR    vendor libraries in DIR
                           [[RUBY_LIB_PREFIX/vendor_ruby]], "no" to disable
                           vendor directory
+  --with-arch-vendordir=DIR
+                          architecture dependent vendor libraries in DIR
+                          [[VENDORDIR/SITEARCH]], "no" to disable vendor
+                          directory
   --with-search-path=DIR  specify the additional search path
   --with-rubyhdrdir=DIR   core headers in DIR
                           [[INCLUDEDIR/RUBY_BASE_NAME-RUBY_VERSION]]
+  --with-arch-rubyhdrdir=DIR
+                          architecture dependent core headers in DIR
+                          [[$(rubyhdrdir)/$(arch)]]
   --with-sitehdrdir=DIR   core site headers in DIR [[RUBYHDRDIR/site_ruby]]
+  --with-arch-sitehdrdir=DIR
+                          architecture dependent core site headers in DIR
+                          [[RUBYHDRDIR/site_ruby]]
   --with-vendorhdrdir=DIR core vendor headers in DIR
+                          [[RUBYHDRDIR/vendor_ruby]]
+  --with-arch-vendorhdrdir=DIR
+                          architecture dependent core vendor headers in DIR
                           [[RUBYHDRDIR/vendor_ruby]]
   --with-mantype=TYPE     specify man page type; TYPE is one of man and doc
   pc file basename
@@ -2906,6 +2947,16 @@ fi
 RUBY_BASE_NAME=`echo ruby | sed "$program_transform_name"`
 RUBYW_BASE_NAME=`echo rubyw | sed "$program_transform_name"`
 
+
+RUBY_VERSION_NAME='${RUBY_BASE_NAME}-${ruby_version}'
+
+cat >>confdefs.h <<_ACEOF
+#define RUBY_BASE_NAME "${RUBY_BASE_NAME}" !<verconf>!
+_ACEOF
+
+cat >>confdefs.h <<_ACEOF
+#define RUBY_VERSION_NAME RUBY_BASE_NAME"-"RUBY_LIB_VERSION !<verconf>!
+_ACEOF
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking host system type" >&5
@@ -17269,7 +17320,7 @@ esac ;; #(
 			  test "$GCC" = yes && test "$rb_cv_prog_gnu_ld" = yes || LDSHARED='$(LD) -Bshareable'
 			fi
 			rb_cv_dlopen=yes ;; #(
-  openbsd*) :
+  openbsd*|mirbsd*) :
     	: ${LDSHARED='$(CC) -shared ${CCDLFLAGS}'}
 			if test "$rb_cv_binary_elf" = yes; then
 			    LDFLAGS="$LDFLAGS -Wl,-E"
@@ -17283,7 +17334,7 @@ esac ;; #(
 			# /usr/local/include is always searched for
 			# some reason, but /usr/local/lib is not.
 			hdr=`find /usr/local/include -name \*.h -type f | sed 's:^/usr/local/include/::;q'`
-			if test -n "$hdr" && $CC -E -include "$hdr" -xc /dev/null 2>/dev/null | fgrep -q "$hdr"; then
+			if test -n "$hdr" && $CC -E -include "$hdr" -xc - </dev/null 2>/dev/null | fgrep -q "$hdr"; then
 			    $CC -print-search-dirs | grep -q '^libraries:.*:/usr/local/lib/*' ||
 			    echo " $LDFLAGS " | grep -q ' -L */usr/local/lib/* ' ||
 			    LDFLAGS="${LDFLAGS:+$LDFLAGS }-L/usr/local/lib"
@@ -18953,6 +19004,49 @@ case "$target_os" in #(
      ;;
 esac
 
+# Check whether --enable-multiarch was given.
+if test "${enable_multiarch+set}" = set; then :
+  enableval=$enable_multiarch; multiarch=
+else
+  unset multiarch
+fi
+
+
+archlibdir='${libdir}'${multiarch+'/${arch}'}
+sitearchlibdir='${libdir}'${multiarch+'/${sitearch}'}
+archincludedir='${includedir}'${multiarch+'/${arch}'}
+sitearchincludedir='${includedir}'${multiarch+'/${sitearch}'}
+
+shvar_to_cpp() {
+    local var="$1" val="$2"
+    val="`echo '"'"${val}"'"' |
+	sed \
+	    -e 's/\${\([A-Z][A-Z_]*\)}/"\1"/g' \
+	    -e 's|\${sitearchlibdir}|'"${sitearchlibdir}|g" \
+	    -e 's|\${sitearchincludedir}|'"${sitearchincludedir}|g" \
+	    -e 's|\${archlibdir}|'"${archlibdir}|g" \
+	    -e 's|\${archincludedir}|'"${archincludedir}|g" \
+	    -e 's|\${libdir}|'"${libdir}|g" \
+	    -e 's/\${ruby_version}/"RUBY_LIB_VERSION"/g' \
+	    -e 's/\${arch}/"arch"/g' \
+	    -e 's/\${sitearch}/"arch"/g' \
+	    -e 's/\${vendorarchdir}/"RUBY_VENDOR_ARCH_LIB"/g' \
+	    -e 's/\${sitearchdir}/"RUBY_SITE_ARCH_LIB"/g' \
+	    -e 's/\${vendorlibdir}/"RUBY_VENDOR_LIB2"/g' \
+	    -e 's/\${sitelibdir}/"RUBY_SITE_LIB2"/g' \
+	    -e 's/\${vendordir}/"RUBY_VENDOR_LIB"/g' \
+	    -e 's/\${sitedir}/"RUBY_SITE_LIB"/g' \
+	    -e 's/\${rubylibdir}/"RUBY_LIB"/g' \
+	    -e 's/\${rubylibprefix}/"RUBY_LIB_PREFIX"/g' \
+	    -e 's/\${rubyarchprefix}/"RUBY_ARCH_PREFIX_FOR(arch)"/g' \
+	    -e 's/\${exec_prefix}/"RUBY_EXEC_PREFIX"/g' \
+	    -e 's|^\"NONE/|RUBY_EXEC_PREFIX\"/|' \
+	    -e 's|^\"NONE\"|\"'"${prefix}"'\"|' \
+	    -e 's/^\"\"\(.\)/\1/;s/\(.\)\"\"$/\1/'
+	`"
+    eval $var='"$val"'
+}
+
 rubylibprefix='${libdir}/${RUBY_BASE_NAME}'
 
 # Check whether --with-rubylibprefix was given.
@@ -18963,7 +19057,17 @@ if test "${with_rubylibprefix+set}" = set; then :
 	    rubylibprefix="$withval"
 fi
 
-RUBY_LIB_PREFIX=`eval echo \\"${rubylibprefix}\\"`
+
+rubylibdir='${rubylibprefix}/${ruby_version}'
+rubyarchdir=${multiarch+'${rubyarchprefix}/${ruby_version}'}${multiarch-'${rubylibdir}/${arch}'}
+
+rubyarchprefix=${multiarch+'${archlibdir}/${RUBY_BASE_NAME}'}${multiarch-'${rubylibprefix}/${arch}'}
+
+# Check whether --with-rubyarchprefix was given.
+if test "${with_rubyarchprefix+set}" = set; then :
+  withval=$with_rubyarchprefix; rubyarchprefix="$withval"
+fi
+
 
 
 RI_BASE_NAME=`echo ${RUBY_BASE_NAME} | sed 's/ruby/ri/'`
@@ -18974,7 +19078,6 @@ if test "${with_ridir+set}" = set; then :
   withval=$with_ridir; ridir=$withval
 fi
 
-RIDIR=`eval echo \\"${ridir}\\"`
 
 
 
@@ -19020,10 +19123,16 @@ else
   sitedir='${rubylibprefix}/site_ruby'
 fi
 
-dir="${sitedir}"
-until SITE_DIR=`eval echo \\"${dir}\\"`; test "x${dir}" = "x${SITE_DIR}"; do
-    dir="${SITE_DIR}"
-done
+sitelibdir='${sitedir}/${ruby_version}'
+
+
+# Check whether --with-sitearchdir was given.
+if test "${with_sitearchdir+set}" = set; then :
+  withval=$with_sitearchdir; sitearchdir=$withval
+else
+  sitearchdir=${multiarch+'${rubyarchprefix}/site_ruby/${ruby_version}'}${multiarch-'${sitelibdir}/${sitearch}'}
+fi
+
 
 
 # Check whether --with-vendordir was given.
@@ -19033,59 +19142,29 @@ else
   vendordir='${rubylibprefix}/vendor_ruby'
 fi
 
-dir="${vendordir}"
-until VENDOR_DIR=`eval echo \\"${dir}\\"`; test "x${dir}" = "x${VENDOR_DIR}"; do
-    dir="${VENDOR_DIR}"
-done
+vendorlibdir='${vendordir}/${ruby_version}'
+
+
+# Check whether --with-vendorarchdir was given.
+if test "${with_vendorarchdir+set}" = set; then :
+  withval=$with_vendorarchdir; vendorarchdir=$withval
+else
+  vendorarchdir=${multiarch+'${rubyarchprefix}/vendor_ruby/${ruby_version}'}${multiarch-'${vendorlibdir}/${sitearch}'}
+fi
+
 
 if test "${LOAD_RELATIVE+set}"; then
     cat >>confdefs.h <<_ACEOF
 #define LOAD_RELATIVE $LOAD_RELATIVE
 _ACEOF
 
-    RUBY_EXEC_PREFIX=""
-    RUBY_LIB_PREFIX="`eval echo "$RUBY_LIB_PREFIX" | sed 's|^NONE/|/|;s|^'"$prefix"'/|/|'`"
-    RUBY_SITE_LIB_PATH="`eval echo "$SITE_DIR" | sed 's|^NONE/|/|;s|^'"$prefix"'/|/|'`"
-    RUBY_VENDOR_LIB_PATH="`eval echo "$VENDOR_DIR" | sed 's|^NONE/|/|;s|^'"$prefix"'/|/|'`"
+    RUBY_EXEC_PREFIX='""'
 else
-    RUBY_EXEC_PREFIX="`eval echo \\"$exec_prefix/\\" | sed 's|^NONE/|'"$prefix"'/|;s|/$||'`"
-    RUBY_LIB_PREFIX="`eval echo \\"$RUBY_LIB_PREFIX\\" | sed 's|^NONE/|'"$prefix"'/|'`"
-    RUBY_SITE_LIB_PATH="`eval echo \\"$SITE_DIR\\" | sed 's|^NONE/|'"$prefix"'/|'`"
-    RUBY_VENDOR_LIB_PATH="`eval echo \\"$VENDOR_DIR\\" | sed 's|^NONE/|'"$prefix"'/|'`"
+    shvar_to_cpp RUBY_EXEC_PREFIX "${exec_prefix}"
 fi
-
-pat=`echo "$RUBY_LIB_PREFIX/" | tr -c '\012' .`'\(.*\)'
-case "$RUBY_SITE_LIB_PATH" in #(
-  "$RUBY_LIB_PREFIX/"*) :
-
-    RUBY_SITE_LIB_PATH='RUBY_LIB_PREFIX"/'"`expr \"$RUBY_SITE_LIB_PATH\" : \"$pat\"`"'"'
-     ;; #(
-  *) :
-
-    RUBY_SITE_LIB_PATH="\"${RUBY_SITE_LIB_PATH}\""
-     ;;
-esac
-case "$RUBY_VENDOR_LIB_PATH" in #(
-  "$RUBY_LIB_PREFIX/"*) :
-
-    RUBY_VENDOR_LIB_PATH='RUBY_LIB_PREFIX"/'"`expr \"$RUBY_VENDOR_LIB_PATH\" : \"$pat\"`"'"'
-     ;; #(
-  *) :
-
-    RUBY_VENDOR_LIB_PATH="\"${RUBY_VENDOR_LIB_PATH}\""
-     ;;
-esac
-pat=`echo "$RUBY_EXEC_PREFIX/" | tr -c '\012' .`'\(.*\)'
-case "$RUBY_LIB_PREFIX" in #(
-  "$RUBY_EXEC_PREFIX/"*) :
-
-    RUBY_LIB_PREFIX='RUBY_EXEC_PREFIX"/'"`expr \"$RUBY_LIB_PREFIX\" : \"$pat\"`"'"'
-     ;; #(
-  *) :
-
-    RUBY_LIB_PREFIX="\"${RUBY_LIB_PREFIX}\""
-     ;;
-esac
+shvar_to_cpp RUBY_LIB_PREFIX "${rubylibprefix}"
+shvar_to_cpp RUBY_ARCH_PREFIX_FOR "${rubyarchprefix}"
+shvar_to_cpp RIDIR "${ridir}"
 
 if test ${RUBY_LIB_VERSION_STYLE+set}; then
     cat >>confdefs.h <<_ACEOF
@@ -19099,28 +19178,57 @@ _ACEOF
 
 fi
 cat >>confdefs.h <<_ACEOF
-#define RUBY_EXEC_PREFIX "${RUBY_EXEC_PREFIX}"
+#define RUBY_EXEC_PREFIX ${RUBY_EXEC_PREFIX}
 _ACEOF
 
 cat >>confdefs.h <<_ACEOF
 #define RUBY_LIB_PREFIX ${RUBY_LIB_PREFIX} !<verconf>!
 _ACEOF
 
-if test "x$SITE_DIR" = xno; then
-    $as_echo "#define NO_RUBY_SITE_LIB  !<verconf>!" >>confdefs.h
+cat >>confdefs.h <<_ACEOF
+#define RUBY_ARCH_PREFIX_FOR(arch) ${RUBY_ARCH_PREFIX_FOR} !<verconf>!
+_ACEOF
 
-else
+
+shvar_to_cpp RUBY_LIB "${rubylibdir}"
+if test "x${RUBY_LIB}" != 'xRUBY_LIB_PREFIX"/"RUBY_LIB_VERSION'; then
     cat >>confdefs.h <<_ACEOF
-#define RUBY_SITE_LIB ${RUBY_SITE_LIB_PATH} !<verconf>!
+#define RUBY_LIB ${RUBY_LIB} !<verconf>!
 _ACEOF
 
 fi
-if test "x$VENDOR_DIR" = xno; then
+shvar_to_cpp RUBY_ARCH_LIB_FOR "${rubyarchdir}"
+cat >>confdefs.h <<_ACEOF
+#define RUBY_ARCH_LIB_FOR(arch) ${RUBY_ARCH_LIB_FOR} !<verconf>!
+_ACEOF
+
+if test "x$sitedir" = xno; then
+    $as_echo "#define NO_RUBY_SITE_LIB  !<verconf>!" >>confdefs.h
+
+else
+    shvar_to_cpp RUBY_SITE_LIB "${sitedir}"
+    cat >>confdefs.h <<_ACEOF
+#define RUBY_SITE_LIB ${RUBY_SITE_LIB} !<verconf>!
+_ACEOF
+
+    shvar_to_cpp RUBY_SITE_ARCH_LIB_FOR "${sitearchdir}"
+    cat >>confdefs.h <<_ACEOF
+#define RUBY_SITE_ARCH_LIB_FOR(arch) ${RUBY_SITE_ARCH_LIB_FOR} !<verconf>!
+_ACEOF
+
+fi
+if test "x$vendordir" = xno; then
     $as_echo "#define NO_RUBY_VENDOR_LIB  !<verconf>!" >>confdefs.h
 
 else
+    shvar_to_cpp RUBY_VENDOR_LIB "${vendordir}"
     cat >>confdefs.h <<_ACEOF
-#define RUBY_VENDOR_LIB ${RUBY_VENDOR_LIB_PATH} !<verconf>!
+#define RUBY_VENDOR_LIB ${RUBY_VENDOR_LIB} !<verconf>!
+_ACEOF
+
+    shvar_to_cpp RUBY_VENDOR_ARCH_LIB_FOR "${vendorarchdir}"
+    cat >>confdefs.h <<_ACEOF
+#define RUBY_VENDOR_ARCH_LIB_FOR(arch) ${RUBY_VENDOR_ARCH_LIB_FOR} !<verconf>!
 _ACEOF
 
 fi
@@ -19233,7 +19341,16 @@ fi
 if test "${with_rubyhdrdir+set}" = set; then :
   withval=$with_rubyhdrdir; rubyhdrdir=$withval
 else
-  rubyhdrdir='${includedir}/${RUBY_BASE_NAME}-${ruby_version}'
+  rubyhdrdir='${includedir}/${RUBY_VERSION_NAME}'
+fi
+
+
+
+# Check whether --with-rubyarchhdrdir was given.
+if test "${with_rubyarchhdrdir+set}" = set; then :
+  withval=$with_rubyarchhdrdir; rubyarchhdrdir=$withval
+else
+  rubyarchhdrdir=${multiarch+'${archincludedir}/${RUBY_VERSION_NAME}'}${multiarch-'${rubyhdrdir}/${arch}'}
 fi
 
 
@@ -19247,11 +19364,29 @@ fi
 
 
 
+# Check whether --with-sitearchhdrdir was given.
+if test "${with_sitearchhdrdir+set}" = set; then :
+  withval=$with_sitearchhdrdir; sitearchhdrdir=$withval
+else
+  sitearchhdrdir=${multiarch+'${sitearchincludedir}/${RUBY_VERSION_NAME}/site_ruby'}${multiarch-'${sitehdrdir}/${sitearch}'}
+fi
+
+
+
 # Check whether --with-vendorhdrdir was given.
 if test "${with_vendorhdrdir+set}" = set; then :
   withval=$with_vendorhdrdir; vendorhdrdir=$withval
 else
   vendorhdrdir='${rubyhdrdir}/vendor_ruby'
+fi
+
+
+
+# Check whether --with-vendorarchhdrdir was given.
+if test "${with_vendorarchhdrdir+set}" = set; then :
+  withval=$with_vendorarchhdrdir; vendorarchhdrdir=$withval
+else
+  vendorarchhdrdir=${multiarch+'${sitearchincludedir}/${RUBY_VERSION_NAME}/vendor_ruby'}${multiarch-'${vendorhdrdir}/${sitearch}'}
 fi
 
 

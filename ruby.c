@@ -2,7 +2,7 @@
 
   ruby.c -
 
-  $Author: ko1 $
+  $Author: kazu $
   created at: Tue Aug 10 12:47:31 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -174,8 +174,8 @@ usage(const char *name, int help)
 	M("--copyright",                   "", "print the copyright"),
 	M("--enable=feature[,...]",	   ", --disable=feature[,...]",
 	  "enable or disable features"),
-	M("--internal-encoding=encoding",  ", --external-encoding=encoding",
-	  "specify the default internal and external character encoding"),
+	M("--external-encoding=encoding",  ", --internal-encoding=encoding",
+	  "specify the default external or internal character encoding"),
 	M("--version",                     "", "print the version"),
 	M("--help",			   "", "show this message, -h for short message"),
     };
