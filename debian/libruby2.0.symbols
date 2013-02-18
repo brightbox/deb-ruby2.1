@@ -388,6 +388,7 @@ libruby-2.0.so.2.0 libruby2.0 #MINVER#
  rb_debug_inspector_frame_binding_get@Base 2.0.0~rc1
  rb_debug_inspector_frame_class_get@Base 2.0.0~rc1
  rb_debug_inspector_frame_iseq_get@Base 2.0.0~rc1
+ rb_debug_inspector_frame_self_get@Base 2.0.0~rc2-1
  rb_debug_inspector_open@Base 2.0.0~rc1
  rb_declare_transcoder@Base 2.0.0~rc1
  rb_default_external_encoding@Base 2.0.0~rc1
