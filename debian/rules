@@ -34,3 +34,8 @@ configure_options += $(shell dpkg-buildflags --export=configure)
 
 override_dh_auto_configure:
 	dh_auto_configure -- $(configure_options)
+
+override_dh_auto_clean:
+	dh_auto_clean
+	$(RM) -r .ext
+	$(RM) -r doc/capi
