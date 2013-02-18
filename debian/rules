@@ -9,15 +9,18 @@ export DH_OPTIONS
 TESTOPTS += -v
 export TESTOPTS
 
+DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
 configure_options += --enable-multiarch
 # FIXME depends on a resolution for http://bugs.ruby-lang.org/issues/7874
-#configure_options += --with-multiachname=$(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+#configure_options += --with-multiachname=$(DEB_HOST_MULTIARCH)
 configure_options += --program-suffix=2.0
 configure_options += --with-soname=ruby-2.0
 configure_options += --enable-shared
 configure_options += --disable-rpath
 configure_options += --with-baseruby=/usr/bin/ruby1.9.1
 configure_options += --with-sitedir='/usr/local/lib/site_ruby'
+configure_options += --with-sitearchdir="/usr/local/lib/$(DEB_HOST_MULTIARCH)/site_ruby"
 
 # the following are ignored by ./configure, but used by some extconf.rb scripts
 configure_options += --enable-ipv6
