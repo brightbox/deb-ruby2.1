@@ -12,8 +12,7 @@ export TESTOPTS
 DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 configure_options += --enable-multiarch
-# FIXME depends on a resolution for http://bugs.ruby-lang.org/issues/7874
-#configure_options += --with-multiachname=$(DEB_HOST_MULTIARCH)
+configure_options += --target=$(DEB_HOST_MULTIARCH)
 configure_options += --program-suffix=2.0
 configure_options += --with-soname=ruby-2.0
 configure_options += --enable-shared
