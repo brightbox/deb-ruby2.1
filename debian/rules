@@ -28,7 +28,7 @@ configure_options += --with-dbm-type=gdbm_compat
 configure_options += $(shell dpkg-buildflags --export=configure)
 
 %:
-	dh $@  --with autotools-dev --with autoreconf
+	dh $@ --parallel --with autotools-dev --with autoreconf
 
 override_dh_auto_configure:
 	dh_auto_configure -- $(configure_options)
