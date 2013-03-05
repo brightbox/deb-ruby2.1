@@ -2,7 +2,7 @@
 
   compar.c -
 
-  $Author: zzak $
+  $Author: drbrain $
   created at: Thu Aug 26 14:39:48 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -29,6 +29,26 @@ rb_cmperr(VALUE x, VALUE y)
     }
     rb_raise(rb_eArgError, "comparison of %s with %s failed",
 	     rb_obj_classname(x), classname);
+}
+
+static VALUE
+invcmp_recursive(VALUE x, VALUE y, int recursive)
+{
+    if (recursive) return Qnil;
+    return rb_check_funcall(y, cmp, 1, &x);
+}
+
+VALUE
+rb_invcmp(VALUE x, VALUE y)
+{
+    VALUE invcmp = rb_exec_recursive(invcmp_recursive, x, y);
+    if (invcmp == Qundef || NIL_P(invcmp)) {
+	return Qnil;
+    }
+    else {
+	int result = -rb_cmpint(invcmp, x, y);
+	return INT2FIX(result);
+    }
 }
 
 static VALUE

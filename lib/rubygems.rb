@@ -8,7 +8,7 @@
 require 'rbconfig'
 
 module Gem
-  VERSION = '2.0.0.rc.2'
+  VERSION = '2.0.0'
 end
 
 # Must be first since it unloads the prelude from 1.9.2
@@ -475,7 +475,9 @@ module Gem
     require 'zlib'
     data = StringIO.new data
 
-    Zlib::GzipReader.new(data).read
+    unzipped = Zlib::GzipReader.new(data).read
+    unzipped.force_encoding Encoding::BINARY if Object.const_defined? :Encoding
+    unzipped
   end
 
   ##
@@ -486,6 +488,7 @@ module Gem
     require 'stringio'
     require 'zlib'
     zipped = StringIO.new
+    zipped.set_encoding Encoding::BINARY if Object.const_defined? :Encoding
 
     Zlib::GzipWriter.wrap zipped do |io| io.write data end
 

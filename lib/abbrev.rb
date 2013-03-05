@@ -7,7 +7,7 @@
 #
 # $Idaemons: /home/cvs/rb/abbrev.rb,v 1.2 2001/05/30 09:37:45 knu Exp $
 # $RoughId: abbrev.rb,v 1.4 2003/10/14 19:45:42 knu Exp $
-# $Id: abbrev.rb 38028 2012-11-30 04:01:07Z knu $
+# $Id: abbrev.rb 39458 2013-02-24 05:06:42Z zzak $
 #++
 
 ##
@@ -49,8 +49,8 @@ module Abbrev
   # are all the possible abbreviations and the values are the full
   # strings.
   #
-  # Thus, given input of "car" and "cone", the keys pointing to "car" would be
-  # "ca" and "car", while those pointing to "cone" would be "co", "con", and
+  # Thus, given +words+ is "car" and "cone", the keys pointing to "car" would
+  # be "ca" and "car", while those pointing to "cone" would be "co", "con", and
   # "cone".
   #
   #   require 'abbrev'

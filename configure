@@ -654,6 +654,7 @@ sitearchlibdir
 archlibdir
 RI_BASE_NAME
 ridir
+rubysitearchprefix
 rubyarchprefix
 rubylibprefix
 MAKEFILES
@@ -882,6 +883,7 @@ enable_debug_env
 enable_multiarch
 with_rubylibprefix
 with_rubyarchprefix
+with_rubysitearchprefix
 with_ridir
 with_ruby_version
 with_sitedir
@@ -1574,6 +1576,9 @@ Optional Packages:
   --with-rubyarchprefix=DIR
                           prefix for architecture dependent ruby libraries
                           [[RUBYLIBPREFIX/ARCH]]
+  --with-rubysitearchprefix=DIR
+                          prefix for architecture dependent site libraries
+                          [[RUBYLIBPREFIX/SITEARCH]]
   --with-ridir=DIR        ri documentation [[DATAROOTDIR/ri]]
   --with-ruby-version=STR ruby version string for version specific directories
                           [[full]] (full|minor|STR)
@@ -17466,6 +17471,7 @@ if test "${with_opt_dir+set}" = set; then :
 			sed "s/^x *//;s${IFS}"'%1\\$-s'"${IFS}${dir}/lib${IFS}g;s${IFS}%s${IFS}${dir}/lib${IFS}g"
 		    done | tr '\012' ' '`
 		set +x
+		LDFLAGS_OPTDIR="$val"
 		LDFLAGS="$LDFLAGS${LDFLAGS:+ }$val"
 		DLDFLAGS="$DLDFLAGS${DLDFLAGS:+ }$val"
 
@@ -17578,8 +17584,23 @@ else
 fi
 
 	if test "x$execinfo_frame_pointer" = xyes; then
-	    optflags="${optflags+$optflags }-fno-omit-frame-pointer"
-	    CFLAGS="$CFLAGS -fno-omit-frame-pointer"
+	    # optflags must be manipulated very carefully.  For the
+	    # later cflagspat/cxxflagspat substitution to work, CFLAGS
+	    # and CXXFLAGS must start exactly with the value of
+	    # optflags.
+	    CFLAGS="${CFLAGS# }"; CFLAGS="${CFLAGS#"$optflags "}"
+	    CXXFLAGS="${CXXFLAGS# }"; CXXFLAGS="${CXXFLAGS#"$optflags "}"
+	    # RUBY_APPEND_OPTION(optflags, -fno-omit-frame-pointer)
+	case " ${optflags-} " in #(
+  *' -fno-omit-frame-pointer '*) :
+     ;; #(
+  '  ') :
+     optflags="-fno-omit-frame-pointer" ;; #(
+  *) :
+     optflags="$optflags -fno-omit-frame-pointer" ;;
+esac
+	    CFLAGS=" $optflags $CFLAGS"
+	    CXXFLAGS=" $optflags $CXXFLAGS"
 	fi
     fi ;; #(
   *) :
@@ -17900,9 +17921,19 @@ esac
 
 
 
-if test "$prefix" = NONE; then
-  prefix=$ac_default_prefix
-fi
+test x"$prefix" = xNONE && prefix=$ac_default_prefix
+test x"${exec_prefix}" = xNONE && exec_prefix="$prefix"
+pat=`echo "${exec_prefix}" | tr -c '\012' .`'\(.*\)'
+for var in bindir libdir; do
+    eval val='"$'$var'"'
+    case "$val" in #(
+  "${exec_prefix}"*) :
+    val='${exec_prefix}'"`expr \"$val\" : \"$pat\"`" ;; #(
+  *) :
+     ;;
+esac
+    eval $var='"$val"'
+done
 
 BTESTRUBY='$(MINIRUBY)'
 if test x"$cross_compiling" = xyes; then
@@ -18094,7 +18125,7 @@ esac
 	 ;; #(
   linux* | gnu* | k*bsd*-gnu | atheos* | kopensolaris*-gnu) :
 
-	LIBRUBY_DLDFLAGS='-Wl,-soname,lib$(RUBY_SO_NAME).so.$(MAJOR).$(MINOR)'
+	LIBRUBY_DLDFLAGS='-Wl,-soname,lib$(RUBY_SO_NAME).so.$(MAJOR).$(MINOR)'" $LDFLAGS_OPTDIR"
 	LIBRUBY_ALIASES='lib$(RUBY_SO_NAME).so.$(MAJOR).$(MINOR) lib$(RUBY_SO_NAME).so'
 	if test "$load_relative" = yes; then
 	    LIBRUBY_RPATHFLAGS="'-Wl,-rpath,\$\${ORIGIN}/../${libdir_basename}'"
@@ -18114,7 +18145,7 @@ esac
 
 	SOLIBS='$(LIBS)'
 	LIBRUBY_SO='lib$(RUBY_SO_NAME).so.$(MAJOR)$(MINOR).$(TEENY)'
-	LIBRUBY_DLDFLAGS='-Wl,-soname,lib$(RUBY_SO_NAME).so.$(MAJOR)$(MINOR)'
+	LIBRUBY_DLDFLAGS='-Wl,-soname,lib$(RUBY_SO_NAME).so.$(MAJOR)$(MINOR)'" $LDFLAGS_OPTDIR"
 	if test "$rb_cv_binary_elf" = yes; then # ELF platforms
 	   LIBRUBY_ALIASES='lib$(RUBY_SO_NAME).so.$(MAJOR)$(MINOR) lib$(RUBY_SO_NAME).so'
 	else	# a.out platforms
@@ -18146,7 +18177,7 @@ esac
 	 ;; #(
   aix*) :
 
-	LIBRUBY_DLDFLAGS="${linker_flag}-bnoentry $XLDFLAGS"
+	LIBRUBY_DLDFLAGS="${linker_flag}-bnoentry $XLDFLAGS $LDFLAGS_OPTDIR"
 	LIBRUBYARG_SHARED='-L${libdir} -l${RUBY_SO_NAME}'
 	SOLIBS='-lm -lc'
 	 ;; #(
@@ -18155,7 +18186,7 @@ esac
 	case "$target_cpu" in #(
   powerpc*) :
 
-	    LIBRUBY_DLDFLAGS='-f ruby.exp -lnet -lbe -lroot glue-noinit.a init_term_dyn.o start_dyn.o'
+	    LIBRUBY_DLDFLAGS="-f ruby.exp -lnet -lbe -lroot glue-noinit.a init_term_dyn.o start_dyn.o $LDFLAGS_OPTDIR"
 	     ;; #(
   *) :
      ;;
@@ -19012,13 +19043,16 @@ else
 fi
 
 
-archlibdir='${libdir}'${multiarch+'/${arch}'}
-sitearchlibdir='${libdir}'${multiarch+'/${sitearch}'}
-archincludedir='${includedir}'${multiarch+'/${arch}'}
-sitearchincludedir='${includedir}'${multiarch+'/${sitearch}'}
+archlibdir='${libdir}/${arch}'
+sitearchlibdir='${libdir}/${sitearch}'
+archincludedir='${includedir}/${arch}'
+sitearchincludedir='${includedir}/${sitearch}'
 
 shvar_to_cpp() {
     local var="$1" val="$2"
+    local exec_prefix_pat="`echo \"${exec_prefix}\" | sed 's/\\./\\\\./g'`"
+    local arch_pat="`echo \"${arch}\" | sed 's/\\./\\\\./g'`"
+    local sitearch_pat="`echo \"${sitearch}\" | sed 's/\\./\\\\./g'`"
     val="`echo '"'"${val}"'"' |
 	sed \
 	    -e 's/\${\([A-Z][A-Z_]*\)}/"\1"/g' \
@@ -19039,12 +19073,38 @@ shvar_to_cpp() {
 	    -e 's/\${rubylibdir}/"RUBY_LIB"/g' \
 	    -e 's/\${rubylibprefix}/"RUBY_LIB_PREFIX"/g' \
 	    -e 's/\${rubyarchprefix}/"RUBY_ARCH_PREFIX_FOR(arch)"/g' \
+	    -e 's/\${rubysitearchprefix}/"RUBY_SITEARCH_PREFIX_FOR(arch)"/g' \
 	    -e 's/\${exec_prefix}/"RUBY_EXEC_PREFIX"/g' \
+	    -e "s|${exec_prefix_pat}/|"'"RUBY_EXEC_PREFIX"/|g' \
+	    -e "s|${arch_pat}|"'"arch"|g' \
+	    -e "s|${sitearch_pat}|"'"sitearch"|g' \
 	    -e 's|^\"NONE/|RUBY_EXEC_PREFIX\"/|' \
 	    -e 's|^\"NONE\"|\"'"${prefix}"'\"|' \
 	    -e 's/^\"\"\(.\)/\1/;s/\(.\)\"\"$/\1/'
 	`"
     eval $var='"$val"'
+}
+
+unexpand_shvar() {
+    local var=$1 val n v expr quote
+    shift
+    test "$#" == 0 && return
+    quote='s/${[^${}"]*}/"&"/g'
+    for n do
+        eval v='"$'$n'"'
+	v="`echo \"$v\" | sed -e \"$quote\" -e 's/[][$|.\\?*]/\\\\&/g'`"
+	if test -n "$v"; then
+	    expr="${expr};s|"'\("[^$"]*\)'"$v|\\1\${$n}\"|g"
+	    case "$v" in #(
+  *'${'*'}'*) :
+    expr="$expr;s|$v|\"\${$n}\"|g" ;; #(
+  *) :
+     ;;
+esac
+	fi
+    done
+    expr="${quote}${expr};"'s/"\(\${[^${}"]*}\)"/\1/g'
+    eval $var='"`echo \"\\\"${'$var'}\\\"\" | sed \"$expr;s/\\\"\\\"//g;s/^\\\"//;s/\\\"\\\$//\"`"'
 }
 
 rubylibprefix='${libdir}/${RUBY_BASE_NAME}'
@@ -19066,6 +19126,15 @@ rubyarchprefix=${multiarch+'${archlibdir}/${RUBY_BASE_NAME}'}${multiarch-'${ruby
 # Check whether --with-rubyarchprefix was given.
 if test "${with_rubyarchprefix+set}" = set; then :
   withval=$with_rubyarchprefix; rubyarchprefix="$withval"
+fi
+
+
+
+rubysitearchprefix=${multiarch+'${sitearchlibdir}/${RUBY_BASE_NAME}'}${multiarch-'${rubylibprefix}/${sitearch}'}
+
+# Check whether --with-rubysitearchprefix was given.
+if test "${with_rubysitearchprefix+set}" = set; then :
+  withval=$with_rubysitearchprefix; rubysitearchprefix="$withval"
 fi
 
 
@@ -19130,7 +19199,7 @@ sitelibdir='${sitedir}/${ruby_version}'
 if test "${with_sitearchdir+set}" = set; then :
   withval=$with_sitearchdir; sitearchdir=$withval
 else
-  sitearchdir=${multiarch+'${rubyarchprefix}/site_ruby/${ruby_version}'}${multiarch-'${sitelibdir}/${sitearch}'}
+  sitearchdir=${multiarch+'${rubysitearchprefix}/site_ruby/${ruby_version}'}${multiarch-'${sitelibdir}/${sitearch}'}
 fi
 
 
@@ -19149,10 +19218,13 @@ vendorlibdir='${vendordir}/${ruby_version}'
 if test "${with_vendorarchdir+set}" = set; then :
   withval=$with_vendorarchdir; vendorarchdir=$withval
 else
-  vendorarchdir=${multiarch+'${rubyarchprefix}/vendor_ruby/${ruby_version}'}${multiarch-'${vendorlibdir}/${sitearch}'}
+  vendorarchdir=${multiarch+'${rubysitearchprefix}/vendor_ruby/${ruby_version}'}${multiarch-'${vendorlibdir}/${sitearch}'}
 fi
 
 
+unexpand_shvar rubylibprefix       exec_prefix libdir RUBY_BASE_NAME
+unexpand_shvar rubyarchprefix      exec_prefix libdir arch RUBY_BASE_NAME archlibdir rubylibprefix
+unexpand_shvar rubysitearchprefix  exec_prefix libdir sitearch arch RUBY_BASE_NAME archlibdir sitearchlibdir rubylibprefix
 if test "${LOAD_RELATIVE+set}"; then
     cat >>confdefs.h <<_ACEOF
 #define LOAD_RELATIVE $LOAD_RELATIVE
@@ -19164,7 +19236,9 @@ else
 fi
 shvar_to_cpp RUBY_LIB_PREFIX "${rubylibprefix}"
 shvar_to_cpp RUBY_ARCH_PREFIX_FOR "${rubyarchprefix}"
+shvar_to_cpp RUBY_SITEARCH_PREFIX_FOR "${rubysitearchprefix}"
 shvar_to_cpp RIDIR "${ridir}"
+unexpand_shvar exec_prefix         prefix
 
 if test ${RUBY_LIB_VERSION_STYLE+set}; then
     cat >>confdefs.h <<_ACEOF
@@ -19187,6 +19261,10 @@ _ACEOF
 
 cat >>confdefs.h <<_ACEOF
 #define RUBY_ARCH_PREFIX_FOR(arch) ${RUBY_ARCH_PREFIX_FOR} !<verconf>!
+_ACEOF
+
+cat >>confdefs.h <<_ACEOF
+#define RUBY_SITEARCH_PREFIX_FOR(arch) ${RUBY_SITEARCH_PREFIX_FOR} !<verconf>!
 _ACEOF
 
 

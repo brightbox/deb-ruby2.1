@@ -8,7 +8,7 @@
 
   $Idaemons: /home/cvs/rb/enumerator/enumerator.c,v 1.1.1.1 2001/07/15 10:12:48 knu Exp $
   $RoughId: enumerator.c,v 1.6 2003/07/27 11:03:24 nobu Exp $
-  $Id: enumerator.c 39066 2013-02-05 05:52:39Z marcandre $
+  $Id: enumerator.c 39440 2013-02-23 17:41:49Z marcandre $
 
 ************************************************/
 
@@ -313,7 +313,7 @@ enumerator_init(VALUE enum_obj, VALUE obj, VALUE meth, int argc, VALUE *argv, VA
  *   p fib.take(10) # => [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
  *
  * The optional parameter can be used to specify how to calculate the size
- * in a lazy fashion (see Enumerable#size). It can either be a value or
+ * in a lazy fashion (see Enumerator#size). It can either be a value or
  * a callable object.
  *
  * In the second, deprecated, form, a generated Enumerator iterates over the

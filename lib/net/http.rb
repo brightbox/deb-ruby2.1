@@ -384,7 +384,7 @@ module Net   #:nodoc:
   class HTTP < Protocol
 
     # :stopdoc:
-    Revision = %q$Revision: 39141 $.split[1]
+    Revision = %q$Revision: 39464 $.split[1]
     HTTPVersion = '1.1'
     begin
       require 'zlib'
@@ -1122,13 +1122,6 @@ module Net   #:nodoc:
     #
     def get(path, initheader = {}, dest = nil, &block) # :yield: +body_segment+
       res = nil
-      if HAVE_ZLIB
-        unless  initheader.keys.any?{|k| k.downcase == "accept-encoding"}
-          initheader = initheader.merge({
-            "accept-encoding" => "gzip;q=1.0,deflate;q=0.6,identity;q=0.3"
-          })
-        end
-      end
       request(Get.new(path, initheader)) {|r|
         r.read_body dest, &block
         res = r
@@ -1410,6 +1403,7 @@ module Net   #:nodoc:
           req.exec @socket, @curr_http_version, edit_path(req.path)
           begin
             res = HTTPResponse.read_new(@socket)
+            res.decode_content = req.decode_content
           end while res.kind_of?(HTTPContinue)
 
           res.uri = req.uri
@@ -1423,7 +1417,9 @@ module Net   #:nodoc:
         raise
       rescue Net::ReadTimeout, IOError, EOFError,
              Errno::ECONNRESET, Errno::ECONNABORTED, Errno::EPIPE,
-             OpenSSL::SSL::SSLError, Timeout::Error => exception
+             # avoid a dependency on OpenSSL
+             defined?(OpenSSL::SSL) ? OpenSSL::SSL::SSLError : IOError,
+             Timeout::Error => exception
         if count == 0 && IDEMPOTENT_METHODS_.include?(req.method)
           count += 1
           @socket.close if @socket and not @socket.closed?

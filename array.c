@@ -2,7 +2,7 @@
 
   array.c -
 
-  $Author: usa $
+  $Author: zzak $
   created at: Fri Aug  6 09:46:12 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -4193,8 +4193,8 @@ flatten(VALUE ary, int level, int *modified)
 
 /*
  *  call-seq:
- *     ary.flatten!        -> Array or nil
- *     ary.flatten!(level) -> Array or nil
+ *     ary.flatten!        -> ary or nil
+ *     ary.flatten!(level) -> ary or nil
  *
  *  Flattens +self+ in place.
  *
@@ -5239,6 +5239,11 @@ rb_ary_drop_while(VALUE ary)
  *
  *     empty_table = Array.new(3) { Array.new(3) }
  *     #=> [[nil, nil, nil], [nil, nil, nil], [nil, nil, nil]]
+ *
+ *  An array can also be created by using the Array() method, provided by
+ *  Kernel, which calls  #to_ary or #to_a on it's argument.
+ *
+ *	Array({:a => "a", :b => "b"}) #=> [[:a, "a"], [:b, "b"]]
  *
  *  == Example Usage
  *

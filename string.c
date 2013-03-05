@@ -2,7 +2,7 @@
 
   string.c -
 
-  $Author: zzak $
+  $Author: drbrain $
   created at: Mon Aug  9 17:12:58 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -2389,13 +2389,8 @@ rb_str_cmp_m(VALUE str1, VALUE str2)
 	if (RB_TYPE_P(tmp, T_STRING)) {
 	    result = rb_str_cmp(str1, tmp);
 	}
-	else if ((tmp = rb_check_funcall(str2, rb_intern("<=>"), 1, &str1)) ==
-		 Qundef) {
-	    return Qnil;
-	}
 	else {
-	    if (NIL_P(tmp)) return Qnil;
-	    result = -rb_cmpint(tmp, str1, str2);
+	    return rb_invcmp(str1, str2);
 	}
     }
     else {

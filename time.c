@@ -2,7 +2,7 @@
 
   time.c -
 
-  $Author: nobu $
+  $Author: drbrain $
   created at: Tue Dec 28 14:31:59 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -3365,12 +3365,7 @@ time_cmp(VALUE time1, VALUE time2)
 	n = wcmp(tobj1->timew, tobj2->timew);
     }
     else {
-	VALUE tmp;
-
-	tmp = rb_funcall(time2, rb_intern("<=>"), 1, time1);
-	if (NIL_P(tmp)) return Qnil;
-
-	n = -rb_cmpint(tmp, time1, time2);
+	return rb_invcmp(time1, time2);
     }
     if (n == 0) return INT2FIX(0);
     if (n > 0) return INT2FIX(1);
