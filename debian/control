@@ -1,10 +1,10 @@
 Source: ruby2.0
-Section: unknown
+Section: ruby
 Priority: extra
 Maintainer: Antonio Terceiro <terceiro@debian.org>
-Build-Depends: debhelper (>= 8.0.0), autotools-dev, ruby1.9.1
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, ruby1.9.1, bison, libgdbm-dev, libncursesw5-dev, libncurses5-dev, libreadline6-dev, tcl-dev, tk-dev, zlib1g-dev, libssl-dev, procps, file, libffi-dev, libyaml-dev, openssl, chrpath, coreutils (>= 7.5-1)
 Standards-Version: 3.9.3
-Homepage: <insert the upstream URL, if relevant>
+Homepage: http://www.ruby-lang.org/
 Vcs-Git: git://git.debian.org/collab-maint/ruby2.0.git
 Vcs-Browser: http://git.debian.org/?p=collab-maint/ruby2.0.git;a=summary
 
