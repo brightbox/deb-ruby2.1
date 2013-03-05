@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
-export DH_VERBOSE=1
+# export DH_VERBOSE=1
 
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
@@ -31,12 +31,14 @@ configure_options += $(shell dpkg-buildflags --export=configure)
 	dh $@ --parallel --with autotools-dev --with autoreconf
 
 override_dh_auto_configure:
+	tar caf debian/backup.tar configure $(shell cat debian/deleted_on_clean.txt)
 	dh_auto_configure -- $(configure_options)
 
 override_dh_auto_clean:
 	dh_auto_clean
 	$(RM) -r .ext
 	$(RM) -r doc/capi
+	tar xaf debian/backup.tar && $(RM) debian/backup.tar
 
 override_dh_auto_build:
 	dh_auto_build -- main
