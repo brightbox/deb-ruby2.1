@@ -1,0 +1,45 @@
+#!/bin/sh
+
+failed=0
+passed=0
+
+fail() {
+  failed=$(($failed + 1))
+  echo "FAIL"
+}
+
+pass() {
+  passed=$(($passed + 1))
+  echo "PASS"
+}
+
+should_not_exist(){
+  for file in "$@"; do
+    printf "$file should not exist: "
+    test -e "$file" && fail || pass
+  done
+}
+
+should_exist() {
+  for file in "$@"; do
+    printf "$file should exist: "
+    test -e "$file" && pass || fail
+  done
+}
+
+# test multi-arch support
+arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+libdir=usr/lib
+archlibdir=usr/lib/${arch}
+should_not_exist debian/libruby2.0/${libdir}/libruby-2.0.so.2.0
+should_exist debian/libruby2.0/${archlibdir}/libruby-2.0.so.2.0
+should_not_exist debian/ruby2.0-dev/${libdir}/pkgconfig/ruby-2.0.pc
+should_exist debian/ruby2.0-dev/${archlibdir}/pkgconfig/ruby-2.0.pc
+
+
+
+echo
+echo "Passed ${passed} tests, failed ${failed} tests"
+if test "$failed" -ne 0; then
+  exit 1
+fi
