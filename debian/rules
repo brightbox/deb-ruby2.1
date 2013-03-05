@@ -38,3 +38,20 @@ override_dh_auto_clean:
 	dh_auto_clean
 	$(RM) -r .ext
 	$(RM) -r doc/capi
+
+override_dh_auto_build:
+	dh_auto_build -- main
+
+override_dh_auto_install:
+	dh_auto_install -- install-nodoc
+	find debian/ruby2.0-doc/ -type d -empty
+
+override_dh_auto_build-indep:
+	$(MAKE) docs
+
+# No tests needed for docs
+override_dh_auto_test-indep:
+
+override_dh_auto_install-indep:
+	$(MAKE) install-doc
+
