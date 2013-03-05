@@ -39,7 +39,7 @@ override_dh_auto_clean:
 	$(RM) -r doc/capi
 
 override_dh_auto_build:
-	dh_auto_build -- main V=1
+	dh_auto_build -- main
 
 override_dh_auto_install:
 	$(MAKE) install-nodoc DESTDIR=$(CURDIR)/debian/tmp
