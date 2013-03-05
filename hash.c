@@ -2,7 +2,7 @@
 
   hash.c -
 
-  $Author: charliesome $
+  $Author: marcandre $
   created at: Mon Nov 22 18:51:18 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -2697,7 +2697,7 @@ env_each_pair(VALUE ehash)
 
 /*
  * call-seq:
- *   ENV.reject! { |name, value| } -> Hash or nil
+ *   ENV.reject! { |name, value| } -> ENV or nil
  *   ENV.reject!                   -> Enumerator
  *
  * Equivalent to ENV#delete_if but returns +nil+ if no changes were made.

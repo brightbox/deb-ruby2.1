@@ -2,7 +2,7 @@
 
   object.c -
 
-  $Author: marcandre $
+  $Author: zzak $
   created at: Thu Jul 15 12:01:24 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -790,6 +790,26 @@ rb_obj_tap(VALUE obj)
  *        module Enumerable
  *          include A
  *        end
+ *         # => prints "A included in Enumerable"
+ */
+
+/*
+ * Document-method: prepended
+ *
+ * call-seq:
+ *    prepended( othermod )
+ *
+ * The equivalent of <tt>included</tt>, but for prepended modules.
+ *
+ *        module A
+ *          def self.prepended(mod)
+ *            puts "#{self} prepended to #{mod}"
+ *          end
+ *        end
+ *        module Enumerable
+ *          prepend A
+ *        end
+ *         # => prints "A prepended to Enumerable"
  */
 
 /*
@@ -2727,8 +2747,9 @@ rb_Array(VALUE val)
  *  call-seq:
  *     Array(arg)    -> array
  *
- *  Returns <i>arg</i> as an <code>Array</code>. First tries to call
- *  <i>arg</i><code>.to_ary</code>, then <i>arg</i><code>.to_a</code>.
+ *  Returns +arg+ as an Array.
+ *
+ *  First tries to call Array#to_ary on +arg+, then Array#to_a.
  *
  *     Array(1..5)   #=> [1, 2, 3, 4, 5]
  */
@@ -3111,6 +3132,12 @@ Init_Object(void)
     rb_undef_method(rb_cClass, "extend_object");
     rb_undef_method(rb_cClass, "append_features");
 
+    /*
+     * Document-class: Data
+     *
+     * This is a recommended base class for C extensions using Data_Make_Struct
+     * or Data_Wrap_Struct, see README.EXT for details.
+     */
     rb_cData = rb_define_class("Data", rb_cObject);
     rb_undef_alloc_func(rb_cData);
 

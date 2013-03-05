@@ -8,6 +8,7 @@ require 'rubygems/exceptions'
 require 'rubygems/package'
 require 'rubygems/ext'
 require 'rubygems/user_interaction'
+require 'fileutils'
 
 ##
 # The installer installs the files contained in the .gem into the Gem.home.
@@ -110,6 +111,7 @@ class Gem::Installer
 
     if options[:user_install] and not options[:unpack] then
       @gem_home = Gem.user_dir
+      @bin_dir = Gem.bindir gem_home unless options[:bin_dir]
       check_that_user_bin_dir_is_in_path
     end
   end
@@ -560,7 +562,9 @@ class Gem::Installer
   # DOC: Missing docs or :nodoc:.
   def check_that_user_bin_dir_is_in_path
     user_bin_dir = @bin_dir || Gem.bindir(gem_home)
-    user_bin_dir.gsub!(File::SEPARATOR, File::ALT_SEPARATOR) if File::ALT_SEPARATOR
+    user_bin_dir = user_bin_dir.gsub(File::SEPARATOR, File::ALT_SEPARATOR) if
+      File::ALT_SEPARATOR
+
     path = ENV['PATH']
     if Gem.win_platform? then
       path = path.downcase
@@ -668,6 +672,8 @@ TEXT
                 end
 
       begin
+        FileUtils.mkdir_p dest_path
+
         Dir.chdir extension_dir do
           results = builder.build(extension, gem_dir, dest_path,
                                   results, @build_args)

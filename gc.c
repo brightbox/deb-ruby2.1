@@ -2,7 +2,7 @@
 
   gc.c -
 
-  $Author: kosaki $
+  $Author: zzak $
   created at: Tue Oct  5 09:44:46 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -4442,7 +4442,7 @@ rb_gcdebug_sentinel(VALUE obj, const char *name)
  *  Document-class: ObjectSpace::WeakMap
  *
  *  An ObjectSpace::WeakMap object holds references to
- *  any objects, but those objects can get be garbage collected.
+ *  any objects, but those objects can get garbage collected.
  *
  *  This class is mostly used internally by WeakRef, please use
  *  +lib/weakref.rb+ for the public interface.

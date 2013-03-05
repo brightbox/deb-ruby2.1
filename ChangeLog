@@ -1,3 +1,292 @@
+Sun Feb 24 15:16:00 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/net/http.rb:  Removed duplicate Accept-Encoding in Net::HTTP#get.
+	  [ruby-trunk - Bug #7924]
+	* test/net/http/test_http.rb:  Test for the above.
+
+Wed Feb 20 14:23:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* thread.c: Grammar for #backtrace_locations and ::handle_interrupt
+
+Fri Feb 22 11:10:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* enum.c (Enumerable#chunk: Improved examples, grammar, and formatting
+	  Patch by Dan Bernier and Rich Bruchal of newhaven.rb
+	  [Backport #7926]
+
+Fri Feb 22 02:33:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* lib/abbrev.rb: Add words parameter to Abbrev::abbrev
+	  Patch by Devin Weaver [Backport #7927]
+
+Wed Feb 20 13:37:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* ext/pty/pty.c: Documentation for the PTY module [Backport #7928]
+
+Wed Feb 20 12:18:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* object.c: Document Data class by Matthew Mongeau [Backport #7929]
+
+Wed Feb 20 11:50:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* lib/mutex_m.rb: Add rdoc for Mutex_m module [Backport #7930]
+
+Tue Feb 19 12:30:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* object.c: rdoc formatting for Kernel#Array() [Backport #7931]
+	* array.c: Add rdoc for Array() method to Creating Arrays section
+
+Sat Feb 23 16:51:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* thread.c: Documentation for Thread#backtrace_locations
+	  [Backport #7932]
+
+Sat Feb 23 16:05:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* vm.c: Typo in ObjectSpace::WeakMap overview [Backport #7933]
+
+Sat Feb 23 16:00:00 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* thread.c: Improved rdoc for ::handle_interrupt, ::pending_interrupt?
+	  and #pending_interrupt? [Backport #7934]
+
+Sat Feb 23 14:19:51 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* include/ruby/ruby.h (HAVE_RB_SCAN_ARGS_OPTIONAL_HASH): for
+	  rb_scan_args() optional hash feature.  [Bug #7861]
+
+Sat Feb 23 13:03:22 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* lib/ipaddr.rb (IPAddr#in6_addr): Fix a typo with the closing
+	  parenthesis.
+
+Sat Feb 23 13:03:22 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* lib/ipaddr.rb (IPAddr#in6_addr): Fix the parser so that it can
+	  recognize IPv6 addresses with only one edge 16-bit piece
+	  compressed, like [::2:3:4:5:6:7:8] or [1:2:3:4:5:6:7::].
+	  [Bug #7477]
+
+Sat Feb 23 13:00:49 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* configure.in (LIBRUBY_DLDFLAGS): Fix a bug where --with-opt-dir
+	  options given were not reflected to LIBRUBY_DLDFLAGS on many
+	  platforms including Linux and other GNU-based systems, NetBSD,
+	  AIX and BeOS.
+
+Sat Feb 23 13:00:07 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* configure.in: Fix a bug introduced in r38342 that the cflagspat
+	  substitution is messed up by the way CFLAGS and optflags are
+	  modified, which affected FreeBSD and NetBSD/amd64 when
+	  configured to use libexecinfo.  This bug resulted in CFLAGS and
+	  CXXFLAGS in RbConfig::CONFIG having warnflags expanded in them,
+	  forcing third-party C/C++ extensions to follow what warnflags
+	  demands, like ANSI/ISO-C90 conformance.  ref [Bug #7101]
+
+Sat Feb 23 12:58:32 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/mkmf.rb: remove extra topdir in VPATH, which was in
+	  win32/Makefile.sub for some reason and moved from there.
+	  [ruby-dev:46998] [Bug #7864]
+
+Tue Feb 23 12:07:00 2013  Kenta MURATA  <mrkn@mrkn.jp>
+
+	* backport r39321 from trunk. [ruby-core:51777] [Bug #7761]
+
+	* ext/bigdecimal/bigdecimal.gemspec: bump to 1.2.0.
+	  [ruby-core:51777] [Bug #7761]
+
+Sat Feb 23 08:57:46 2013  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* backport r39410 from trunk
+
+	* doc/NEWS-*: Update NEWS from their respective branches
+
+Sat Feb 23 08:14:43 2013  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* backport r39400-r39407 from trunk.
+
+	* NEWS: many additions
+
+	* object.c: Add doc for Module.prepended
+
+Sat Feb 23 06:07:04 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/rubygems/installer.rb (build_extensions):  Create extension
+	  install destination before building extension.  Patch by Kenta Murata.
+	  [ruby-trunk - Bug #7897]
+	* test/rubygems/test_gem_installer.rb:  Test for the above.
+
+Sat Feb 23 04:34:44 2013  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* NEWS: pending_interrupt? is both instance and singleton method
+
+Sat Feb 23 02:49:10 2013  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* NEWS: Add Thread#pending_interrupt? and Thread.handle_interrupt
+
+Fri Feb 22 19:22:05 2013  Aaron Patterson <aaron@tenderlovemaking.com>
+
+	* lib/rexml/document.rb (REXML::Document.entity_expansion_text_limit):
+	  new attribute to read/write entity expansion text limit.  the default
+	  limit is 10Kb.
+
+	* lib/rexml/text.rb (REXML::Text.unnormalize): check above attribute.
+
+Thu Feb 21 05:03:38 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/rubygems/commands/update_command.rb:  Create the installer after
+	  options are processed.  [ruby-trunk - Bug #7779]
+	* test/rubygems/test_gem_commands_update_command.rb:  Test for the
+	  above.
+
+Thu Feb 21 04:54:14 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/rubygems/installer.rb:  Use gsub instead of gsub! to avoid
+	  altering @bin_dir.  Fixes tests on windows.  [ruby-trunk - Bug #7885]
+
+Thu Feb 21 03:16:37 2013  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* NEWS: Floats are frozen too
+
+Thu Feb 21 03:10:53 2013  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* NEWS: Add that Fixnums and Bignums are frozen
+
+Wed Feb 20 17:02:12 2013  Koichi Sasada  <ko1@atdot.net>
+
+	* vm_eval.c (vm_call0_body): check interrupts after method dispatch
+	  from C methods. [Bug #7878]
+
+Wed Feb 20 08:05:25 2013 Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* compar.c (rb_invcmp): compare by inversed comarison, with preventing
+	  from infinite recursion.  [ruby-core:52305] [Bug #7870]
+
+	* string.c (rb_str_cmp_m), time.c (time_cmp): get rid of infinite
+	  recursion.
+
+Tue Feb 19 15:49:58 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* configure.in (unexpand_shvar): regularize a shell variable by
+	  unexpanding shell variables in it.
+
+	* configure.in (shvar_to_cpp): do not substitute exec_prefix itself
+	  with RUBY_EXEC_PREFIX, which cause recursive definition.
+	  [ruby-core:52296] [Bug #7860]
+
+	* configure.in: unexpand arch sitearch and exec_prefix values, so
+	  directly specified bindir, libdir, rubyprefix, etc can be properly
+	  substituted.  [ruby-core:52296] [Bug #7860]
+
+Tue Feb 19 14:08:46 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* backport r39307 from trunk.  [Bug #7880]
+
+	* lib/rubygems/installer.rb:  Fixed placement of executables with
+	  --user-install.  [ruby-trunk - Bug #7779]
+
+	* test/rubygems/test_gem_installer.rb:  Test for above.
+
+Tue Feb 19 13:57:26 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* backport r39247 from trunk. [Bug #7853]
+
+	* lib/rdoc.rb:  Update to release version of 4.0.0
+
+	* lib/rubygems.rb:  Update to release version of 2.0.0
+
+Tue Feb 19 12:25:27 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* win32/Makefile.sub (config.status): site and vendor directories
+	  should use sitearch, not arch.  [ruby-dev:46964] [Bug #7823]
+
+Tue Feb 19 07:51:01 2013  Koichi Sasada  <ko1@atdot.net>
+
+	* backport r39275 from trunk. [ruby-dev:46994] [Bug #7774]
+
+	* proc.c (rb_binding_new_with_cfp): create binding object even if
+	  the frame is IFUNC. But return a ruby-level binding to keep
+	  compatibility.
+	  This patch fix degradation introduced from r39067.
+	  [Bug #7774] [ruby-dev:46960]
+
+	* test/ruby/test_settracefunc.rb: add a test.
+
+Sat Feb 16 20:43:43 2013  Koichi Sasada  <ko1@atdot.net>
+
+	* backport r39276 from trunk. [ruby-dev:46997] [Bug #7825]
+
+	* vm.c (rb_thread_mark): mark a working Proc of bmethod
+	  (a method defined by define_method) even if the method was removed.
+	  We could not trace working Proc object which represents the body
+	  of bmethod if the method was removed (alias/undef/overridden).
+	  Simply, it was mark miss.
+	  This patch by Kazuki Tsujimoto. [Bug #7825]
+
+	  NOTE: We can brush up this marking because we do not need to mark
+	  `me' on each living control frame. We need to mark `me's
+	  only if `me' was free'ed. This is future work after Ruby 2.0.0.
+
+	* test/ruby/test_method.rb: add a test.
+
+Fri Feb 15 00:49:32 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/net/http.rb:  Removed OpenSSL dependency from Net::HTTP.
+
+	* test/net/http/test_http.rb:  Remove Zlib dependency from tests.
+	* test/net/http/test_http_request.rb:  ditto.
+
+Fri Feb 15 00:49:32 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/net/http:  Do not handle Content-Encoding when the user sets
+	  Accept-Encoding.  This allows users to handle Content-Encoding for
+	  themselves.  This restores backwards-compatibility with Ruby 1.x.
+	  [ruby-trunk - Bug #7831]
+	* lib/net/http/generic_request.rb:  ditto.
+	* lib/net/http/response.rb:  ditto
+	* test/net/http/test_http.rb:  Test for the above.
+	* test/net/http/test_http_request.rb:  ditto.
+	* test/net/http/test_httpresponse.rb:  ditto.
+
+Thu Feb 14 13:17:10 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* Backport r39168 Warning about TracePoint events to 2.0.0
+	  [ruby-core:52073] [Bug #7815]
+
+	* vm_trace.c: note about TracePoint events set
+
+Thu Feb 14 07:04:13 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* Backport r39213 from trunk [ruby-trunk - Bug #7383]
+
+	* lib/rubygems.rb:  Return BINARY strings from Gem.gzip and Gem.gunzip.
+	  Fixes intermittent test failures.  RubyGems issue #450 by Jeremey
+	  Kemper.
+	* test/rubygems/test_gem.rb:  Test for the above.
+
+Thu Feb 14 07:01:12 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* Backport part of r39166 from trunk [ruby-trunk - Bug #7809]
+
+	* lib/rubygems/package.rb:  Include checksums.yaml.gz signatures for
+	  verification.
+	* test/rubygems/test_gem_package.rb:  Test for the above.
+
+Wed Feb 13 15:34:21 2013  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* ext/json: merge JSON 1.7.7.
+	  This includes security fix. [CVE-2013-0269]
+	  https://github.com/flori/json/commit/d0a62f3ced7560daba2ad546d83f0479a5ae2cf2
+	  https://groups.google.com/d/topic/rubyonrails-security/4_YvCpLzL58/discussion
+
+Sat Feb  9 21:13:35 2013  Kazuki Tsujimoto  <kazuki@callcc.net>
+
+	* backport r39167 from trunk. [ruby-core:52059] [Bug #7812]
+
+	* BSDL: update copyright notice for 2013.
+
 Fri Feb  8 19:56:54 2013  NAKAMURA Usaku  <usa@ruby-lang.org>
 
 	* array.c (rb_ary_dup): reverted r39004.  see [Bug #7768], and
