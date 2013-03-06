@@ -44,7 +44,7 @@ override_dh_auto_clean:
 
 override_dh_autoreconf_clean:
 	dh_autoreconf_clean
-	tar xaf debian/backup.tar && $(RM) debian/backup.tar
+	(test -f debian/backup.tar && tar xaf debian/backup.tar && $(RM) debian/backup.tar) || true
 
 override_dh_auto_build:
 	dh_auto_build -- main
