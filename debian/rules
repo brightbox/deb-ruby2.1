@@ -60,6 +60,8 @@ override_dh_auto_build-indep:
 override_dh_auto_test-indep:
 
 override_dh_auto_install-indep:
-	$(MAKE) install-doc
+	$(MAKE) install-doc DESTDIR=$(CURDIR)/debian/tmp
+	dh_install -pruby2.0-doc usr/share/ri
+	dh_install -pruby2.0-doc usr/share/doc/ruby-capi/html /usr/share/doc/ruby2.0-doc/
 	find debian/ruby2.0-doc/ -type d -empty
 
