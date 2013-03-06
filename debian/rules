@@ -41,6 +41,9 @@ override_dh_auto_clean:
 	dh_auto_clean
 	$(RM) -r .ext
 	$(RM) -r doc/capi
+
+override_dh_autoreconf_clean:
+	dh_autoreconf_clean
 	tar xaf debian/backup.tar && $(RM) debian/backup.tar
 
 override_dh_auto_build:
