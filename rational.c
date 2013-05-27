@@ -571,6 +571,22 @@ f_rational_new_no_reduce2(VALUE klass, VALUE x, VALUE y)
  *
  *    Rational(1, 2)   #=> (1/2)
  *    Rational('1/2')  #=> (1/2)
+ *
+ * Syntax of string form:
+ *
+ *   string form = extra spaces , rational , extra spaces ;
+ *   rational = [ sign ] , unsigned rational ;
+ *   unsigned rational = numerator | numerator , "/" , denominator ;
+ *   numerator = integer part | fractional part | integer part , fractional part ;
+ *   denominator = digits ;
+ *   integer part = digits ;
+ *   fractional part = "." , digits , [ ( "e" | "E" ) , [ sign ] , digits ] ;
+ *   sign = "-" | "+" ;
+ *   digits = digit , { digit | "_" , digit } ;
+ *   digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+ *   extra spaces = ? \s* ? ;
+ *
+ * See String#to_r.
  */
 static VALUE
 nurat_f_rational(int argc, VALUE *argv, VALUE klass)
@@ -623,7 +639,6 @@ inline static VALUE
 f_imul(long a, long b)
 {
     VALUE r;
-    volatile long c;
 
     if (a == 0 || b == 0)
 	return ZERO;
@@ -632,10 +647,10 @@ f_imul(long a, long b)
     else if (b == 1)
 	return LONG2NUM(a);
 
-    c = a * b;
-    r = LONG2NUM(c);
-    if (NUM2LONG(r) != c || (c / a) != b)
+    if (MUL_OVERFLOW_LONG_P(a, b))
 	r = rb_big_mul(rb_int2big(a), rb_int2big(b));
+    else
+        r = LONG2NUM(a * b);
     return r;
 }
 
@@ -1024,9 +1039,11 @@ nurat_expt(VALUE self, VALUE other)
 
 /*
  * call-seq:
- *    rat <=> numeric  ->  -1, 0, +1 or nil
+ *    rational <=> numeric  ->  -1, 0, +1 or nil
  *
  * Performs comparison and returns -1, 0, or +1.
+ *
+ * +nil+ is returned if the two values are incomparable.
  *
  *    Rational(2, 3)  <=> Rational(2, 3)  #=> 0
  *    Rational(5)     <=> 5               #=> 0
@@ -2254,6 +2271,8 @@ string_to_r_strict(VALUE self)
  *    '21 june 09'.to_r  #=> (21/1)
  *    '21/06/09'.to_r    #=> (7/2)
  *    'bwv 1079'.to_r    #=> (0/1)
+ *
+ * See Kernel.Rational.
  */
 static VALUE
 string_to_r(VALUE self)

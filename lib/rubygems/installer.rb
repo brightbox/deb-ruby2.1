@@ -132,7 +132,7 @@ class Gem::Installer
   def check_executable_overwrite filename # :nodoc:
     return if @force
 
-    generated_bin = File.join @bin_dir, filename
+    generated_bin = File.join @bin_dir, formatted_program_filename(filename)
 
     return unless File.exist? generated_bin
 
@@ -681,7 +681,7 @@ TEXT
           say results.join("\n") if Gem.configuration.really_verbose
         end
       rescue
-        extension_build_error(extension_dir, results.join("\n"))
+        extension_build_error(extension_dir, results.join("\n"), $@)
       end
     end
   end
@@ -689,7 +689,7 @@ TEXT
   ##
   # Logs the build +output+ in +build_dir+, then raises ExtensionBuildError.
 
-  def extension_build_error(build_dir, output)
+  def extension_build_error(build_dir, output, backtrace = nil)
     gem_make_out = File.join build_dir, 'gem_make.out'
 
     open gem_make_out, 'wb' do |io| io.puts output end
@@ -703,7 +703,7 @@ Gem files will remain installed in #{gem_dir} for inspection.
 Results logged to #{gem_make_out}
 EOF
 
-    raise ExtensionBuildError, message
+    raise ExtensionBuildError, message, backtrace
   end
 
   ##

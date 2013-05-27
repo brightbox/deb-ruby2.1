@@ -2,7 +2,7 @@
 
   dir.c -
 
-  $Author: usa $
+  $Author: nagachika $
   created at: Wed Jan  5 09:51:01 JST 1994
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -689,6 +689,7 @@ dir_seek(VALUE dir, VALUE pos)
 #define dir_seek rb_f_notimplement
 #endif
 
+#ifdef HAVE_SEEKDIR
 /*
  *  call-seq:
  *     dir.pos( integer ) -> integer
@@ -709,6 +710,9 @@ dir_set_pos(VALUE dir, VALUE pos)
     dir_seek(dir, pos);
     return pos;
 }
+#else
+#define dir_set_pos rb_f_notimplement
+#endif
 
 /*
  *  call-seq:
@@ -1386,9 +1390,6 @@ glob_helper(
 	    enum answer new_isdir = UNKNOWN;
 
 	    if (recursive && dp->d_name[0] == '.') {
-		/* RECURSIVE never match dot files unless FNM_DOTMATCH is set */
-		if (!(flags & FNM_DOTMATCH)) continue;
-
 		/* always skip current and parent directories not to recurse infinitely */
 		if (!dp->d_name[1]) continue;
 		if (dp->d_name[1] == '.' && !dp->d_name[2]) continue;
@@ -1399,7 +1400,8 @@ glob_helper(
 		status = -1;
 		break;
 	    }
-	    if (recursive) {
+	    if (recursive && ((flags & FNM_DOTMATCH) || dp->d_name[0] != '.')) {
+		/* RECURSIVE never match dot files unless FNM_DOTMATCH is set */
 #ifndef _WIN32
 		if (do_lstat(buf, &st, flags) == 0)
 		    new_isdir = S_ISDIR(st.st_mode) ? YES : S_ISLNK(st.st_mode) ? UNKNOWN : NO;
@@ -1919,7 +1921,24 @@ fnmatch_brace(const char *pattern, VALUE val, void *enc)
 {
     struct brace_args *arg = (struct brace_args *)val;
     VALUE path = arg->value;
+    rb_encoding *enc_pattern = enc;
+    rb_encoding *enc_path = rb_enc_get(path);
 
+    if (enc_pattern != enc_path) {
+	if (!rb_enc_asciicompat(enc_pattern))
+	    return FNM_NOMATCH;
+	if (!rb_enc_asciicompat(enc_path))
+	    return FNM_NOMATCH;
+	if (!rb_enc_str_asciionly_p(path)) {
+	    int cr = ENC_CODERANGE_7BIT;
+	    long len = strlen(pattern);
+	    if (rb_str_coderange_scan_restartable(pattern, pattern + len,
+						  enc_pattern, &cr) != len)
+		return FNM_NOMATCH;
+	    if (cr != ENC_CODERANGE_7BIT)
+		return FNM_NOMATCH;
+	}
+    }
     return (fnmatch(pattern, enc, RSTRING_PTR(path), arg->flags) == 0);
 }
 
@@ -1977,7 +1996,7 @@ fnmatch_brace(const char *pattern, VALUE val, void *enc)
  *
  *     File.fnmatch('\?',   '?')                       #=> true  # escaped wildcard becomes ordinary
  *     File.fnmatch('\a',   'a')                       #=> true  # escaped ordinary remains ordinary
- *     File.fnmatch('\a',   '\a', File::FNM_NOESCAPE)  #=> true  # FNM_NOESACPE makes '\' ordinary
+ *     File.fnmatch('\a',   '\a', File::FNM_NOESCAPE)  #=> true  # FNM_NOESCAPE makes '\' ordinary
  *     File.fnmatch('[\?]', '?')                       #=> true  # can escape inside bracket expression
  *
  *     File.fnmatch('*',   '.profile')                      #=> false # wildcard doesn't match leading
@@ -2029,8 +2048,9 @@ file_s_fnmatch(int argc, VALUE *argv, VALUE obj)
 	    return Qtrue;
     }
     else {
-	if (fnmatch(RSTRING_PTR(pattern), rb_enc_get(pattern), RSTRING_PTR(path),
-		    flags) == 0)
+	rb_encoding *enc = rb_enc_compatible(pattern, path);
+	if (!enc) return Qfalse;
+	if (fnmatch(RSTRING_PTR(pattern), enc, RSTRING_PTR(path), flags) == 0)
 	    return Qtrue;
     }
     RB_GC_GUARD(pattern);

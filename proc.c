@@ -2,7 +2,7 @@
 
   proc.c - Proc, Binding, Env
 
-  $Author: ko1 $
+  $Author: nagachika $
   created at: Wed Jan 17 12:13:14 2007
 
   Copyright (C) 2004-2007 Koichi Sasada
@@ -905,6 +905,7 @@ bm_free(void *ptr)
 {
     struct METHOD *data = ptr;
     struct unlinked_method_entry_list_entry *ume = data->ume;
+    data->me->mark = 0;
     ume->me = data->me;
     ume->next = GET_VM()->unlinked_method_entry_list;
     GET_VM()->unlinked_method_entry_list = ume;

@@ -2,7 +2,7 @@
 
   process.c -
 
-  $Author: nobu $
+  $Author: nagachika $
   created at: Tue Aug 10 14:30:50 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -5432,7 +5432,6 @@ proc_setgid(VALUE obj, VALUE id)
  * HP-UX			   20
  * Windows			 1015
  */
-#define RB_MAX_GROUPS (65536)
 static int _maxgroups = -1;
 static int
 get_sc_ngroups_max(void)

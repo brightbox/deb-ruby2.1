@@ -2,7 +2,7 @@
 
   vm_core.h -
 
-  $Author: nobu $
+  $Author: nagachika $
   created at: 04/01/01 19:41:38 JST
 
   Copyright (C) 2004-2007 Koichi Sasada
@@ -364,7 +364,7 @@ typedef struct rb_vm_struct {
     VALUE expanded_load_path;
     VALUE loaded_features;
     VALUE loaded_features_snapshot;
-    VALUE loaded_features_index;
+    struct st_table *loaded_features_index;
     struct st_table *loading_table;
 
     /* signal */

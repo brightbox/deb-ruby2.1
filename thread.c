@@ -2,7 +2,7 @@
 
   thread.c -
 
-  $Author: zzak $
+  $Author: nagachika $
 
   Copyright (C) 2004-2007 Koichi Sasada
 
@@ -42,6 +42,19 @@
  */
 
 
+/*
+ * FD_SET, FD_CLR and FD_ISSET have a small sanity check when using glibc
+ * 2.15 or later and set _FORTIFY_SOURCE > 0.
+ * However, the implementation is wrong. Even though Linux's select(2)
+ * support large fd size (>FD_SETSIZE), it wrongly assume fd is always
+ * less than FD_SETSIZE (i.e. 1024). And then when enabling HAVE_RB_FD_INIT,
+ * it doesn't work correctly and makes program abort. Therefore we need to
+ * disable FORTY_SOURCE until glibc fixes it.
+ */
+#undef _FORTIFY_SOURCE
+#undef __USE_FORTIFY_LEVEL
+#define __USE_FORTIFY_LEVEL 0
+
 /* for model 2 */
 
 #include "eval_intern.h"
@@ -59,6 +72,9 @@
 #ifndef THREAD_DEBUG
 #define THREAD_DEBUG 0
 #endif
+
+#define TIMET_MAX (~(time_t)0 <= 0 ? (time_t)((~(unsigned_time_t)0) >> 1) : (time_t)(~(unsigned_time_t)0))
+#define TIMET_MIN (~(time_t)0 <= 0 ? (time_t)(((unsigned_time_t)1) << (sizeof(time_t) * CHAR_BIT - 1)) : (time_t)0)
 
 VALUE rb_cMutex;
 VALUE rb_cThreadShield;
@@ -622,7 +638,26 @@ thread_create_core(VALUE thval, VALUE args, VALUE (*fn)(ANYARGS))
     return thval;
 }
 
-/* :nodoc: */
+/*
+ * call-seq:
+ *  Thread.new { ... }			-> thread
+ *  Thread.new(*args, &proc)		-> thread
+ *  Thread.new(*args) { |args| ... }	-> thread
+ *
+ *  Creates a new thread executing the given block.
+ *
+ *  Any +args+ given to ::new will be passed to the block:
+ *
+ *	arr = []
+ *	a, b, c = 1, 2, 3
+ *	Thread.new(a,b,c) { |d,e,f| arr << d << e << f }.join
+ *	arr #=> [1, 2, 3]
+ *
+ *  A ThreadError exception is raised if ::new is called without a block.
+ *
+ *  If you're going to subclass Thread, be sure to call super in your
+ *  +initialize+ method, otherwise a ThreadError will be raised.
+ */
 static VALUE
 thread_s_new(int argc, VALUE *argv, VALUE klass)
 {
@@ -646,9 +681,9 @@ thread_s_new(int argc, VALUE *argv, VALUE klass)
  *     Thread.start([args]*) {|args| block }   -> thread
  *     Thread.fork([args]*) {|args| block }    -> thread
  *
- *  Basically the same as <code>Thread::new</code>. However, if class
- *  <code>Thread</code> is subclassed, then calling <code>start</code> in that
- *  subclass will not invoke the subclass's <code>initialize</code> method.
+ *  Basically the same as ::new. However, if class Thread is subclassed, then
+ *  calling +start+ in that subclass will not invoke the subclass's
+ *  +initialize+ method.
  */
 
 static VALUE
@@ -884,6 +919,12 @@ double2timeval(double d)
 {
     struct timeval time;
 
+    if (isinf(d)) {
+        time.tv_sec = TIMET_MAX;
+        time.tv_usec = 0;
+        return time;
+    }
+
     time.tv_sec = (int)d;
     time.tv_usec = (int)((d - (int)d) * 1e6);
     if (time.tv_usec < 0) {
@@ -940,10 +981,17 @@ sleep_timeval(rb_thread_t *th, struct timeval tv, int spurious_check)
     enum rb_thread_status prev_status = th->status;
 
     getclockofday(&to);
-    to.tv_sec += tv.tv_sec;
+    if (TIMET_MAX - tv.tv_sec < to.tv_sec)
+        to.tv_sec = TIMET_MAX;
+    else
+        to.tv_sec += tv.tv_sec;
     if ((to.tv_usec += tv.tv_usec) >= 1000000) {
-	to.tv_sec++;
-	to.tv_usec -= 1000000;
+        if (to.tv_sec == TIMET_MAX)
+            to.tv_usec = 999999;
+        else {
+            to.tv_sec++;
+            to.tv_usec -= 1000000;
+        }
     }
 
     th->status = THREAD_STOPPED;
@@ -3477,9 +3525,6 @@ rb_thread_fd_select(int max, rb_fdset_t * read, rb_fdset_t * write, rb_fdset_t *
 #define POLLOUT_SET (POLLWRBAND | POLLWRNORM | POLLOUT | POLLERR)
 #define POLLEX_SET (POLLPRI)
 
-#define TIMET_MAX (~(time_t)0 <= 0 ? (time_t)((~(unsigned_time_t)0) >> 1) : (time_t)(~(unsigned_time_t)0))
-#define TIMET_MIN (~(time_t)0 <= 0 ? (time_t)(((unsigned_time_t)1) << (sizeof(time_t) * CHAR_BIT - 1)) : (time_t)0)
-
 #ifndef HAVE_PPOLL
 /* TODO: don't ignore sigmask */
 int
@@ -3853,6 +3898,12 @@ static const rb_data_type_t thgroup_data_type = {
  *  were created.
  */
 
+/*
+ * Document-const: Default
+ *
+ *  The default ThreadGroup created when Ruby starts; all Threads belong to it
+ *  by default.
+ */
 static VALUE
 thgroup_s_alloc(VALUE klass)
 {
@@ -4483,7 +4534,7 @@ rb_mutex_synchronize_m(VALUE self, VALUE args)
 	rb_raise(rb_eThreadError, "must be called with a block");
     }
 
-    return rb_mutex_synchronize(self, rb_yield, Qnil);
+    return rb_mutex_synchronize(self, rb_yield, Qundef);
 }
 
 void rb_mutex_allow_trap(VALUE self, int val)

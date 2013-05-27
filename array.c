@@ -2,7 +2,7 @@
 
   array.c -
 
-  $Author: zzak $
+  $Author: nagachika $
   created at: Fri Aug  6 09:46:12 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -3602,7 +3602,7 @@ recursive_eql(VALUE ary1, VALUE ary2, int recur)
  *     ary.eql?(other)  -> true or false
  *
  *  Returns +true+ if +self+ and +other+ are the same object,
- *  or are both arrays with the same content.
+ *  or are both arrays with the same content (according to Object#eql?).
  */
 
 static VALUE
@@ -3656,7 +3656,7 @@ rb_ary_hash(VALUE ary)
  *     ary.include?(object)   -> true or false
  *
  *  Returns +true+ if the given +object+ is present in +self+ (that is, if any
- *  object <code>==</code> +object+), otherwise returns +false+.
+ *  element <code>==</code> +object+), otherwise returns +false+.
  *
  *     a = [ "a", "b", "c" ]
  *     a.include?("b")   #=> true
@@ -3702,6 +3702,8 @@ recursive_cmp(VALUE ary1, VALUE ary2, int recur)
  *
  *  Comparison --- Returns an integer (+-1+, +0+, or <code>+1</code>) if this
  *  array is less than, equal to, or greater than +other_ary+.
+ *
+ *  +nil+ is returned if the two values are incomparable.
  *
  *  Each object in each array is compared (using the <=> operator).
  *
@@ -3801,7 +3803,8 @@ ary_recycle_hash(VALUE hash)
  *  Array Difference
  *
  *  Returns a new array that is a copy of the original array, removing any
- *  items that also appear in +other_ary+.
+ *  items that also appear in +other_ary+. The order is preserved from the
+ *  original array.
  *
  *  It compares elements using their #hash and #eql? methods for efficiency.
  *
@@ -3833,7 +3836,8 @@ rb_ary_diff(VALUE ary1, VALUE ary2)
  *     ary & other_ary      -> new_ary
  *
  *  Set Intersection --- Returns a new array containing elements common to the
- *  two arrays, excluding any duplicates.
+ *  two arrays, excluding any duplicates. The order is preserved from the
+ *  original array.
  *
  *  It compares elements using their #hash and #eql? methods for efficiency.
  *
@@ -3875,7 +3879,7 @@ rb_ary_and(VALUE ary1, VALUE ary2)
  *     ary | other_ary     -> new_ary
  *
  *  Set Union --- Returns a new array by joining +ary+ with +other_ary+,
- *  excluding any duplicates.
+ *  excluding any duplicates and preserving the order from the original array.
  *
  *  It compares elements using their #hash and #eql? methods for efficiency.
  *
@@ -5031,15 +5035,14 @@ rb_ary_product(int argc, VALUE *argv, VALUE ary)
     else {
 	/* Compute the length of the result array; return [] if any is empty */
 	for (i = 0; i < n; i++) {
-	    long k = RARRAY_LEN(arrays[i]), l = resultlen;
+	    long k = RARRAY_LEN(arrays[i]);
 	    if (k == 0) {
 		result = rb_ary_new2(0);
 		goto done;
 	    }
-	    resultlen *= k;
-	    if (resultlen < k || resultlen < l || resultlen / k != l) {
+            if (MUL_OVERFLOW_LONG_P(resultlen, k))
 		rb_raise(rb_eRangeError, "too big to product");
-	    }
+	    resultlen *= k;
 	}
 	result = rb_ary_new2(resultlen);
     }
@@ -5222,7 +5225,7 @@ rb_ary_drop_while(VALUE ary)
  *
  *     ary = Array.new    #=> []
  *     Array.new(3)       #=> [nil, nil, nil]
- *     Array.new(3, true) #=> [0, 0, 0]
+ *     Array.new(3, true) #=> [true, true, true]
  *
  *  Note that the second argument populates the array with references to the
  *  same object.  Therefore, it is only recommended in cases when you need to
@@ -5241,7 +5244,7 @@ rb_ary_drop_while(VALUE ary)
  *     #=> [[nil, nil, nil], [nil, nil, nil], [nil, nil, nil]]
  *
  *  An array can also be created by using the Array() method, provided by
- *  Kernel, which calls  #to_ary or #to_a on it's argument.
+ *  Kernel, which tries to call #to_ary, then #to_a on its argument.
  *
  *	Array({:a => "a", :b => "b"}) #=> [[:a, "a"], [:b, "b"]]
  *

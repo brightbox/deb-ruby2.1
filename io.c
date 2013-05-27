@@ -2,7 +2,7 @@
 
   io.c -
 
-  $Author: nobu $
+  $Author: nagachika $
   created at: Fri Oct 15 18:08:59 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -19,6 +19,7 @@
 #include "id.h"
 #include <ctype.h>
 #include <errno.h>
+#include "ruby_atomic.h"
 
 #define free(x) xfree(x)
 
@@ -109,6 +110,11 @@
 # endif
 #endif
 
+#if defined(HAVE___SYSCALL) && (defined(__APPLE__) || defined(__OpenBSD__))
+/* Mac OS X and OpenBSD have __syscall but don't define it in headers */
+off_t __syscall(quad_t number, ...);
+#endif
+
 #define numberof(array) (int)(sizeof(array) / sizeof((array)[0]))
 
 #define IO_RBUF_CAPA_MIN  8192
@@ -153,15 +159,20 @@ struct argf {
     int8_t init_p, next_p, binmode;
 };
 
-static int max_file_descriptor = NOFILE;
+static rb_atomic_t max_file_descriptor = NOFILE;
 void
 rb_update_max_fd(int fd)
 {
     struct stat buf;
+    rb_atomic_t afd = (rb_atomic_t)fd;
+
     if (fstat(fd, &buf) != 0 && errno == EBADF) {
         rb_bug("rb_update_max_fd: invalid fd (%d) given.", fd);
     }
-    if (max_file_descriptor < fd) max_file_descriptor = fd;
+
+    while (max_file_descriptor < afd) {
+	ATOMIC_CAS(max_file_descriptor, max_file_descriptor, afd);
+    }
 }
 
 void
@@ -191,7 +202,7 @@ void
 rb_fd_fix_cloexec(int fd)
 {
     rb_maygvl_fd_fix_cloexec(fd);
-    if (max_file_descriptor < fd) max_file_descriptor = fd;
+    rb_update_max_fd(fd);
 }
 
 int
@@ -3865,6 +3876,14 @@ rb_io_close_on_exec_p(VALUE io)
  *     f.close_on_exec = true
  *     system("cat", "/proc/self/fd/#{f.fileno}") # cat: /proc/self/fd/3: No such file or directory
  *     f.closed?                #=> false
+ *
+ *  Ruby sets close-on-exec flags of all file descriptors by default
+ *  since Ruby 2.0.0.
+ *  So you don't need to set by yourself.
+ *  Also, unsetting a close-on-exec flag can cause file descriptor leak
+ *  if another thread use fork() and exec() (via system() method for example).
+ *  If you really needs file descriptor inheritance to child process,
+ *  use spawn()'s argument such as fd=>fd.
  */
 
 static VALUE
@@ -4816,7 +4835,7 @@ rb_io_oflags_modestr(int oflags)
  * Qnil => no encoding specified (internal only)
  */
 static void
-rb_io_ext_int_to_encs(rb_encoding *ext, rb_encoding *intern, rb_encoding **enc, rb_encoding **enc2)
+rb_io_ext_int_to_encs(rb_encoding *ext, rb_encoding *intern, rb_encoding **enc, rb_encoding **enc2, int fmode)
 {
     int default_ext = 0;
 
@@ -4827,7 +4846,8 @@ rb_io_ext_int_to_encs(rb_encoding *ext, rb_encoding *intern, rb_encoding **enc, 
     if (intern == NULL && ext != rb_ascii8bit_encoding())
 	/* If external is ASCII-8BIT, no default transcoding */
 	intern = rb_default_internal_encoding();
-    if (intern == NULL || intern == (rb_encoding *)Qnil || intern == ext) {
+    if (intern == NULL || intern == (rb_encoding *)Qnil ||
+	(!(fmode & FMODE_SETENC_BY_BOM) && (intern == ext))) {
 	/* No internal encoding => use external + no transcoding */
 	*enc = (default_ext && intern != ext) ? NULL : ext;
 	*enc2 = NULL;
@@ -4850,6 +4870,7 @@ parse_mode_enc(const char *estr, rb_encoding **enc_p, rb_encoding **enc2_p, int 
     const char *p;
     char encname[ENCODING_MAXNAMELEN+1];
     int idx, idx2;
+    int fmode = fmode_p ? *fmode_p : 0;
     rb_encoding *ext_enc, *int_enc;
 
     /* parse estr as "enc" or "enc2:enc" or "enc:-" */
@@ -4861,7 +4882,7 @@ parse_mode_enc(const char *estr, rb_encoding **enc_p, rb_encoding **enc2_p, int 
 	    idx = -1;
 	else {
 	    if (io_encname_bom_p(estr, len)) {
-		if (fmode_p) *fmode_p |= FMODE_SETENC_BY_BOM;
+		fmode |= FMODE_SETENC_BY_BOM;
 		estr += 4;
                 len -= 4;
             }
@@ -4874,7 +4895,7 @@ parse_mode_enc(const char *estr, rb_encoding **enc_p, rb_encoding **enc2_p, int 
     else {
 	long len = strlen(estr);
 	if (io_encname_bom_p(estr, len)) {
-	    if (fmode_p) *fmode_p |= FMODE_SETENC_BY_BOM;
+	    fmode |= FMODE_SETENC_BY_BOM;
 	    estr += 4;
             len -= 4;
 	    memcpy(encname, estr, len);
@@ -4883,6 +4904,7 @@ parse_mode_enc(const char *estr, rb_encoding **enc_p, rb_encoding **enc2_p, int 
 	}
 	idx = rb_enc_find_index(estr);
     }
+    if (fmode_p) *fmode_p = fmode;
 
     if (idx >= 0)
 	ext_enc = rb_enc_from_index(idx);
@@ -4902,7 +4924,7 @@ parse_mode_enc(const char *estr, rb_encoding **enc_p, rb_encoding **enc2_p, int 
 	    idx2 = rb_enc_find_index(p);
 	    if (idx2 < 0)
 		unsupported_encoding(p);
-	    else if (idx2 == idx) {
+	    else if (!(fmode & FMODE_SETENC_BY_BOM) && (idx2 == idx)) {
 		int_enc = (rb_encoding *)Qnil;
 	    }
 	    else
@@ -4910,7 +4932,7 @@ parse_mode_enc(const char *estr, rb_encoding **enc_p, rb_encoding **enc2_p, int 
 	}
     }
 
-    rb_io_ext_int_to_encs(ext_enc, int_enc, enc_p, enc2_p);
+    rb_io_ext_int_to_encs(ext_enc, int_enc, enc_p, enc2_p, fmode);
 }
 
 int
@@ -4971,12 +4993,12 @@ rb_io_extract_encoding_option(VALUE opt, rb_encoding **enc_p, rb_encoding **enc2
 	    parse_mode_enc(StringValueCStr(tmp), enc_p, enc2_p, fmode_p);
 	}
 	else {
-	    rb_io_ext_int_to_encs(rb_to_encoding(encoding), NULL, enc_p, enc2_p);
+	    rb_io_ext_int_to_encs(rb_to_encoding(encoding), NULL, enc_p, enc2_p, 0);
 	}
     }
     else if (extenc != Qundef || intenc != Qundef) {
         extracted = 1;
-	rb_io_ext_int_to_encs(extencoding, intencoding, enc_p, enc2_p);
+	rb_io_ext_int_to_encs(extencoding, intencoding, enc_p, enc2_p, 0);
     }
     return extracted;
 }
@@ -5047,7 +5069,7 @@ rb_io_extract_modeenc(VALUE *vmode_p, VALUE *vperm_p, VALUE opthash,
     vmode = *vmode_p;
 
     /* Set to defaults */
-    rb_io_ext_int_to_encs(NULL, NULL, &enc, &enc2);
+    rb_io_ext_int_to_encs(NULL, NULL, &enc, &enc2, 0);
 
   vmode_handle:
     if (NIL_P(vmode)) {
@@ -5075,7 +5097,7 @@ rb_io_extract_modeenc(VALUE *vmode_p, VALUE *vperm_p, VALUE opthash,
 	    rb_encoding *e;
 
 	    e = (fmode & FMODE_BINMODE) ? rb_ascii8bit_encoding() : NULL;
-	    rb_io_ext_int_to_encs(e, NULL, &enc, &enc2);
+	    rb_io_ext_int_to_encs(e, NULL, &enc, &enc2, fmode);
 	}
     }
 
@@ -5099,7 +5121,7 @@ rb_io_extract_modeenc(VALUE *vmode_p, VALUE *vperm_p, VALUE opthash,
             oflags |= O_BINARY;
 #endif
 	    if (!has_enc)
-		rb_io_ext_int_to_encs(rb_ascii8bit_encoding(), NULL, &enc, &enc2);
+		rb_io_ext_int_to_encs(rb_ascii8bit_encoding(), NULL, &enc, &enc2, fmode);
 	}
 #if DEFAULT_TEXTMODE
 	else if (NIL_P(vmode)) {
@@ -5322,12 +5344,15 @@ static void
 io_set_encoding_by_bom(VALUE io)
 {
     int idx = io_strip_bom(io);
+    rb_io_t *fptr;
 
+    GetOpenFile(io, fptr);
     if (idx) {
-	rb_io_t *fptr;
-	GetOpenFile(io, fptr);
 	io_encoding_set(fptr, rb_enc_from_encoding(rb_enc_from_index(idx)),
 		rb_io_internal_encoding(io), Qnil);
+    }
+    else {
+	fptr->encs.enc2 = NULL;
     }
 }
 
@@ -5338,7 +5363,7 @@ rb_file_open_generic(VALUE io, VALUE filename, int oflags, int fmode, convconfig
     convconfig_t cc;
     if (!convconfig) {
 	/* Set to default encodings */
-	rb_io_ext_int_to_encs(NULL, NULL, &cc.enc, &cc.enc2);
+	rb_io_ext_int_to_encs(NULL, NULL, &cc.enc, &cc.enc2, fmode);
         cc.ecflags = 0;
         cc.ecopts = Qnil;
         convconfig = &cc;
@@ -5372,7 +5397,7 @@ rb_file_open_internal(VALUE io, VALUE filename, const char *modestr)
 	/* Set to default encodings */
 
 	e = (fmode & FMODE_BINMODE) ? rb_ascii8bit_encoding() : NULL;
-	rb_io_ext_int_to_encs(e, NULL, &convconfig.enc, &convconfig.enc2);
+	rb_io_ext_int_to_encs(e, NULL, &convconfig.enc, &convconfig.enc2, fmode);
         convconfig.ecflags = 0;
         convconfig.ecopts = Qnil;
     }
@@ -5594,7 +5619,7 @@ void
 rb_close_before_exec(int lowfd, int maxhint, VALUE noclose_fds)
 {
     int fd, ret;
-    int max = max_file_descriptor;
+    int max = (int)max_file_descriptor;
 #ifdef F_MAXFD
     /* F_MAXFD is available since NetBSD 2.0. */
     ret = fcntl(0, F_MAXFD); /* async-signal-safe */
@@ -9027,7 +9052,7 @@ io_encoding_set(rb_io_t *fptr, VALUE v1, VALUE v2, VALUE opt)
     else {
 	if (NIL_P(v1)) {
 	    /* Set to default encodings */
-	    rb_io_ext_int_to_encs(NULL, NULL, &enc, &enc2);
+	    rb_io_ext_int_to_encs(NULL, NULL, &enc, &enc2, 0);
 	    SET_UNIVERSAL_NEWLINE_DECORATOR_IF_ENC2(enc2, ecflags);
             ecopts = Qnil;
 	}
@@ -9039,7 +9064,7 @@ io_encoding_set(rb_io_t *fptr, VALUE v1, VALUE v2, VALUE opt)
                 ecflags = rb_econv_prepare_options(opt, &ecopts, ecflags);
 	    }
 	    else {
-		rb_io_ext_int_to_encs(find_encoding(v1), NULL, &enc, &enc2);
+		rb_io_ext_int_to_encs(find_encoding(v1), NULL, &enc, &enc2, 0);
 		SET_UNIVERSAL_NEWLINE_DECORATOR_IF_ENC2(enc2, ecflags);
                 ecopts = Qnil;
 	    }

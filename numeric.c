@@ -2,7 +2,7 @@
 
   numeric.c -
 
-  $Author: marcandre $
+  $Author: nagachika $
   created at: Fri Aug 13 18:33:09 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -183,6 +183,12 @@ negative_int_p(VALUE num)
 	    return RBIGNUM_NEGATIVE_P(num);
     }
     return RTEST(rb_funcall(num, mid, 1, INT2FIX(0)));
+}
+
+int
+rb_num_negative_p(VALUE num)
+{
+    return negative_int_p(num);
 }
 
 /*
@@ -522,8 +528,10 @@ num_real_p(VALUE num)
  *  call-seq:
  *     num.integer?  ->  true or false
  *
- *  Returns <code>true</code> if <i>num</i> is an <code>Integer</code>
- *  (including <code>Fixnum</code> and <code>Bignum</code>).
+ *  Returns +true+ if +num+ is an Integer (including Fixnum and Bignum).
+ *
+ *      (1.0).integer? #=> false
+ *      (1).integer?   #=> true
  */
 
 static VALUE
@@ -596,8 +604,11 @@ num_nonzero_p(VALUE num)
  *  call-seq:
  *     num.to_int  ->  integer
  *
- *  Invokes the child class's <code>to_i</code> method to convert
- *  <i>num</i> to an integer.
+ *  Invokes the child class's +to_i+ method to convert +num+ to an integer.
+ *
+ *      1.0.class => Float
+ *      1.0.to_int.class => Fixnum
+ *      1.0.to_i.class => Fixnum
  */
 
 static VALUE
@@ -619,7 +630,7 @@ num_to_int(VALUE num)
  *  So you should know its esoteric system. see following:
  *
  *  - http://docs.sun.com/source/806-3568/ncg_goldberg.html
- *  - http://wiki.github.com/rdp/ruby_tutorials_core/ruby-talk-faq#floats_imprecise
+ *  - http://wiki.github.com/rdp/ruby_tutorials_core/ruby-talk-faq#wiki-floats_imprecise
  *  - http://en.wikipedia.org/wiki/Floating_point#Accuracy_problems
  */
 
@@ -899,10 +910,10 @@ ruby_float_mod(double x, double y)
 
 /*
  *  call-seq:
- *     flt % other        ->  float
- *     flt.modulo(other)  ->  float
+ *     float % other        ->  float
+ *     float.modulo(other)  ->  float
  *
- *  Return the modulo after division of <code>flt</code> by <code>other</code>.
+ *  Return the modulo after division of +float+ by +other+.
  *
  *     6543.21.modulo(137)      #=> 104.21
  *     6543.21.modulo(137.24)   #=> 92.9299999999996
@@ -941,9 +952,12 @@ dbl2ival(double d)
 
 /*
  *  call-seq:
- *     flt.divmod(numeric)  ->  array
+ *     float.divmod(numeric)  ->  array
  *
- *  See <code>Numeric#divmod</code>.
+ *  See Numeric#divmod.
+ *
+ *      42.0.divmod 6 #=> [7, 0.0]
+ *      42.0.divmod 5 #=> [8, 2.0]
  */
 
 static VALUE
@@ -1024,10 +1038,10 @@ num_eql(VALUE x, VALUE y)
 
 /*
  *  call-seq:
- *     num <=> other  ->  0 or nil
+ *     number <=> other  ->  0 or nil
  *
- *  Returns zero if <i>num</i> equals <i>other</i>, <code>nil</code>
- *  otherwise.
+ *  Returns zero if +number+ equals +other+, otherwise +nil+ is returned if the
+ *  two values are incomparable.
  */
 
 static VALUE
@@ -1115,13 +1129,15 @@ rb_dbl_cmp(double a, double b)
 
 /*
  *  call-seq:
- *     flt <=> real  ->  -1, 0, +1 or nil
+ *     float <=> real  ->  -1, 0, +1 or nil
  *
- *  Returns -1, 0, +1 or nil depending on whether <i>flt</i> is less
- *  than, equal to, or greater than <i>real</i>. This is the basis for
- *  the tests in <code>Comparable</code>.
+ *  Returns -1, 0, +1 or nil depending on whether +float+ is less than, equal
+ *  to, or greater than +real+. This is the basis for the tests in Comparable.
+ *
  *  The result of <code>NaN <=> NaN</code> is undefined, so the
  *  implementation-dependent value is returned.
+ *
+ *  +nil+ is returned if the two values are incomparable.
  */
 
 static VALUE
@@ -2678,7 +2694,6 @@ fix_mul(VALUE x, VALUE y)
 #if SIZEOF_LONG * 2 <= SIZEOF_LONG_LONG
 	LONG_LONG d;
 #else
-	volatile long c;
 	VALUE r;
 #endif
 
@@ -2692,13 +2707,11 @@ fix_mul(VALUE x, VALUE y)
 #else
 	if (FIT_SQRT_LONG(a) && FIT_SQRT_LONG(b))
 	    return LONG2FIX(a*b);
-	c = a * b;
-	r = LONG2FIX(c);
-
 	if (a == 0) return x;
-	if (FIX2LONG(r) != c || c/a != b) {
+        if (MUL_OVERFLOW_FIXNUM_P(a, b))
 	    r = rb_big_mul(rb_int2big(a), rb_int2big(b));
-	}
+        else
+            r = LONG2FIX(a * b);
 	return r;
 #endif
     }
@@ -2920,11 +2933,10 @@ int_pow(long x, unsigned long y)
 	    y >>= 1;
 	}
 	{
-	    volatile long xz = x * z;
-	    if (!POSFIXABLE(xz) || xz / x != z) {
+            if (MUL_OVERFLOW_FIXNUM_P(x, z)) {
 		goto bignum;
 	    }
-	    z = xz;
+	    z = x * z;
 	}
     } while (--y);
     if (neg) z = -z;
@@ -3028,10 +3040,11 @@ fix_equal(VALUE x, VALUE y)
  *  call-seq:
  *     fix <=> numeric  ->  -1, 0, +1 or nil
  *
- *  Comparison---Returns -1, 0, +1 or nil depending on whether
- *  <i>fix</i> is less than, equal to, or greater than
- *  <i>numeric</i>. This is the basis for the tests in
- *  <code>Comparable</code>.
+ *  Comparison---Returns -1, 0, +1 or nil depending on whether +fix+ is less
+ *  than, equal to, or greater than +numeric+. This is the basis for the tests
+ *  in  Comparable.
+ *
+ *  +nil+ is returned if the two values are incomparable.
  */
 
 static VALUE
