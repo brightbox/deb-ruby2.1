@@ -30,10 +30,6 @@ configure_options += $(shell dpkg-buildflags --export=configure)
 %:
 	dh $@ --parallel --with autotools-dev --with autoreconf
 
-override_dh_autoreconf:
-	tar caf debian/backup.tar configure $(shell cat debian/deleted_on_clean.txt)
-	dh_autoreconf
-
 override_dh_auto_configure:
 	dh_auto_configure -- $(configure_options)
 
@@ -44,7 +40,6 @@ override_dh_auto_clean:
 
 override_dh_autoreconf_clean:
 	dh_autoreconf_clean
-	(test -f debian/backup.tar && tar xaf debian/backup.tar && $(RM) debian/backup.tar) || true
 
 override_dh_auto_build:
 	dh_auto_build -- main
