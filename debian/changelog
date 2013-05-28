@@ -1,3 +1,9 @@
+ruby2.0 (2.0.0.195-1bbox1~precise1) precise; urgency=low
+
+  * New upstream release
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 27 May 2013 22:48:52 +0100
+
 ruby2.0 (2.0.0.0-1) unstable; urgency=low
 
   * Initial release (Closes: #697703)
