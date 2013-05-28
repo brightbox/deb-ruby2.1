@@ -1,1 +1,3 @@
 backported_multiarch_support.patch
+20100829-rubygems_default_dir.diff
+20100829-rubygems_disable_update_system.diff
