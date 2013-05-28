@@ -2,7 +2,7 @@
 
   marshal.c -
 
-  $Author: charliesome $
+  $Author: nagachika $
   created at: Thu Apr 27 16:30:01 JST 1995
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -457,12 +457,17 @@ hash_each(VALUE key, VALUE value, struct dump_call_arg *arg)
     return ST_CONTINUE;
 }
 
+#define SINGLETON_DUMP_UNABLE_P(klass) \
+    (RCLASS_M_TBL(klass)->num_entries || \
+     (RCLASS_IV_TBL(klass) && RCLASS_IV_TBL(klass)->num_entries > 1))
+
 static void
 w_extended(VALUE klass, struct dump_arg *arg, int check)
 {
     if (check && FL_TEST(klass, FL_SINGLETON)) {
-	if (RCLASS_M_TBL(klass)->num_entries ||
-	    (RCLASS_IV_TBL(klass) && RCLASS_IV_TBL(klass)->num_entries > 1)) {
+	VALUE origin = RCLASS_ORIGIN(klass);
+	if (SINGLETON_DUMP_UNABLE_P(klass) ||
+	    (origin != klass && SINGLETON_DUMP_UNABLE_P(origin))) {
 	    rb_raise(rb_eTypeError, "singleton can't be dumped");
 	}
 	klass = RCLASS_SUPER(klass);
@@ -920,7 +925,7 @@ marshal_dump(int argc, VALUE *argv)
     VALUE obj, port, a1, a2;
     int limit = -1;
     struct dump_arg *arg;
-    VALUE wrapper;
+    volatile VALUE wrapper;
 
     port = Qnil;
     rb_scan_args(argc, argv, "12", &obj, &a1, &a2);
@@ -1904,7 +1909,7 @@ marshal_load(int argc, VALUE *argv)
     VALUE port, proc;
     int major, minor, infection = 0;
     VALUE v;
-    VALUE wrapper;
+    volatile VALUE wrapper;
     struct load_arg *arg;
 
     rb_scan_args(argc, argv, "11", &port, &proc);

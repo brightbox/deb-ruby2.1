@@ -116,7 +116,12 @@ File.foreach "config.status" do |line|
     eq = win32 && vars[name] ? '<< "\n"' : '='
     vars[name] = val
     if name == "configure_args"
-      val.gsub!(/ +(?!-)/, "=") if win32
+      if win32
+        val.gsub!(/\G(--[-a-z0-9]+)((=\S+)|(?:\s+(?!-)\S+)+)?(\s*)/) {
+          _, opt, list, arg, sep = *$~
+          "#{opt}#{arg || list && list.sub(/^\s+/, '=').tr_s(' ', ',')}#{sep}"
+        }
+      end
       val.gsub!(/--with-out-ext/, "--without-ext")
     end
     val = val.gsub(/\$(?:\$|\{?(\w+)\}?)/) {$1 ? "$(#{$1})" : $&}.dump
@@ -167,6 +172,7 @@ def vars.expand(val, config = self)
   val
 end
 vars["prefix"] = ""
+vars["exec_prefix"] = ""
 prefix = vars.expand(vars["rubyarchdir"])
 print "  TOPDIR = File.dirname(__FILE__).chomp!(#{prefix.dump})\n"
 print "  DESTDIR = ", (drive ? "TOPDIR && TOPDIR[/\\A[a-z]:/i] || " : ""), "'' unless defined? DESTDIR\n"

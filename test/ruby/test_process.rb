@@ -1380,24 +1380,34 @@ class TestProcess < Test::Unit::TestCase
 
   def test_spawn_too_long_path
     bug4314 = '[ruby-core:34842]'
-    assert_fail_too_long_path(bug4314)
+    assert_fail_too_long_path(%w"echo", bug4314)
   end
 
   def test_aspawn_too_long_path
     bug4315 = '[ruby-core:34833]'
-    assert_fail_too_long_path(bug4315)
+    assert_fail_too_long_path(%w"echo |", bug4315)
   end
 
-  def assert_fail_too_long_path(cmd, mesg = nil)
-    size = 1_000_000 / cmd.size
+  def assert_fail_too_long_path((cmd, sep), mesg)
+    sep ||= ""
+    min = 1_000 / (cmd.size + sep.size)
+    cmds = Array.new(min, cmd)
     exs = [Errno::ENOENT]
     exs << Errno::E2BIG if defined?(Errno::E2BIG)
     EnvUtil.suppress_warning do
       assert_raise(*exs, mesg) do
         begin
-          Process.spawn(cmd * size)
+          loop do
+            Process.spawn(cmds.join(sep), [STDOUT, STDERR]=>:close)
+            min = [cmds.size, min].max
+            cmds *= 100
+          end
         rescue NoMemoryError
-          raise if (size /= 2) < 250
+          size = cmds.size
+          raise if min >= size - 1
+          min = [min, size /= 2].max
+          cmds[size..-1] = []
+          raise if size < 250
           retry
         end
       end
@@ -1583,6 +1593,9 @@ class TestProcess < Test::Unit::TestCase
 	newsid = Process.setsid
 	Marshal.dump(newsid, STDOUT)
 	STDOUT.flush
+	# getsid() on MacOS X return ESRCH when target process is zombie
+	# even if it is valid process id.
+	sleep
 EOS
       begin
         # test Process.getsid() w/o arg
@@ -1591,7 +1604,7 @@ EOS
         # test Process.setsid return value and Process::getsid(pid)
         assert_equal(Marshal.load(io), Process.getsid(io.pid))
       ensure
-        Process.kill(:KILL, io.pid)
+        Process.kill(:KILL, io.pid) rescue nil
         Process.wait(io.pid)
       end
     end

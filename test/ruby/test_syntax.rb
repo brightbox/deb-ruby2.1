@@ -2,12 +2,26 @@ require 'test/unit'
 require_relative 'envutil'
 
 class TestSyntax < Test::Unit::TestCase
-  def test_syntax
-    assert_nothing_raised(Exception) do
-      for script in Dir[File.expand_path("../../../{lib,sample,ext,test}/**/*.rb", __FILE__)].sort
+  def assert_syntax_files(test)
+    srcdir = File.expand_path("../../..", __FILE__)
+    srcdir = File.join(srcdir, test)
+    assert_separately(%W[--disable-gem -r#{__dir__}/envutil - #{srcdir}],
+                      __FILE__, __LINE__, <<-'eom', timeout: Float::INFINITY)
+      dir = ARGV.shift
+      for script in Dir["#{dir}/**/*.rb"].sort
         assert_valid_syntax(IO::read(script), script)
       end
-    end
+    eom
+  end
+
+  def test_syntax_lib; assert_syntax_files("lib"); end
+  def test_syntax_sample; assert_syntax_files("sample"); end
+  def test_syntax_ext; assert_syntax_files("ext"); end
+  def test_syntax_test; assert_syntax_files("test"); end
+
+  def test_defined_empty_argument
+    bug8220 = '[ruby-core:53999] [Bug #8220]'
+    assert_ruby_status(%w[--disable-gem], 'puts defined? ()', bug8220)
   end
 
   def test_must_ascii_compatible
@@ -77,6 +91,9 @@ class TestSyntax < Test::Unit::TestCase
       eval("def o.m(k: 0) k end")
     end
     assert_equal(42, o.m(k: 42), '[ruby-core:45744]')
+    bug7922 = '[ruby-core:52744] [Bug #7922]'
+    def o.bug7922(**) end
+    assert_nothing_raised(ArgumentError, bug7922) {o.bug7922(foo: 42)}
   end
 
   def test_keyword_splat

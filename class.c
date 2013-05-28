@@ -2,7 +2,7 @@
 
   class.c -
 
-  $Author: nobu $
+  $Author: nagachika $
   created at: Tue Aug 10 15:05:44 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -307,6 +307,14 @@ rb_singleton_class_attached(VALUE klass, VALUE obj)
  */
 #define META_CLASS_OF_CLASS_CLASS_P(k)  (METACLASS_OF(k) == (k))
 
+/*!
+ * whether k has a metaclass
+ * @retval 1 if \a k has a metaclass
+ * @retval 0 otherwise
+ */
+#define HAVE_METACLASS_P(k) \
+    (FL_TEST(METACLASS_OF(k), FL_SINGLETON) && \
+     rb_ivar_get(METACLASS_OF(k), id_attached) == (k))
 
 /*!
  * ensures \a klass belongs to its own eigenclass.
@@ -316,7 +324,7 @@ rb_singleton_class_attached(VALUE klass, VALUE obj)
  * @note this macro creates a new eigenclass if necessary.
  */
 #define ENSURE_EIGENCLASS(klass) \
- (rb_ivar_get(METACLASS_OF(klass), id_attached) == (klass) ? METACLASS_OF(klass) : make_metaclass(klass))
+    (HAVE_METACLASS_P(klass) ? METACLASS_OF(klass) : make_metaclass(klass))
 
 
 /*!
@@ -681,7 +689,7 @@ rb_include_class_new(VALUE module, VALUE super)
     return (VALUE)klass;
 }
 
-static int include_modules_at(VALUE klass, VALUE c, VALUE module);
+static int include_modules_at(const VALUE klass, VALUE c, VALUE module);
 
 void
 rb_include_module(VALUE klass, VALUE module)
@@ -713,17 +721,18 @@ add_refined_method_entry_i(st_data_t key, st_data_t value, st_data_t data)
 }
 
 static int
-include_modules_at(VALUE klass, VALUE c, VALUE module)
+include_modules_at(const VALUE klass, VALUE c, VALUE module)
 {
     VALUE p;
     int changed = 0;
+    const st_table *const klass_m_tbl = RCLASS_M_TBL(RCLASS_ORIGIN(klass));
 
     while (module) {
 	int superclass_seen = FALSE;
 
 	if (RCLASS_ORIGIN(module) != module)
 	    goto skip;
-	if (RCLASS_M_TBL(klass) && RCLASS_M_TBL(klass) == RCLASS_M_TBL(module))
+	if (klass_m_tbl && klass_m_tbl == RCLASS_M_TBL(module))
 	    return -1;
 	/* ignore if the module included already in superclasses */
 	for (p = RCLASS_SUPER(klass); p; p = RCLASS_SUPER(p)) {
@@ -789,6 +798,7 @@ move_refined_method(st_data_t key, st_data_t value, st_data_t data)
 void
 rb_prepend_module(VALUE klass, VALUE module)
 {
+    void rb_vm_check_redefinition_by_prepend(VALUE klass);
     VALUE origin;
     int changed = 0;
 
@@ -815,7 +825,10 @@ rb_prepend_module(VALUE klass, VALUE module)
     changed = include_modules_at(klass, klass, module);
     if (changed < 0)
 	rb_raise(rb_eArgError, "cyclic prepend detected");
-    if (changed) rb_clear_cache();
+    if (changed) {
+	rb_clear_cache();
+	rb_vm_check_redefinition_by_prepend(klass);
+    }
 }
 
 /*
@@ -840,10 +853,13 @@ rb_mod_included_modules(VALUE mod)
 {
     VALUE ary = rb_ary_new();
     VALUE p;
+    VALUE origin = RCLASS_ORIGIN(mod);
 
     for (p = RCLASS_SUPER(mod); p; p = RCLASS_SUPER(p)) {
-	if (BUILTIN_TYPE(p) == T_ICLASS) {
-	    rb_ary_push(ary, RBASIC(p)->klass);
+	if (p != origin && BUILTIN_TYPE(p) == T_ICLASS) {
+	    VALUE m = RBASIC(p)->klass;
+	    if (RB_TYPE_P(m, T_MODULE))
+		rb_ary_push(ary, m);
 	}
     }
     return ary;

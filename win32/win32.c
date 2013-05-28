@@ -5629,6 +5629,7 @@ constat_attr(int count, const int *seq, DWORD attr, DWORD default_attr)
 
 	  case 40:
 	    attr &= ~(BACKGROUND_BLUE | BACKGROUND_GREEN | BACKGROUND_RED);
+	    break;
 	  case 41:
 	    attr = attr & ~(BACKGROUND_BLUE | BACKGROUND_GREEN) | BACKGROUND_RED;
 	    break;
@@ -6582,7 +6583,8 @@ rb_w32_inet_ntop(int af, const void *addr, char *numaddr, size_t numaddr_len)
 
 /* License: Ruby's */
 char
-rb_w32_fd_is_text(int fd) {
+rb_w32_fd_is_text(int fd)
+{
     return _osfile(fd) & FTEXT;
 }
 
