@@ -54,7 +54,7 @@ profile.rb:: Runs the Ruby Profiler__
 Profiler__:: Provides a way to profile your Ruby application
 PStore:: Implements a file based persistence mechanism based on a Hash
 Queue:: Synchronized communication between threads, provided by thread.rb
-Racc:: A LALR(1) parser generator writting in Ruby.
+Racc:: A LALR(1) parser generator written in Ruby.
 Rake:: Ruby build program with capabilities similar to make
 rational.rb:: Deprecated library replaced by C implementation in core
 RbConfig:: Information of your configure and build of Ruby
@@ -70,7 +70,7 @@ SecureRandom:: Interface for secure random number generator
 Set:: Provides a class to deal with collections of unordered, unique values
 Shell:: An idiomatic Ruby interface for common UNIX shell commands
 Shellwords:: Manipulates strings with word parsing rules of UNIX Bourne shell
-Singleton:: Implementation of the Singelton pattern for Ruby
+Singleton:: Implementation of the Singleton pattern for Ruby
 Synchronizer:: A module that provides a two-phase lock with a counter
 Tempfile:: A utility class for managing temporary files
 Test::Unit:: A compatibility layer for MiniTest

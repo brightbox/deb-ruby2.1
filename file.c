@@ -2,7 +2,7 @@
 
   file.c -
 
-  $Author: kosaki $
+  $Author: nagachika $
   created at: Mon Nov 15 12:24:34 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -73,6 +73,10 @@ int flock(int, int);
 
 #if defined(HAVE_FCNTL_H)
 #include <fcntl.h>
+#endif
+
+#if defined(HAVE_SYS_TIME_H)
+#include <sys/time.h>
 #endif
 
 #if !defined HAVE_LSTAT && !defined lstat
@@ -326,8 +330,10 @@ static struct timespec stat_mtimespec(struct stat *st);
  *  call-seq:
  *     stat <=> other_stat    -> -1, 0, 1, nil
  *
- *  Compares <code>File::Stat</code> objects by comparing their
- *  respective modification times.
+ *  Compares File::Stat objects by comparing their respective modification
+ *  times.
+ *
+ *  +nil+ is returned if the two values are incomparable.
  *
  *     f1 = File.new("f1", "w")
  *     sleep 1
@@ -1016,36 +1022,48 @@ rb_file_lstat(VALUE obj)
 static int
 rb_group_member(GETGROUPS_T gid)
 {
+#ifdef _WIN32
+    return FALSE;
+#else
     int rv = FALSE;
-#ifndef _WIN32
+    int groups = 16;
+    VALUE v = 0;
+    GETGROUPS_T *gary;
+    int anum;
+
     if (getgid() == gid || getegid() == gid)
 	return TRUE;
 
-# ifdef HAVE_GETGROUPS
-#  ifndef NGROUPS
-#   ifdef NGROUPS_MAX
-#    define NGROUPS NGROUPS_MAX
-#   else
-#    define NGROUPS 32
-#   endif
-#  endif
-    {
-	GETGROUPS_T *gary;
-	int anum;
-
-	gary = xmalloc(NGROUPS * sizeof(GETGROUPS_T));
-	anum = getgroups(NGROUPS, gary);
-	while (--anum >= 0) {
-	    if (gary[anum] == gid) {
-		rv = TRUE;
-		break;
-	    }
+    /*
+     * On Mac OS X (Mountain Lion), NGROUPS is 16. But libc and kernel
+     * accept more larger value.
+     * So we don't trunk NGROUPS anymore.
+     */
+    while (groups <= RB_MAX_GROUPS) {
+	gary = ALLOCV_N(GETGROUPS_T, v, groups);
+	anum = getgroups(groups, gary);
+	if (anum != -1 && anum != groups)
+	    break;
+	groups *= 2;
+	if (v) {
+	    ALLOCV_END(v);
+	    v = 0;
 	}
-	xfree(gary);
     }
-# endif
-#endif
+    if (anum == -1)
+	return FALSE;
+
+    while (--anum >= 0) {
+	if (gary[anum] == gid) {
+	    rv = TRUE;
+	    break;
+	}
+    }
+    if (v)
+	ALLOCV_END(v);
+
     return rv;
+#endif
 }
 
 #ifndef S_IXUGO
@@ -1096,12 +1114,6 @@ eaccess(const char *path, int mode)
 }
 #endif
 
-static inline int
-access_internal(const char *path, int mode)
-{
-    return access(path, mode);
-}
-
 
 /*
  * Document-class: FileTest
@@ -1122,6 +1134,8 @@ access_internal(const char *path, int mode)
  * Returns <code>true</code> if the named file is a directory,
  * or a symlink that points at a directory, and <code>false</code>
  * otherwise.
+ *
+ * _file_name_ can be an IO object.
  *
  *    File.directory?(".")
  */
@@ -1145,6 +1159,8 @@ rb_file_directory_p(VALUE obj, VALUE fname)
  *   File.pipe?(file_name)   ->  true or false
  *
  * Returns <code>true</code> if the named file is a pipe.
+ *
+ * _file_name_ can be an IO object.
  */
 
 static VALUE
@@ -1206,6 +1222,8 @@ rb_file_symlink_p(VALUE obj, VALUE fname)
  *   File.socket?(file_name)   ->  true or false
  *
  * Returns <code>true</code> if the named file is a socket.
+ *
+ * _file_name_ can be an IO object.
  */
 
 static VALUE
@@ -1240,6 +1258,8 @@ rb_file_socket_p(VALUE obj, VALUE fname)
  *   File.blockdev?(file_name)   ->  true or false
  *
  * Returns <code>true</code> if the named file is a block device.
+ *
+ * _file_name_ can be an IO object.
  */
 
 static VALUE
@@ -1268,6 +1288,8 @@ rb_file_blockdev_p(VALUE obj, VALUE fname)
  *   File.chardev?(file_name)   ->  true or false
  *
  * Returns <code>true</code> if the named file is a character device.
+ *
+ * _file_name_ can be an IO object.
  */
 static VALUE
 rb_file_chardev_p(VALUE obj, VALUE fname)
@@ -1290,6 +1312,10 @@ rb_file_chardev_p(VALUE obj, VALUE fname)
  *    File.exists?(file_name)   ->  true or false
  *
  * Return <code>true</code> if the named file exists.
+ *
+ * _file_name_ can be an IO object.
+ *
+ * "file exists" means that stat() or fstat() system call is successful.
  */
 
 static VALUE
@@ -1333,7 +1359,7 @@ rb_file_readable_real_p(VALUE obj, VALUE fname)
     rb_secure(2);
     FilePathValue(fname);
     fname = rb_str_encode_ospath(fname);
-    if (access_internal(StringValueCStr(fname), R_OK) < 0) return Qfalse;
+    if (access(StringValueCStr(fname), R_OK) < 0) return Qfalse;
     return Qtrue;
 }
 
@@ -1353,6 +1379,8 @@ rb_file_readable_real_p(VALUE obj, VALUE fname)
  * representing the file permission bits of <i>file_name</i>. Returns
  * <code>nil</code> otherwise. The meaning of the bits is platform
  * dependent; on Unix systems, see <code>stat(2)</code>.
+ *
+ * _file_name_ can be an IO object.
  *
  *    File.world_readable?("/etc/passwd")	    #=> 420
  *    m = File.world_readable?("/etc/passwd")
@@ -1405,7 +1433,7 @@ rb_file_writable_real_p(VALUE obj, VALUE fname)
     rb_secure(2);
     FilePathValue(fname);
     fname = rb_str_encode_ospath(fname);
-    if (access_internal(StringValueCStr(fname), W_OK) < 0) return Qfalse;
+    if (access(StringValueCStr(fname), W_OK) < 0) return Qfalse;
     return Qtrue;
 }
 
@@ -1417,6 +1445,8 @@ rb_file_writable_real_p(VALUE obj, VALUE fname)
  * representing the file permission bits of <i>file_name</i>. Returns
  * <code>nil</code> otherwise. The meaning of the bits is platform
  * dependent; on Unix systems, see <code>stat(2)</code>.
+ *
+ * _file_name_ can be an IO object.
  *
  *    File.world_writable?("/tmp")		    #=> 511
  *    m = File.world_writable?("/tmp")
@@ -1469,7 +1499,7 @@ rb_file_executable_real_p(VALUE obj, VALUE fname)
     rb_secure(2);
     FilePathValue(fname);
     fname = rb_str_encode_ospath(fname);
-    if (access_internal(StringValueCStr(fname), X_OK) < 0) return Qfalse;
+    if (access(StringValueCStr(fname), X_OK) < 0) return Qfalse;
     return Qtrue;
 }
 
@@ -1483,6 +1513,8 @@ rb_file_executable_real_p(VALUE obj, VALUE fname)
  *
  * Returns <code>true</code> if the named file exists and is a
  * regular file.
+ *
+ * _file_name_ can be an IO object.
  */
 
 static VALUE
@@ -1501,6 +1533,8 @@ rb_file_file_p(VALUE obj, VALUE fname)
  *
  * Returns <code>true</code> if the named file exists and has
  * a zero size.
+ *
+ * _file_name_ can be an IO object.
  */
 
 static VALUE
@@ -1519,6 +1553,8 @@ rb_file_zero_p(VALUE obj, VALUE fname)
  *
  * Returns +nil+ if +file_name+ doesn't exist or has zero size, the size of the
  * file otherwise.
+ *
+ * _file_name_ can be an IO object.
  */
 
 static VALUE
@@ -1538,6 +1574,8 @@ rb_file_size_p(VALUE obj, VALUE fname)
  * Returns <code>true</code> if the named file exists and the
  * effective used id of the calling process is the owner of
  * the file.
+ *
+ * _file_name_ can be an IO object.
  */
 
 static VALUE
@@ -1567,6 +1605,8 @@ rb_file_rowned_p(VALUE obj, VALUE fname)
  * Returns <code>true</code> if the named file exists and the
  * effective group id of the calling process is the owner of
  * the file. Returns <code>false</code> on Windows.
+ *
+ * _file_name_ can be an IO object.
  */
 
 static VALUE
@@ -1653,6 +1693,8 @@ rb_file_sticky_p(VALUE obj, VALUE fname)
  *
  * Returns <code>true</code> if the named files are identical.
  *
+ * _file_1_ and _file_2_ can be an IO object.
+ *
  *     open("a", "w") {}
  *     p File.identical?("a", "a")      #=> true
  *     p File.identical?("a", "./a")    #=> true
@@ -1717,6 +1759,8 @@ rb_file_identical_p(VALUE obj, VALUE fname1, VALUE fname2)
  *    File.size(file_name)   -> integer
  *
  * Returns the size of <code>file_name</code>.
+ *
+ * _file_name_ can be an IO object.
  */
 
 static VALUE
@@ -1808,6 +1852,8 @@ rb_file_s_ftype(VALUE klass, VALUE fname)
  *
  *  Returns the last access time for the named file as a Time object).
  *
+ *  _file_name_ can be an IO object.
+ *
  *     File.atime("testfile")   #=> Wed Apr 09 08:51:48 CDT 2003
  *
  */
@@ -1853,6 +1899,8 @@ rb_file_atime(VALUE obj)
  *     File.mtime(file_name)  ->  time
  *
  *  Returns the modification time for the named file as a Time object.
+ *
+ *  _file_name_ can be an IO object.
  *
  *     File.mtime("testfile")   #=> Tue Apr 08 12:58:04 CDT 2003
  *
@@ -1900,6 +1948,8 @@ rb_file_mtime(VALUE obj)
  *  Returns the change time for the named file (the time at which
  *  directory information about the file was changed, not the file
  *  itself).
+ *
+ *  _file_name_ can be an IO object.
  *
  *  Note that on Windows (NTFS), returns creation time (birth time).
  *
@@ -2188,7 +2238,7 @@ lchown_internal(const char *path, VALUE pathv, void *arg)
 
 /*
  *  call-seq:
- *     file.lchown(owner_int, group_int, file_name,..) -> integer
+ *     File.lchown(owner_int, group_int, file_name,..) -> integer
  *
  *  Equivalent to <code>File::chown</code>, but does not follow symbolic
  *  links (so it will change the owner associated with the link, not the
@@ -3722,7 +3772,7 @@ rb_file_s_basename(int argc, VALUE *argv)
 
 /*
  *  call-seq:
- *     File.dirname(file_name )  ->  dir_name
+ *     File.dirname(file_name)  ->  dir_name
  *
  *  Returns all components of the filename given in <i>file_name</i>
  *  except the last one. The filename can be formed using both
@@ -4153,7 +4203,7 @@ rb_thread_flock(void *data)
 
 /*
  *  call-seq:
- *     file.flock (locking_constant )-> 0 or false
+ *     file.flock(locking_constant) -> 0 or false
  *
  *  Locks or unlocks a file according to <i>locking_constant</i> (a
  *  logical <em>or</em> of the values in the table below).
@@ -4258,14 +4308,14 @@ test_check(int n, int argc, VALUE *argv)
 
 /*
  *  call-seq:
- *     test(int_cmd, file1 [, file2] ) -> obj
+ *     test(cmd, file1 [, file2] ) -> obj
  *
- *  Uses the integer +int_cmd+ to perform various tests on +file1+ (first
+ *  Uses the integer +cmd+ to perform various tests on +file1+ (first
  *  table below) or on +file1+ and +file2+ (second table).
  *
  *  File tests on a single file:
  *
- *    Test   Returns   Meaning
+ *    Cmd    Returns   Meaning
  *    "A"  | Time    | Last access time for file1
  *    "b"  | boolean | True if file1 is a block device
  *    "c"  | boolean | True if file1 is a character device

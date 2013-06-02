@@ -2,7 +2,7 @@
 
   string.c -
 
-  $Author: drbrain $
+  $Author: nagachika $
   created at: Mon Aug  9 17:12:58 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -490,12 +490,15 @@ RUBY_ALIAS_FUNCTION(rb_tainted_str_new2(const char *ptr), rb_tainted_str_new_cst
 VALUE
 rb_str_conv_enc_opts(VALUE str, rb_encoding *from, rb_encoding *to, int ecflags, VALUE ecopts)
 {
+    extern VALUE rb_cEncodingConverter;
     rb_econv_t *ec;
     rb_econv_result_t ret;
-    long len;
+    long len, olen;
+    VALUE econv_wrapper;
     VALUE newstr;
-    const unsigned char *sp;
-    unsigned char *dp;
+    const unsigned char *start, *sp;
+    unsigned char *dest, *dp;
+    size_t converted_output = 0;
 
     if (!to) return str;
     if (!from) from = rb_enc_get(str);
@@ -511,23 +514,39 @@ rb_str_conv_enc_opts(VALUE str, rb_encoding *from, rb_encoding *to, int ecflags,
 
     len = RSTRING_LEN(str);
     newstr = rb_str_new(0, len);
+    olen = len;
 
-  retry:
+    econv_wrapper = rb_obj_alloc(rb_cEncodingConverter);
+    RBASIC(econv_wrapper)->klass = 0;
     ec = rb_econv_open_opts(from->name, to->name, ecflags, ecopts);
     if (!ec) return str;
+    DATA_PTR(econv_wrapper) = ec;
 
     sp = (unsigned char*)RSTRING_PTR(str);
-    dp = (unsigned char*)RSTRING_PTR(newstr);
-    ret = rb_econv_convert(ec, &sp, (unsigned char*)RSTRING_END(str),
-			   &dp, (unsigned char*)RSTRING_END(newstr), 0);
-    rb_econv_close(ec);
-    switch (ret) {
-      case econv_destination_buffer_full:
+    start = sp;
+    while ((dest = (unsigned char*)RSTRING_PTR(newstr)),
+	   (dp = dest + converted_output),
+	   (ret = rb_econv_convert(ec, &sp, start + len, &dp, dest + olen, 0)),
+	   ret == econv_destination_buffer_full) {
 	/* destination buffer short */
-	len = len < 2 ? 2 : len * 2;
-	rb_str_resize(newstr, len);
-	goto retry;
-
+	size_t converted_input = sp - start;
+	size_t rest = len - converted_input;
+	converted_output = dp - dest;
+	rb_str_set_len(newstr, converted_output);
+	if (converted_input && converted_output &&
+	    rest < (LONG_MAX / converted_output)) {
+	    rest = (rest * converted_output) / converted_input;
+	}
+	else {
+	    rest = olen;
+	}
+	olen += rest < 2 ? 2 : rest;
+	rb_str_resize(newstr, olen);
+    }
+    DATA_PTR(econv_wrapper) = 0;
+    rb_econv_close(ec);
+    rb_gc_force_recycle(econv_wrapper);
+    switch (ret) {
       case econv_finished:
 	len = dp - (unsigned char*)RSTRING_PTR(newstr);
 	rb_str_set_len(newstr, len);
@@ -2358,20 +2377,22 @@ rb_str_eql(VALUE str1, VALUE str2)
 
 /*
  *  call-seq:
- *     str <=> other_str   -> -1, 0, +1 or nil
+ *     string <=> other_string   -> -1, 0, +1 or nil
  *
- *  Comparison---Returns -1 if <i>other_str</i> is greater than, 0 if
- *  <i>other_str</i> is equal to, and +1 if <i>other_str</i> is less than
- *  <i>str</i>. If the strings are of different lengths, and the strings are
- *  equal when compared up to the shortest length, then the longer string is
- *  considered greater than the shorter one. In older versions of Ruby, setting
- *  <code>$=</code> allowed case-insensitive comparisons; this is now deprecated
- *  in favor of using <code>String#casecmp</code>.
+ *
+ *  Comparison---Returns -1, 0, +1 or nil depending on whether +string+ is less
+ *  than, equal to, or greater than +other_string+.
+ *
+ *  +nil+ is returned if the two values are incomparable.
+ *
+ *  If the strings are of different lengths, and the strings are equal when
+ *  compared up to the shortest length, then the longer string is considered
+ *  greater than the shorter one.
  *
  *  <code><=></code> is the basis for the methods <code><</code>,
- *  <code><=</code>, <code>></code>, <code>>=</code>, and <code>between?</code>,
- *  included from module <code>Comparable</code>.  The method
- *  <code>String#==</code> does not use <code>Comparable#==</code>.
+ *  <code><=</code>, <code>></code>, <code>>=</code>, and
+ *  <code>between?</code>, included from module Comparable. The method
+ *  String#== does not use Comparable#==.
  *
  *     "abcdef" <=> "abcde"     #=> 1
  *     "abcdef" <=> "abcdef"    #=> 0
@@ -3956,7 +3977,7 @@ rb_str_gsub_bang(int argc, VALUE *argv, VALUE str)
  *  <code>\\\k<n></code>, where <i>n</i> is a group name. If it is a
  *  double-quoted string, both back-references must be preceded by an
  *  additional backslash. However, within <i>replacement</i> the special match
- *  variables, such as <code>&$</code>, will not refer to the current match.
+ *  variables, such as <code>$&</code>, will not refer to the current match.
  *
  *  If the second argument is a <code>Hash</code>, and the matched text is one
  *  of its keys, the corresponding value is the replacement string.
@@ -4069,9 +4090,9 @@ rb_str_getbyte(VALUE str, VALUE index)
 
 /*
  *  call-seq:
- *     str.setbyte(index, int) -> int
+ *     str.setbyte(index, integer) -> integer
  *
- *  modifies the <i>index</i>th byte as <i>int</i>.
+ *  modifies the <i>index</i>th byte as <i>integer</i>.
  */
 static VALUE
 rb_str_setbyte(VALUE str, VALUE index, VALUE value)
@@ -4120,9 +4141,28 @@ str_byte_substr(VALUE str, long beg, long len)
     }
     else {
 	str2 = rb_str_new5(str, p, len);
-	rb_enc_cr_str_copy_for_substr(str2, str);
-	OBJ_INFECT(str2, str);
     }
+
+    str_enc_copy(str2, str);
+
+    if (RSTRING_LEN(str2) == 0) {
+	if (!rb_enc_asciicompat(STR_ENC_GET(str)))
+	    ENC_CODERANGE_SET(str2, ENC_CODERANGE_VALID);
+	else
+	    ENC_CODERANGE_SET(str2, ENC_CODERANGE_7BIT);
+    }
+    else {
+	switch (ENC_CODERANGE(str)) {
+	  case ENC_CODERANGE_7BIT:
+	    ENC_CODERANGE_SET(str2, ENC_CODERANGE_7BIT);
+	    break;
+	  default:
+	    ENC_CODERANGE_SET(str2, ENC_CODERANGE_UNKNOWN);
+	    break;
+	}
+    }
+
+    OBJ_INFECT(str2, str);
 
     return str2;
 }
@@ -4530,7 +4570,6 @@ rb_str_inspect(VALUE str)
 	    }
 	}
 	switch (c) {
-	  case '\0': cc = '0'; break;
 	  case '\n': cc = 'n'; break;
 	  case '\r': cc = 'r'; break;
 	  case '\t': cc = 't'; break;
@@ -7946,9 +7985,15 @@ sym_succ(VALUE sym)
 /*
  * call-seq:
  *
- *   str <=> other       -> -1, 0, +1 or nil
+ *   symbol <=> other_symbol       -> -1, 0, +1 or nil
  *
- * Compares _sym_ with _other_ in string form.
+ * Compares +symbol+ with +other_symbol+ after calling #to_s on each of the
+ * symbols. Returns -1, 0, +1 or nil depending on whether +symbol+ is less
+ * than, equal to, or greater than +other_symbol+.
+ *
+ *  +nil+ is returned if the two values are incomparable.
+ *
+ * See String#<=> for more information.
  */
 
 static VALUE

@@ -1,28 +1,17 @@
-# $Id: test_nowrite.rb 34669 2012-02-17 17:59:47Z tenderlove $
+# $Id: test_nowrite.rb 40251 2013-04-11 17:00:49Z nagachika $
 
 require 'fileutils'
 require 'test/unit'
-require_relative 'clobber'
+require_relative 'visibility_tests'
 
 class TestFileUtilsNoWrite < Test::Unit::TestCase
 
   include FileUtils::NoWrite
-  include TestFileUtils::Clobber
+  include TestFileUtils::Visibility
 
-  FileUtils::METHODS.each do |m|
-    define_method "test_singleton_visibility_#{m}" do
-      assert_equal true, FileUtils::NoWrite.respond_to?(m, true),
-                   "FileUtils::NoWrite.#{m} is not defined"
-      assert_equal true, FileUtils::NoWrite.respond_to?(m, false),
-                   "FileUtils::NoWrite.#{m} is not public"
-    end
-
-    define_method "test_instance_visibility_#{m}" do
-      assert_equal true, respond_to?(m, true),
-                   "FileUtils::NoWrite\##{m} is not defined"
-      assert_equal true, FileUtils::NoWrite.private_method_defined?(m),
-                   "FileUtils::NoWrite\##{m} is not private"
-    end
+  def setup
+    super
+    @fu_module = FileUtils::NoWrite
   end
 
 end

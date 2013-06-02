@@ -2,7 +2,7 @@
 
   object.c -
 
-  $Author: zzak $
+  $Author: nagachika $
   created at: Thu Jul 15 12:01:24 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -584,6 +584,7 @@ rb_obj_is_kind_of(VALUE obj, VALUE c)
     VALUE cl = CLASS_OF(obj);
 
     c = class_or_module_required(c);
+    c = RCLASS_ORIGIN(c);
     while (cl) {
 	if (cl == c || RCLASS_M_TBL(cl) == RCLASS_M_TBL(c))
 	    return Qtrue;
@@ -1320,6 +1321,17 @@ rb_obj_not_match(VALUE obj1, VALUE obj2)
  *     obj <=> other -> 0 or nil
  *
  *  Returns 0 if obj === other, otherwise nil.
+ *
+ *  The <=> is used by various methods to compare objects, for example
+ *  Enumerable#sort, Enumerable#max etc.
+ *
+ *  Your implementation of <=> should return one of the following values: -1, 0,
+ *  1 or nil. -1 means self is smaller than other. 0 means self is equal to other.
+ *  1 means self is bigger than other. Nil means the two values could not be
+ *  compared.
+ *
+ *  When you defined <=>, you can include Comparable to gain the methods <=, <,
+ *  ==, >=, > and between?.
  */
 static VALUE
 rb_obj_cmp(VALUE obj1, VALUE obj2)
@@ -1454,6 +1466,7 @@ rb_class_inherited_p(VALUE mod, VALUE arg)
     if (!CLASS_OR_MODULE_P(arg)) {
 	rb_raise(rb_eTypeError, "compared with non class/module");
     }
+    arg = RCLASS_ORIGIN(arg);
     while (mod) {
 	if (RCLASS_M_TBL(mod) == RCLASS_M_TBL(arg))
 	    return Qtrue;
@@ -1529,13 +1542,14 @@ rb_mod_gt(VALUE mod, VALUE arg)
 
 /*
  *  call-seq:
- *     mod <=> other_mod   -> -1, 0, +1, or nil
+ *     module <=> other_module   -> -1, 0, +1, or nil
  *
- *  Comparison---Returns -1 if <i>mod</i> includes <i>other_mod</i>, 0 if
- *  <i>mod</i> is the same as <i>other_mod</i>, and +1 if <i>mod</i> is
- *  included by <i>other_mod</i>. Returns <code>nil</code> if <i>mod</i>
- *  has no relationship with <i>other_mod</i> or if <i>other_mod</i> is
- *  not a module.
+ *  Comparison---Returns -1, 0, +1 or nil depending on whether +module+
+ *  includes +other_module+, they are the same, or if +module+ is included by
+ *  +other_module+. This is the basis for the tests in Comparable.
+ *
+ *  Returns +nil+ if +module+ has no relationship with +other_module+, if
+ *  +other_module+ is not a module, or if the two values are incomparable.
  */
 
 static VALUE
@@ -2997,7 +3011,6 @@ Init_Object(void)
     rb_define_private_method(rb_cModule, "included", rb_obj_dummy, 1);
     rb_define_private_method(rb_cModule, "extended", rb_obj_dummy, 1);
     rb_define_private_method(rb_cModule, "prepended", rb_obj_dummy, 1);
-    rb_define_private_method(rb_cModule, "used", rb_obj_dummy, 1);
     rb_define_private_method(rb_cModule, "method_added", rb_obj_dummy, 1);
     rb_define_private_method(rb_cModule, "method_removed", rb_obj_dummy, 1);
     rb_define_private_method(rb_cModule, "method_undefined", rb_obj_dummy, 1);

@@ -64,6 +64,12 @@ class TestGc < Test::Unit::TestCase
     assert_equal(arg, res)
     assert_equal(false, res.empty?)
     assert_kind_of(Integer, res[:count])
+
+    stat, count = {}, {}
+    GC.start
+    GC.stat(stat)
+    ObjectSpace.count_objects(count)
+    assert_equal(count[:TOTAL]-count[:FREE], stat[:heap_live_num])
   end
 
   def test_singleton_method
@@ -139,5 +145,19 @@ class TestGc < Test::Unit::TestCase
     assert_in_out_err(%w[--disable-gems], <<-EOS, ["\"finalize\""], [], "[ruby-dev:46647]")
       ObjectSpace.define_finalizer(Thread.main) { p 'finalize' }
     EOS
+  end
+
+  def test_expand_heap
+    assert_separately %w[--disable-gem], __FILE__, __LINE__, <<-'eom'
+    base_length = GC.stat[:heap_length]
+    (base_length * 500).times{ 'a' }
+    GC.start
+    assert_equal base_length, GC.stat[:heap_length], "invalid heap expanding"
+
+    a = []
+    (base_length * 500).times{ a << 'a' }
+    GC.start
+    assert base_length < GC.stat[:heap_length]
+    eom
   end
 end

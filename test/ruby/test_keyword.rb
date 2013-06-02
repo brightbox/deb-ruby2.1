@@ -23,6 +23,7 @@ class TestKeywordArguments < Test::Unit::TestCase
   def test_f2
     assert_equal([:xyz, "foo", 424242], f2(:xyz))
     assert_raise(ArgumentError) { f2({}) } # [ruby-dev:46712] [Bug #7529]
+    assert_equal([{"bar"=>42}, "foo", 424242], f2("bar"=>42))
   end
 
 
@@ -273,5 +274,42 @@ class TestKeywordArguments < Test::Unit::TestCase
     assert_valid_syntax("def bug7662(**) end")
     assert_valid_syntax("def bug7662(*, **) end")
     assert_valid_syntax("def bug7662(a, **) end")
+  end
+
+  def test_without_paren
+    bug7942 = '[ruby-core:52820] [Bug #7942]'
+    assert_valid_syntax("def bug7942 a: 1; end")
+    assert_valid_syntax("def bug7942 a: 1, **; end")
+
+    o = Object.new
+    eval("def o.bug7942 a: 1; a; end", nil, __FILE__, __LINE__)
+    assert_equal(1, o.bug7942(), bug7942)
+    assert_equal(42, o.bug7942(a: 42), bug7942)
+
+    o = Object.new
+    eval("def o.bug7942 a: 1, **; a; end", nil, __FILE__, __LINE__)
+    assert_equal(1, o.bug7942(), bug7942)
+    assert_equal(42, o.bug7942(a: 42), bug7942)
+  end
+
+  def test_super_with_keyword
+    bug8236 = '[ruby-core:54094] [Bug #8236]'
+    base = Class.new do
+      def foo(*args)
+        args
+      end
+    end
+    a = Class.new(base) do
+      def foo(arg, bar: 'x')
+        super
+      end
+    end
+    b = Class.new(base) do
+      def foo(*args, bar: 'x')
+        super
+      end
+    end
+    assert_equal([42, {:bar=>"x"}], a.new.foo(42), bug8236)
+    assert_equal([42, {:bar=>"x"}], b.new.foo(42), bug8236)
   end
 end

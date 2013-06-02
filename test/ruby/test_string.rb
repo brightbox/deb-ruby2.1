@@ -1984,6 +1984,14 @@ class TestString < Test::Unit::TestCase
     assert_instance_of(String, s.to_s)
   end
 
+  def test_inspect_nul
+    bug8290 = '[ruby-core:54458]'
+    s = "\0" + "12"
+    assert_equal '"\u000012"', s.inspect, bug8290
+    s = "\0".b + "12"
+    assert_equal '"\x0012"', s.inspect, bug8290
+  end
+
   def test_partition
     assert_equal(%w(he l lo), "hello".partition(/l/))
     assert_equal(%w(he l lo), "hello".partition("l"))
@@ -2180,6 +2188,10 @@ class TestString < Test::Unit::TestCase
     assert_equal(u("\x81\x82"), "\u3042".byteslice(1..2))
 
     assert_equal(u("\x82")+("\u3042"*9), ("\u3042"*10).byteslice(2, 28))
+
+    bug7954 = '[ruby-dev:47108]'
+    assert_equal(false, "\u3042".byteslice(0, 2).valid_encoding?)
+    assert_equal(false, ("\u3042"*10).byteslice(0, 20).valid_encoding?)
   end
 end
 

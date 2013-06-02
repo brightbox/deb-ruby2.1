@@ -225,5 +225,6 @@ class Gem::SpecFetcher
       cache[source.uri] ||= source.load_specs(type)
     end
   end
+
 end
 

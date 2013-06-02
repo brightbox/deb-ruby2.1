@@ -648,6 +648,7 @@ remove_method(VALUE klass, ID mid)
 {
     st_data_t key, data;
     rb_method_entry_t *me = 0;
+    VALUE self = klass;
 
     klass = RCLASS_ORIGIN(klass);
     if (klass == rb_cObject) {
@@ -674,7 +675,7 @@ remove_method(VALUE klass, ID mid)
     rb_clear_cache_for_undef(klass, mid);
     rb_unlink_method_entry(me);
 
-    CALL_METHOD_HOOK(klass, removed, mid);
+    CALL_METHOD_HOOK(self, removed, mid);
 }
 
 void
@@ -751,7 +752,8 @@ rb_export_method(VALUE klass, ID name, rb_method_flag_t noex)
     if (me->flag != noex) {
 	rb_vm_check_redefinition_opt_method(me, klass);
 
-	if (klass == defined_class) {
+	if (klass == defined_class ||
+	    RCLASS_ORIGIN(klass) == defined_class) {
 	    me->flag = noex;
 	    if (me->def->type == VM_METHOD_TYPE_REFINED) {
 		me->def->body.orig_me->flag = noex;
@@ -1357,7 +1359,7 @@ rb_mod_private(int argc, VALUE *argv, VALUE module)
 static VALUE
 rb_mod_public_method(int argc, VALUE *argv, VALUE obj)
 {
-    set_method_visibility(CLASS_OF(obj), argc, argv, NOEX_PUBLIC);
+    set_method_visibility(rb_singleton_class(obj), argc, argv, NOEX_PUBLIC);
     return obj;
 }
 
@@ -1380,7 +1382,7 @@ rb_mod_public_method(int argc, VALUE *argv, VALUE obj)
 static VALUE
 rb_mod_private_method(int argc, VALUE *argv, VALUE obj)
 {
-    set_method_visibility(CLASS_OF(obj), argc, argv, NOEX_PRIVATE);
+    set_method_visibility(rb_singleton_class(obj), argc, argv, NOEX_PRIVATE);
     return obj;
 }
 

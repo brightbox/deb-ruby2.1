@@ -3,7 +3,7 @@
 
   vm_opts.h - VM optimize option
 
-  $Author: ko1 $
+  $Author: nagachika $
 
   Copyright (C) 2004-2007 Koichi Sasada
 
@@ -29,7 +29,7 @@
  * You can't change these options at runtime.
  */
 
-/* C compiler depend */
+/* C compiler dependent */
 #define OPT_DIRECT_THREADED_CODE     1
 #define OPT_TOKEN_THREADED_CODE      0
 #define OPT_CALL_THREADED_CODE       0
