@@ -11,24 +11,37 @@ Vcs-Browser: http://git.debian.org/?p=collab-maint/ruby2.0.git;a=summary
 Package: ruby2.0
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, rubygems-integration
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Description: Interpreter of object-oriented scripting language Ruby
+ Ruby is the interpreted scripting language for quick and easy
+ object-oriented programming.  It has many features to process text
+ files and to do system management tasks (as in perl).  It is simple,
+ straight-forward, and extensible.
+ .
+ In the name of this package, `2.0' indicates the Ruby library compatibility
+ version. This package currently provides the `2.0.x' branch of Ruby.
 
 Package: libruby2.0
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Description: Libraries necessary to run Ruby 2.0
+ Ruby is the interpreted scripting language for quick and easy
+ object-oriented programming.  It has many features to process text
+ files and to do system management tasks (as in perl).  It is simple,
+ straight-forward, and extensible.
+ .
+ This package includes the 'libruby-2.0' library, necessary to run Ruby 2.0.
+ (API version 2.0.0)
 
 Package: ruby2.0-dev
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
-
-Package: ruby2.0-doc
-Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Description: Header files for compiling extension modules for the Ruby 2.0
+ Ruby is the interpreted scripting language for quick and easy
+ object-oriented programming.  It has many features to process text
+ files and to do system management tasks (as in perl).  It is simple,
+ straight-forward, and extensible.
+ .
+ This package contains the header files and the mkmf library, necessary
+ to make extension library for Ruby 2.0. It is also required to build
+ many gems.
