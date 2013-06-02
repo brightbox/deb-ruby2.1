@@ -1,0 +1,10 @@
+#!/bin/sh
+
+for commit in $(git log --format=%H --no-merges upstream..); do
+  if test -n "$(git show --name-only --format='%H' $commit | sed -e '1,2d; /^debian\//d')"; then
+    if ! grep -q "^Commit:\s*$commit\s*$" debian/upstream-changes.blacklist; then
+      git --no-pager show --color=always $commit
+      echo
+    fi
+  fi
+done | less -FRSX
