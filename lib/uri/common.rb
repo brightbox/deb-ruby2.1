@@ -2,7 +2,7 @@
 # = uri/common.rb
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
-# Revision:: $Id: common.rb 34364 2012-01-24 02:52:09Z naruse $
+# Revision:: $Id: common.rb 40339 2013-04-17 14:26:57Z nagachika $
 # License::
 #   You can redistribute it and/or modify it under the same term as Ruby.
 #
@@ -891,7 +891,7 @@ module URI
 
   # Decode given +str+ of URL-encoded form data.
   #
-  # This decods + to SP.
+  # This decodes + to SP.
   #
   # See URI.encode_www_form_component, URI.decode_www_form
   def self.decode_www_form_component(str, enc=Encoding::UTF_8)

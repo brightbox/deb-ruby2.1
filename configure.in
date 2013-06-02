@@ -9,6 +9,24 @@ AC_DEFUN([RUBY_PREREQ_AC],
 	[m4_if(m4_version_compare(m4_defn([m4_PACKAGE_VERSION]), [$1]), [-1],
 		AC_MSG_ERROR([Autoconf version ]$1[ or higher is required]$2))])
 
+AC_DEFUN([RUBY_RM_RECURSIVE], [
+m4_if(m4_version_compare(m4_defn([m4_PACKAGE_VERSION]), [2.70]), [-1], [
+# suppress error messages, rm: cannot remove 'conftest.dSYM', from
+# AC_EGREP_CPP with CFLAGS=-g on Darwin.
+AS_CASE([$build_os], [darwin*], [
+rm() {
+    rm_recursive=''
+    for arg do
+	AS_CASE("$arg",
+		[--*], [],
+		[-*r*], [break],
+		[conftest.*], [if test -d "$arg"; then rm_recursive=-r; break; fi],
+		[])
+    done
+    command rm $rm_recursive "[$]@"
+}
+])])])
+
 { # environment section
 
 AC_ARG_WITH(baseruby,
@@ -172,9 +190,11 @@ RUBY_PROGRAM_VERSION=`sed -n 's/^#define RUBY_VERSION "\(.*\)"/\1/p' $srcdir/ver
 AC_SUBST(RUBY_PROGRAM_VERSION)
 RUBY_RELEASE_DATE=`sed -n 's/^#define RUBY_RELEASE_DATE "\(.*\)"/\1/p' $srcdir/version.h`
 AC_SUBST(RUBY_RELEASE_DATE)
+RUBY_PATCHLEVEL=`sed -n 's/^#define RUBY_PATCHLEVEL //p' $srcdir/version.h`
 AC_DEFINE(CANONICALIZATION_FOR_MATHN)
 dnl checks for alternative programs
 AC_CANONICAL_BUILD
+RUBY_RM_RECURSIVE
 AC_ARG_WITH(gcc,
 	AS_HELP_STRING([--without-gcc], [never use gcc]),
 	[
@@ -189,7 +209,7 @@ then
 (it is also a good idea to do 'make clean' before compiling))
 fi
 AS_CASE(["$build_os"],
-  [darwin11.*], [
+  [darwin1*.*], [
     AS_CASE(["x$CC"],
       [xgcc-4.2|x/usr/bin/gcc-4.2], [: ${CXX=g++-4.2}],
       [xgcc|x/usr/bin/gcc],         [: ${CXX=g++}],
@@ -197,6 +217,7 @@ AS_CASE(["$build_os"],
       [xclang|x/usr/bin/clang],     [: ${CXX=clang++}])
   ])
 test -z "$CC" || ac_cv_prog_CC="$CC"
+test -z "$CXX" || ac_cv_prog_CXX="$CXX"
 
 if test "$program_prefix" = NONE; then
   program_prefix=
@@ -406,6 +427,29 @@ if test "$target_cpu" != "$host_cpu" -a "$GCC" = yes -a "$cross_compiling" = no 
     RUBY_DEFAULT_ARCH("$target_cpu")
 fi
 
+AS_CASE(["$target_cpu-$target_os"], [[i[3-6]86*]], [
+	 AC_CACHE_CHECK([for __sync_val_compare_and_swap], [rb_cv_gcc_compiler_cas], [
+			 AC_TRY_LINK([unsigned long atomic_var;],
+				     [
+				      __sync_val_compare_and_swap(&atomic_var, 0, 1);
+				      ],
+				      [rb_cv_gcc_compiler_cas=yes],
+				      [rb_cv_gcc_compiler_cas=no])])
+	 if test "$rb_cv_gcc_compiler_cas" = no; then
+		 unset rb_cv_gcc_compiler_cas
+		 save_CFLAGS="$CFLAGS"
+		 CFLAGS="$CFLAGS -march=i486"
+		 AC_CACHE_CHECK([for __sync_val_compare_and_swap with -march=i486], [rb_cv_gcc_compiler_cas], [
+				 AC_TRY_LINK([unsigned long atomic_var;],
+					     [
+					      __sync_val_compare_and_swap(&atomic_var, 0, 1);
+					      ],
+					      [rb_cv_gcc_compiler_cas=yes
+					       ARCH_FLAG="-march=i486"],
+					      [rb_cv_gcc_compiler_cas=no])])
+		 CFLAGS="$save_CFLAGS"
+	 fi])
+
 AC_CHECK_TOOL(RANLIB, ranlib, :)
 AC_CHECK_TOOL(AR, ar)
 if test -z "$AR"; then
@@ -592,9 +636,17 @@ AC_DEFUN(RUBY_TRY_LDFLAGS, [
     save_LDFLAGS=
 ])
 
+AS_CASE([$RUBY_PATCHLEVEL], [-*],
+	[particular_werror_flags=yes], [particular_werror_flags=no])
+AC_ARG_ENABLE(werror,
+	AS_HELP_STRING([--disable-werror],
+		       [don't make warnings into errors
+		       even if a compiler support -Werror feature
+		       @<:@disabled by default unless development version@:>@]),
+	[particular_werror_flags=$enableval])
+
 rb_cv_warnflags="$warnflags"
 if test "$GCC:${warnflags+set}:no" = yes::no; then
-    particular_werror_flags=yes
     for wflag in -Wno-unused-parameter -Wno-parentheses -Wno-long-long \
 		 -Wno-missing-field-initializers \
 		 -Wunused-variable \
@@ -602,11 +654,9 @@ if test "$GCC:${warnflags+set}:no" = yes::no; then
 		 -Werror=write-strings \
 		 -Werror=declaration-after-statement \
 		 -Werror=shorten-64-to-32 \
-		 -Werror-implicit-function-declaration \
+		 -Werror=implicit-function-declaration \
 		 ; do
-	if test "$particular_werror_flags" = yes; then
-	    wflag=`echo x$wflag | sed 's/^x-Werror-/-Werror=/;s/^x//'`
-	else
+	if test "$particular_werror_flags" != yes; then
 	    wflag=`echo x$wflag | sed 's/^x-Werror=/-W/;s/^x//'`
 	fi
 	ok=no
@@ -719,6 +769,207 @@ fi
 
 test -z "${ac_env_CFLAGS_set}" -a -n "${cflags+set}" && eval CFLAGS="\"$cflags $ARCH_FLAG\""
 test -z "${ac_env_CXXFLAGS_set}" -a -n "${cxxflags+set}" && eval CXXFLAGS="\"$cxxflags $ARCH_FLAG\""
+
+}
+{ # header and library section
+
+AC_ARG_WITH(winnt-ver,
+  AS_HELP_STRING([--with-winnt-ver=0xXXXX], [target Windows NT version (default to 0x0501)]),
+  [with_winnt_ver="$withval"], [with_winnt_ver="0x0501"])
+AS_CASE(["$target_os"],
+[mingw*], [
+  RUBY_APPEND_OPTION(CPPFLAGS, -D_WIN32_WINNT=$with_winnt_ver)
+])
+
+AS_CASE(["$target_os"],
+[freebsd*], [
+  AC_CACHE_CHECK([whether pthread should be enabled by default],
+    rb_cv_enable_pthread_default,
+    [AC_TRY_CPP([
+#include <osreldate.h>
+#if __FreeBSD_version < 502102
+#error pthread should be disabled on this platform
+#endif
+      ],
+      rb_cv_enable_pthread_default=yes,
+      rb_cv_enable_pthread_default=no)])
+  enable_pthread=$rb_cv_enable_pthread_default
+  ],
+[mingw*], [
+  enable_pthread=no
+  ],
+[
+  enable_pthread=yes
+  ])
+
+AC_ARG_ENABLE(pthread,
+       AS_HELP_STRING([--enable-pthread], [obsolete, and ignored]))
+
+dnl Checks for libraries.
+AS_CASE(["$target_os"],[*bsd*|dragonfly*],[],[ac_cv_func_daemon=no])
+
+POSTLINK=:
+AC_SUBST(POSTLINK)
+AS_CASE(["$target_os"],
+[nextstep*], [	],
+[openstep*], [	],
+[rhapsody*], [	],
+[darwin*], [	RUBY_PREPEND_OPTION(LIBS, -lobjc)
+		RUBY_APPEND_OPTIONS(CPPFLAGS, -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT)
+		AC_MSG_CHECKING(whether Mac OS X 10.5 or later)
+		AC_TRY_CPP([#include <AvailabilityMacros.h>
+		    #if MAC_OS_X_VERSION_MAX_ALLOWED <= 1040
+		    #error pre OS X 10.4
+		    [!<===== pre OS X 10.4 =====>]
+		    #endif
+		    ],
+		    [macosx_10_5=yes], [macosx_10_5=no])
+		AC_MSG_RESULT($macosx_10_5)
+		if test $macosx_10_5 = yes; then
+		    ac_cv_header_ucontext_h=no
+		else
+		    AC_DEFINE(BROKEN_SETREUID, 1)
+		    AC_DEFINE(BROKEN_SETREGID, 1)
+		fi
+		ac_cv_type_getgroups=gid_t # getgroups() on Rosetta fills garbage
+		ac_cv_lib_crypt_crypt=no
+		ac_cv_func_fdatasync=no # Mac OS X wrongly reports it has fdatasync()
+                AC_CACHE_CHECK(for broken crypt with 8bit chars, rb_cv_broken_crypt,
+                    [AC_TRY_RUN([
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+
+int
+main()
+{
+    int i;
+    for (i = 0; i < 128*128; i++) {
+	char salt[2], buf[256], *s;
+	salt[0] = 0x80 | (i & 0x7f);
+	salt[1] = 0x80 | (i >> 7);
+	strcpy(buf, crypt("", salt));
+	if (strcmp(buf, s = crypt("", salt))) {
+#if 0
+	    printf("%.2x%.2x: %s -> %s\n", (unsigned char)salt[0], (unsigned char)salt[1],
+		   buf+2, s+2);
+#endif
+	    return 1;
+	}
+    }
+    return 0;
+}
+],
+	            rb_cv_broken_crypt=no,
+	            rb_cv_broken_crypt=yes,
+	            rb_cv_broken_crypt=yes)])
+                if test "$rb_cv_broken_crypt" = yes; then
+                  AC_DEFINE(BROKEN_CRYPT, 1)
+                fi
+		AC_CHECK_PROGS(codesign, codesign)
+		if test -n "$codesign"; then
+		    POSTLINK="test -z '\$(RUBY_CODESIGN)' || $codesign -s '\$(RUBY_CODESIGN)' -f \$@"
+		    LINK_SO="$LINK_SO
+$POSTLINK"
+		fi
+		AC_CHECK_HEADERS(crt_externs.h, [], [], [
+		    #include <crt_externs.h>
+		])
+		],
+[hpux*], [	LIBS="-lm $LIBS"
+		ac_cv_c_inline=no],
+[beos*|haiku*], [
+		ac_cv_func_link=no
+		ac_cv_func_sched_yield=no
+		ac_cv_func_pthread_attr_setinheritsched=no
+		AS_CASE(["$target_os"],
+		[beos*], [ ac_cv_header_net_socket_h=yes],
+		[haiku*], [ ac_cv_func_shutdown=no])
+		LIBS="$LIBS" # m lib is include in root under BeOS/Haiku
+		],
+[cygwin*], [	ac_cv_header_langinfo_h=yes
+		AC_CHECK_FUNCS(cygwin_conv_path)
+		AC_LIBOBJ([langinfo])
+		],
+[mingw*], [	LIBS="-lshell32 -lws2_32 -limagehlp -lshlwapi $LIBS"
+		ac_cv_header_a_out_h=no
+		ac_cv_header_pwd_h=no
+		ac_cv_header_utime_h=no
+		ac_cv_header_sys_ioctl_h=no
+		ac_cv_header_sys_param_h=no
+		ac_cv_header_sys_resource_h=no
+		ac_cv_header_sys_select_h=no
+		ac_cv_header_sys_time_h=no
+		ac_cv_header_sys_times_h=no
+		ac_cv_header_sys_socket_h=no
+		ac_cv_func_times=yes
+		ac_cv_func_waitpid=yes
+		ac_cv_func_fsync=yes
+		ac_cv_func_seekdir=yes
+		ac_cv_func_telldir=yes
+		ac_cv_func_isinf=yes
+		ac_cv_func_isnan=yes
+		ac_cv_func_finite=yes
+		ac_cv_func_link=yes
+		ac_cv_func_fseeko=yes
+		ac_cv_lib_crypt_crypt=no
+		ac_cv_func_getpgrp_void=no
+		ac_cv_func_memcmp_working=yes
+		ac_cv_lib_dl_dlopen=no
+		rb_cv_binary_elf=no
+		rb_cv_negative_time_t=no
+		ac_cv_func_fcntl=yes
+		ac_cv_func_flock=yes
+		ac_cv_func_gmtime_r=yes
+		rb_cv_large_fd_select=yes
+		ac_cv_type_struct_timeval=yes
+		AC_LIBOBJ([langinfo])
+		],
+[os2-emx*], [	LIBS="-lm $LIBS"
+		ac_cv_lib_dir_opendir=no],
+[bsdi*], [	LIBS="-lm $LIBS"
+		AC_DEFINE(BROKEN_SETREUID, 1)
+		AC_DEFINE(BROKEN_SETREGID, 1)
+                ac_cv_sizeof_rlim_t=8],
+[freebsd*], [	LIBS="-lm $LIBS"
+		ac_cv_func_getpeername=no
+		ac_cv_func_getsockname=no
+		ac_cv_func_shutdown=no
+		ac_cv_func_close=no
+		],
+[dragonfly*], [	LIBS="-lm $LIBS"
+		# isinf() and isnan() are macros on DragonFly.
+		ac_cv_func_isinf=yes
+		ac_cv_func_isnan=yes
+		],
+[bow], [	ac_cv_func_setitimer=no
+		],
+[superux*], [	ac_cv_func_setitimer=no
+		],
+[nacl], [
+  LIBS="-lm $LIBS"
+  if test "${nacl_cv_build_variant}" = "newlib"; then
+    RUBY_APPEND_OPTION(CPPFLAGS, -DNACL_NEWLIB)
+    RUBY_APPEND_OPTION(LIBS, '-lnosys')
+  else
+    RUBY_APPEND_OPTION(XCFLAGS, -fPIC)
+  fi
+  ac_cv_func_shutdown=no
+  ac_cv_func_fcntl=no
+  ],
+[	LIBS="-lm $LIBS"])
+
+dnl Checks for header files.
+AC_HEADER_DIRENT
+dnl AC_HEADER_STDC has been checked in AC_USE_SYSTEM_EXTENSIONS
+AC_HEADER_STDBOOL
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS(limits.h sys/file.h sys/ioctl.h sys/syscall.h\
+		 fcntl.h sys/fcntl.h sys/select.h sys/time.h sys/times.h sys/param.h\
+		 syscall.h pwd.h grp.h a.out.h utime.h direct.h sys/resource.h \
+		 sys/mkdev.h sys/utime.h xti.h netinet/in_systm.h float.h ieeefp.h \
+		 ucontext.h intrinsics.h langinfo.h locale.h sys/sendfile.h time.h \
+		 net/socket.h sys/socket.h process.h sys/prctl.h atomic.h)
 
 dnl check for large file stuff
 mv confdefs.h confdefs1.h
@@ -921,7 +1172,15 @@ RUBY_REPLACE_TYPE(gid_t, int, GIDT)
 RUBY_REPLACE_TYPE(time_t, [], TIMET, [@%:@include <time.h>])
 RUBY_REPLACE_TYPE(dev_t, [int long "long long"], DEVT)
 RUBY_REPLACE_TYPE(mode_t, ["unsigned int" long], MODET, [@%:@include <sys/stat.h>])
-RUBY_REPLACE_TYPE(rlim_t, [int long "long long"], RLIM, [@%:@include <sys/resource.h>])
+RUBY_REPLACE_TYPE(rlim_t, [int long "long long"], RLIM, [
+@%:@ifdef HAVE_SYS_TYPES_H
+@%:@include <sys/types.h>
+@%:@endif
+@%:@ifdef HAVE_SYS_TYPES_H
+@%:@include <sys/time.h>
+@%:@endif
+@%:@include <sys/resource.h>
+])
 
 AC_CACHE_CHECK(for prototypes, rb_cv_have_prototypes,
   [AC_TRY_COMPILE([int foo(int x) { return 0; }], [return foo(10);],
@@ -1117,197 +1376,10 @@ fi
 
 RUBY_APPEND_OPTION(XCFLAGS, -DRUBY_EXPORT)
 
-}
-{ # header and library section
-
 dnl Check whether we need to define sys_nerr locally
 AC_CHECK_DECLS([sys_nerr], [], [], [$ac_includes_default
 @%:@include <errno.h>])
 
-AC_ARG_WITH(winnt-ver,
-  AS_HELP_STRING([--with-winnt-ver=0xXXXX], [target Windows NT version (default to 0x0501)]),
-  [with_winnt_ver="$withval"], [with_winnt_ver="0x0501"])
-AS_CASE(["$target_os"],
-[mingw*], [
-  RUBY_APPEND_OPTION(CPPFLAGS, -D_WIN32_WINNT=$with_winnt_ver)
-])
-
-AS_CASE(["$target_os"],
-[freebsd*], [
-  AC_CACHE_CHECK([whether pthread should be enabled by default],
-    rb_cv_enable_pthread_default,
-    [AC_TRY_CPP([
-#include <osreldate.h>
-#if __FreeBSD_version < 502102
-#error pthread should be disabled on this platform
-#endif
-      ],
-      rb_cv_enable_pthread_default=yes,
-      rb_cv_enable_pthread_default=no)])
-  enable_pthread=$rb_cv_enable_pthread_default
-  ],
-[mingw*], [
-  enable_pthread=no
-  ],
-[
-  enable_pthread=yes
-  ])
-
-AC_ARG_ENABLE(pthread,
-       AS_HELP_STRING([--enable-pthread], [obsolete, and ignored]))
-
-dnl Checks for libraries.
-AS_CASE(["$target_os"],[*bsd*|dragonfly*],[],[ac_cv_func_daemon=no])
-
-POSTLINK=:
-AC_SUBST(POSTLINK)
-AS_CASE(["$target_os"],
-[nextstep*], [	],
-[openstep*], [	],
-[rhapsody*], [	],
-[darwin*], [	RUBY_PREPEND_OPTION(LIBS, -lobjc)
-		RUBY_APPEND_OPTIONS(CPPFLAGS, -D_XOPEN_SOURCE -D_DARWIN_C_SOURCE -D_DARWIN_UNLIMITED_SELECT -D_REENTRANT)
-		AC_MSG_CHECKING(whether Mac OS X 10.5 or later)
-		AC_TRY_CPP([#include <AvailabilityMacros.h>
-		    #if MAC_OS_X_VERSION_MAX_ALLOWED <= 1040
-		    #error pre OS X 10.4
-		    [!<===== pre OS X 10.4 =====>]
-		    #endif
-		    ],
-		    [macosx_10_5=yes], [macosx_10_5=no])
-		AC_MSG_RESULT($macosx_10_5)
-		if test $macosx_10_5 = yes; then
-		    ac_cv_header_ucontext_h=no
-		else
-		    AC_DEFINE(BROKEN_SETREUID, 1)
-		    AC_DEFINE(BROKEN_SETREGID, 1)
-		fi
-		ac_cv_type_getgroups=gid_t # getgroups() on Rosetta fills garbage
-		ac_cv_lib_crypt_crypt=no
-		ac_cv_func_fdatasync=no # Mac OS X wrongly reports it has fdatasync()
-                AC_CACHE_CHECK(for broken crypt with 8bit chars, rb_cv_broken_crypt,
-                    [AC_TRY_RUN([
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-
-int
-main()
-{
-    int i;
-    for (i = 0; i < 128*128; i++) {
-	char salt[2], buf[256], *s;
-	salt[0] = 0x80 | (i & 0x7f);
-	salt[1] = 0x80 | (i >> 7);
-	strcpy(buf, crypt("", salt));
-	if (strcmp(buf, s = crypt("", salt))) {
-#if 0
-	    printf("%.2x%.2x: %s -> %s\n", (unsigned char)salt[0], (unsigned char)salt[1],
-		   buf+2, s+2);
-#endif
-	    return 1;
-	}
-    }
-    return 0;
-}
-],
-	            rb_cv_broken_crypt=no,
-	            rb_cv_broken_crypt=yes,
-	            rb_cv_broken_crypt=yes)])
-                if test "$rb_cv_broken_crypt" = yes; then
-                  AC_DEFINE(BROKEN_CRYPT, 1)
-                fi
-		AC_CHECK_PROGS(codesign, codesign)
-		if test -n "$codesign"; then
-		    POSTLINK="test -z '\$(RUBY_CODESIGN)' || $codesign -s '\$(RUBY_CODESIGN)' -f \$@"
-		    LINK_SO="$LINK_SO
-$POSTLINK"
-		fi
-		AC_CHECK_HEADERS(crt_externs.h, [], [], [
-		    #include <crt_externs.h>
-		])
-		],
-[hpux*], [	LIBS="-lm $LIBS"
-		ac_cv_c_inline=no],
-[beos*|haiku*], [
-		ac_cv_func_link=no
-		ac_cv_func_sched_yield=no
-		ac_cv_func_pthread_attr_setinheritsched=no
-		AS_CASE(["$target_os"],
-		[beos*], [ ac_cv_header_net_socket_h=yes],
-		[haiku*], [ ac_cv_func_shutdown=no])
-		LIBS="$LIBS" # m lib is include in root under BeOS/Haiku
-		],
-[cygwin*], [	ac_cv_header_langinfo_h=yes
-		AC_CHECK_FUNCS(cygwin_conv_path)
-		AC_LIBOBJ([langinfo])
-		],
-[mingw*], [	LIBS="-lshell32 -lws2_32 -limagehlp -lshlwapi $LIBS"
-		ac_cv_header_a_out_h=no
-		ac_cv_header_pwd_h=no
-		ac_cv_header_utime_h=no
-		ac_cv_header_sys_ioctl_h=no
-		ac_cv_header_sys_param_h=no
-		ac_cv_header_sys_resource_h=no
-		ac_cv_header_sys_select_h=no
-		ac_cv_header_sys_time_h=no
-		ac_cv_header_sys_times_h=no
-		ac_cv_header_sys_socket_h=no
-		ac_cv_func_times=yes
-		ac_cv_func_waitpid=yes
-		ac_cv_func_fsync=yes
-		ac_cv_func_seekdir=yes
-		ac_cv_func_telldir=yes
-		ac_cv_func_isinf=yes
-		ac_cv_func_isnan=yes
-		ac_cv_func_finite=yes
-		ac_cv_func_link=yes
-		ac_cv_func_fseeko=yes
-		ac_cv_lib_crypt_crypt=no
-		ac_cv_func_getpgrp_void=no
-		ac_cv_func_memcmp_working=yes
-		ac_cv_lib_dl_dlopen=no
-		rb_cv_binary_elf=no
-		rb_cv_negative_time_t=no
-		ac_cv_func_fcntl=yes
-		ac_cv_func_flock=yes
-		ac_cv_func_gmtime_r=yes
-		rb_cv_large_fd_select=yes
-		AC_LIBOBJ([langinfo])
-		],
-[os2-emx*], [	LIBS="-lm $LIBS"
-		ac_cv_lib_dir_opendir=no],
-[bsdi*], [	LIBS="-lm $LIBS"
-		AC_DEFINE(BROKEN_SETREUID, 1)
-		AC_DEFINE(BROKEN_SETREGID, 1)
-                ac_cv_sizeof_rlim_t=8],
-[freebsd*], [	LIBS="-lm $LIBS"
-		ac_cv_func_getpeername=no
-		ac_cv_func_getsockname=no
-		ac_cv_func_shutdown=no
-		ac_cv_func_close=no
-		],
-[dragonfly*], [	LIBS="-lm $LIBS"
-		# isinf() and isnan() are macros on DragonFly.
-		ac_cv_func_isinf=yes
-		ac_cv_func_isnan=yes
-		],
-[bow], [	ac_cv_func_setitimer=no
-		],
-[superux*], [	ac_cv_func_setitimer=no
-		],
-[nacl], [
-  LIBS="-lm $LIBS"
-  if test "${nacl_cv_build_variant}" = "newlib"; then
-    RUBY_APPEND_OPTION(CPPFLAGS, -DNACL_NEWLIB)
-    RUBY_APPEND_OPTION(LIBS, '-lnosys')
-  else
-    RUBY_APPEND_OPTION(XCFLAGS, -fPIC)
-  fi
-  ac_cv_func_shutdown=no
-  ac_cv_func_fcntl=no
-  ],
-[	LIBS="-lm $LIBS"])
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(dl, dlopen)	# Dynamic linking for SunOS/Solaris and SYSV
 AC_CHECK_LIB(dld, shl_load)	# Dynamic linking for HP-UX
@@ -1330,17 +1402,6 @@ else
     ac_cv_header_sys_socket_h=${ac_cv_header_sys_socket_h=yes}
 fi
 
-dnl Checks for header files.
-AC_HEADER_DIRENT
-dnl AC_HEADER_STDC has been checked in AC_USE_SYSTEM_EXTENSIONS
-AC_HEADER_STDBOOL
-AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS(limits.h sys/file.h sys/ioctl.h sys/syscall.h\
-		 fcntl.h sys/fcntl.h sys/select.h sys/time.h sys/times.h sys/param.h\
-		 syscall.h pwd.h grp.h a.out.h utime.h direct.h sys/resource.h \
-		 sys/mkdev.h sys/utime.h xti.h netinet/in_systm.h float.h ieeefp.h \
-		 ucontext.h intrinsics.h langinfo.h locale.h sys/sendfile.h time.h \
-		 net/socket.h sys/socket.h process.h sys/prctl.h)
 
 AC_TYPE_SIZE_T
 RUBY_CHECK_SIZEOF(size_t, [int long void*], [], [@%:@include <sys/types.h>])
@@ -1363,6 +1424,13 @@ AC_CHECK_MEMBERS([struct stat.st_mtimensec])
 AC_CHECK_MEMBERS([struct stat.st_ctim])
 AC_CHECK_MEMBERS([struct stat.st_ctimespec])
 AC_CHECK_MEMBERS([struct stat.st_ctimensec])
+
+AC_CHECK_TYPES([struct timeval], [], [], [@%:@ifdef HAVE_TIME_H
+@%:@include <time.h>
+@%:@endif
+@%:@ifdef HAVE_SYS_TIME_H
+@%:@include <sys/time.h>
+@%:@endif])
 
 AC_CHECK_TYPES([struct timespec], [], [], [@%:@ifdef HAVE_TIME_H
 @%:@include <time.h>
@@ -1543,18 +1611,6 @@ AS_CASE(["$target_os"],
 [hpux*], [AC_DEFINE(SPT_TYPE,SPT_PSTAT) ],
 [])
 
-
-AS_CASE(["$target_cpu-$target_os"], [[i[3-6]86*]], [
-	 AC_CACHE_CHECK([for __sync_val_compare_and_swap], [rb_cv_gcc_compiler_cas], [
-			 AC_TRY_LINK([unsigned long atomic_var;],
-				     [
-				      __sync_val_compare_and_swap(&atomic_var, 0, 1);
-				      ],
-				      [rb_cv_gcc_compiler_cas=yes],
-				      [rb_cv_gcc_compiler_cas=no])])
-	 if test "$rb_cv_gcc_compiler_cas" = no; then
-		 ARCH_FLAG="-march=i486"
-	 fi])
 
 AC_CACHE_CHECK(for signbit, rb_cv_have_signbit,
   [AC_TRY_LINK([
@@ -2370,13 +2426,11 @@ AC_ARG_WITH(opt-dir,
 	[
 		val=`echo "$PATH_SEPARATOR$withval" | sed "s|$PATH_SEPARATOR\([[^$PATH_SEPARATOR]*]\)| -I\1/include|g;s/^ //"`
 		CPPFLAGS="$CPPFLAGS $val"
-		set -x
 		val=`IFS="$PATH_SEPARATOR"
 		    for dir in $withval; do
 			echo x ${LIBPATHFLAG} ${RPATHFLAG} |
 			sed "s/^x *//;s${IFS}"'%1\\$-s'"${IFS}${dir}/lib${IFS}g;s${IFS}%s${IFS}${dir}/lib${IFS}g"
 		    done | tr '\012' ' '`
-		set +x
 		LDFLAGS_OPTDIR="$val"
 		LDFLAGS="$LDFLAGS${LDFLAGS:+ }$val"
 		DLDFLAGS="$DLDFLAGS${DLDFLAGS:+ }$val"
@@ -3161,57 +3215,56 @@ archincludedir='${includedir}/${arch}'
 sitearchincludedir='${includedir}/${sitearch}'
 
 shvar_to_cpp() {
-    local var="$1" val="$2"
-    local exec_prefix_pat="`echo \"${exec_prefix}\" | sed 's/\\./\\\\./g'`"
-    local arch_pat="`echo \"${arch}\" | sed 's/\\./\\\\./g'`"
-    local sitearch_pat="`echo \"${sitearch}\" | sed 's/\\./\\\\./g'`"
-    val="`echo '"'"${val}"'"' |
+    var="$1" val="$2"
+    exec_prefix_pat="`echo \"${exec_prefix}\" | sed 's/\\./\\\\./g'`"
+    arch_pat="`echo \"${arch}\" | sed 's/\\./\\\\./g'`"
+    sitearch_pat="`echo \"${sitearch}\" | sed 's/\\./\\\\./g'`"
+    val="`echo '\"'\"${val}\"'\"' |
 	sed \
-	    -e 's/\${\([[A-Z][A-Z_]]*\)}/"\1"/g' \
-	    -e 's|\${sitearchlibdir}|'"${sitearchlibdir}|g" \
-	    -e 's|\${sitearchincludedir}|'"${sitearchincludedir}|g" \
-	    -e 's|\${archlibdir}|'"${archlibdir}|g" \
-	    -e 's|\${archincludedir}|'"${archincludedir}|g" \
-	    -e 's|\${libdir}|'"${libdir}|g" \
-	    -e 's/\${ruby_version}/"RUBY_LIB_VERSION"/g' \
-	    -e 's/\${arch}/"arch"/g' \
-	    -e 's/\${sitearch}/"arch"/g' \
-	    -e 's/\${vendorarchdir}/"RUBY_VENDOR_ARCH_LIB"/g' \
-	    -e 's/\${sitearchdir}/"RUBY_SITE_ARCH_LIB"/g' \
-	    -e 's/\${vendorlibdir}/"RUBY_VENDOR_LIB2"/g' \
-	    -e 's/\${sitelibdir}/"RUBY_SITE_LIB2"/g' \
-	    -e 's/\${vendordir}/"RUBY_VENDOR_LIB"/g' \
-	    -e 's/\${sitedir}/"RUBY_SITE_LIB"/g' \
-	    -e 's/\${rubylibdir}/"RUBY_LIB"/g' \
-	    -e 's/\${rubylibprefix}/"RUBY_LIB_PREFIX"/g' \
-	    -e 's/\${rubyarchprefix}/"RUBY_ARCH_PREFIX_FOR(arch)"/g' \
-	    -e 's/\${rubysitearchprefix}/"RUBY_SITEARCH_PREFIX_FOR(arch)"/g' \
-	    -e 's/\${exec_prefix}/"RUBY_EXEC_PREFIX"/g' \
-	    -e "s|${exec_prefix_pat}/|"'"RUBY_EXEC_PREFIX"/|g' \
-	    -e "s|${arch_pat}|"'"arch"|g' \
-	    -e "s|${sitearch_pat}|"'"sitearch"|g' \
-	    -e 's|^\"NONE/|RUBY_EXEC_PREFIX\"/|' \
-	    -e 's|^\"NONE\"|\"'"${prefix}"'\"|' \
-	    -e 's/^\"\"\(.\)/\1/;s/\(.\)\"\"$/\1/'
+	    -e 's/\${\([[A-Z][A-Z_]]*\)}/\"\1\"/g' \
+	    -e 's|\${sitearchlibdir}|'\"${sitearchlibdir}|g\" \
+	    -e 's|\${sitearchincludedir}|'\"${sitearchincludedir}|g\" \
+	    -e 's|\${archlibdir}|'\"${archlibdir}|g\" \
+	    -e 's|\${archincludedir}|'\"${archincludedir}|g\" \
+	    -e 's|\${libdir}|'\"${libdir}|g\" \
+	    -e 's/\${ruby_version}/\"RUBY_LIB_VERSION\"/g' \
+	    -e 's/\${arch}/\"arch\"/g' \
+	    -e 's/\${sitearch}/\"arch\"/g' \
+	    -e 's/\${vendorarchdir}/\"RUBY_VENDOR_ARCH_LIB\"/g' \
+	    -e 's/\${sitearchdir}/\"RUBY_SITE_ARCH_LIB\"/g' \
+	    -e 's/\${vendorlibdir}/\"RUBY_VENDOR_LIB2\"/g' \
+	    -e 's/\${sitelibdir}/\"RUBY_SITE_LIB2\"/g' \
+	    -e 's/\${vendordir}/\"RUBY_VENDOR_LIB\"/g' \
+	    -e 's/\${sitedir}/\"RUBY_SITE_LIB\"/g' \
+	    -e 's/\${rubylibdir}/\"RUBY_LIB\"/g' \
+	    -e 's/\${rubylibprefix}/\"RUBY_LIB_PREFIX\"/g' \
+	    -e 's/\${rubyarchprefix}/\"RUBY_ARCH_PREFIX_FOR(arch)\"/g' \
+	    -e 's/\${rubysitearchprefix}/\"RUBY_SITEARCH_PREFIX_FOR(arch)\"/g' \
+	    -e 's/\${exec_prefix}/\"RUBY_EXEC_PREFIX\"/g' \
+	    -e \"s|${exec_prefix_pat}/|\"'\"RUBY_EXEC_PREFIX\"/|g' \
+	    -e \"s|${arch_pat}|\"'\"arch\"|g' \
+	    -e \"s|${sitearch_pat}|\"'\"sitearch\"|g' \
+	    -e 's|^\\\"NONE/|RUBY_EXEC_PREFIX\\\"/|' \
+	    -e 's|^\\\"NONE\\\"|\\\"'\"${prefix}\"'\\\"|' \
+	    -e 's/^\\\"\\\"\(.\)/\1/;s/\(.\)\\\"\\\"$/\1/'
 	`"
     eval $var='"$val"'
 }
 
 unexpand_shvar() {
-    local var=$1 val n v expr quote
+    var=$1 n="" v="" expr=""
     shift
-    test "$#" == 0 && return
-    quote=['s/${[^${}"]*}/"&"/g']
+    test "$#" -eq 0 && return
     for n do
         eval v='"$'$n'"'
-	v="`echo \"$v\" | sed -e \"$quote\" -e ['s/[][$|.\\?*]/\\\\&/g']`"
+	v="`echo \"$v\" | sed -e ['s/${[^${}\"]*}/\"&\"/g'] -e ['s/[][$|.\\?*]/\\\\&/g']`"
 	if test -n "$v"; then
 	    expr=["${expr};s|"'\("[^$"]*\)'"$v|\\1\${$n}\"|g"]
 	    AS_CASE(["$v"], [*'${'*'}'*], [expr=["$expr;s|$v|\"\${$n}\"|g"]])
 	fi
     done
-    expr=["${quote}${expr};"'s/"\(\${[^${}"]*}\)"/\1/g']
-    eval $var='"`echo \"\\\"${'$var'}\\\"\" | sed \"$expr;s/\\\"\\\"//g;s/^\\\"//;s/\\\"\\\$//\"`"'
+    expr=['s/${[^${}"]*}/"&"/g;'"${expr};"'s/"\(\${[^${}"]*}\)"/\1/g']
+    eval $var='"`echo \"\\\"${'$var'}\\\"\" | sed \"$expr;s/\\\"//g\"`"'
 }
 
 rubylibprefix='${libdir}/${RUBY_BASE_NAME}'

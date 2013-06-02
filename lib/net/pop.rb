@@ -15,7 +15,7 @@
 # NOTE: You can find Japanese version of this document at:
 # http://www.ruby-lang.org/ja/man/html/net_pop.html
 #
-#   $Id: pop.rb 39017 2013-02-02 04:32:25Z zzak $
+#   $Id: pop.rb 40295 2013-04-14 15:19:46Z nagachika $
 #
 # See Net::POP3 for documentation.
 #
@@ -195,7 +195,7 @@ module Net
   class POP3 < Protocol
 
     # svn revision of this library
-    Revision = %q$Revision: 39017 $.split[1]
+    Revision = %q$Revision: 40295 $.split[1]
 
     #
     # Class Parameters
@@ -496,12 +496,12 @@ module Net
 
     # Seconds to wait until a connection is opened.
     # If the POP3 object cannot open a connection within this time,
-    # it raises a Net::OpenTimeout exception.
+    # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
     attr_accessor :open_timeout
 
     # Seconds to wait until reading one block (by one read(1) call).
     # If the POP3 object cannot complete a read() within this time,
-    # it raises a Net::ReadTimeout exception.
+    # it raises a Net::ReadTimeout exception. The default value is 60 seconds.
     attr_reader :read_timeout
 
     # Set the read timeout.

@@ -499,7 +499,7 @@ class TestMethod < Test::Unit::TestCase
           define_singleton_method(:reverse, target.method(:reverse).to_proc)
         end
       end
-      1000.times {p = Bug6171.new('test'); 10000.times {p.reverse}}
+      100.times {p = Bug6171.new('test'); 1000.times {p.reverse}}
       EOC
   end
 
@@ -535,5 +535,18 @@ class TestMethod < Test::Unit::TestCase
       end
       IRB.start
     }, '[Bug #7825]'
+  end
+
+  def test_unlinked_method_entry_in_method_object_bug
+    bug8100 = '[ruby-core:53640] [Bug #8100]'
+    assert_ruby_status [], %q{
+      loop do
+        def x
+          "hello" * 1000
+        end
+        method(:x).call
+      end
+    }, bug8100, timeout: 2
+  rescue Timeout::Error
   end
 end

@@ -120,6 +120,11 @@ class TestThread < Test::Unit::TestCase
     assert_equal(max * max * max, r)
   end
 
+  def test_mutex_synchronize_yields_no_block_params
+    bug8097 = '[ruby-core:53424] [Bug #8097]'
+    assert_empty(Mutex.new.synchronize {|*params| break params}, bug8097)
+  end
+
   def test_local_barrier
     dir = File.dirname(__FILE__)
     lbtest = File.join(dir, "lbtest.rb")
@@ -669,8 +674,8 @@ class TestThread < Test::Unit::TestCase
             q.push :ng1
           end
           begin
-            Thread.handle_interrupthandle_interrupt(Object => :immediate){} if Thread.pending_interrupt?
-          rescue => e
+            Thread.handle_interrupt(Object => :immediate){} if Thread.pending_interrupt?
+          rescue RuntimeError => e
             q.push :ok
           end
         rescue => e
@@ -876,7 +881,7 @@ Thread.new(Thread.current) {|mth|
     env = {}
     env['RUBY_THREAD_VM_STACK_SIZE'] = vm_stack_size.to_s if vm_stack_size
     env['RUBY_THREAD_MACHINE_STACK_SIZE'] = machine_stack_size.to_s if machine_stack_size
-    out, = EnvUtil.invoke_ruby([env, '-e', script], '', true, true)
+    out, = EnvUtil.invoke_ruby([env, '-e', script], '', true, true, :timeout => 50)
     use_length ? out.length : out
   end
 

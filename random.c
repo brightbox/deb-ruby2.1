@@ -2,7 +2,7 @@
 
   random.c -
 
-  $Author: zzak $
+  $Author: nagachika $
   created at: Fri Dec 24 16:39:21 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -73,6 +73,9 @@ The original copyright notice follows.
 #endif
 #include <math.h>
 #include <errno.h>
+#if defined(HAVE_SYS_TIME_H)
+#include <sys/time.h>
+#endif
 
 #ifdef _WIN32
 # if !defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0400
@@ -942,14 +945,31 @@ rb_random_real(VALUE obj)
     return genrand_real(&rnd->mt);
 }
 
+static inline VALUE
+ulong_to_num_plus_1(unsigned long n)
+{
+#if HAVE_LONG_LONG
+    return ULL2NUM((LONG_LONG)n+1);
+#else
+    if (n >= ULONG_MAX) {
+	return rb_big_plus(ULONG2NUM(n), INT2FIX(1));
+    }
+    return ULONG2NUM(n+1);
+#endif
+}
+
 unsigned long
 rb_random_ulong_limited(VALUE obj, unsigned long limit)
 {
     rb_random_t *rnd = try_get_rnd(obj);
     if (!rnd) {
-	VALUE lim = ULONG2NUM(limit);
+	extern int rb_num_negative_p(VALUE);
+	VALUE lim = ulong_to_num_plus_1(limit);
 	VALUE v = rb_funcall2(obj, id_rand, 1, &lim);
 	unsigned long r = NUM2ULONG(v);
+	if (rb_num_negative_p(v)) {
+	    rb_raise(rb_eRangeError, "random number too small %ld", r);
+	}
 	if (r > limit) {
 	    rb_raise(rb_eRangeError, "random number too big %ld", r);
 	}

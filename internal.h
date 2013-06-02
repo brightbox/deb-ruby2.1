@@ -19,6 +19,15 @@ extern "C" {
 #endif
 #endif
 
+#define MUL_OVERFLOW_SIGNED_INTEGER_P(a, b, min, max) ( \
+    (a) == 0 ? 0 : \
+    (a) == -1 ? (b) < -(max) : \
+    (a) > 0 ? \
+      ((b) > 0 ? (max) / (a) < (b) : (min) / (a) > (b)) : \
+      ((b) > 0 ? (min) / (a) < (b) : (max) / (a) > (b)))
+#define MUL_OVERFLOW_FIXNUM_P(a, b) MUL_OVERFLOW_SIGNED_INTEGER_P(a, b, FIXNUM_MIN, FIXNUM_MAX)
+#define MUL_OVERFLOW_LONG_P(a, b) MUL_OVERFLOW_SIGNED_INTEGER_P(a, b, LONG_MIN, LONG_MAX)
+
 struct rb_deprecated_classext_struct {
     char conflict[sizeof(VALUE) * 3];
 };
@@ -168,6 +177,7 @@ int rb_num_to_uint(VALUE val, unsigned int *ret);
 VALUE num_interval_step_size(VALUE from, VALUE to, VALUE step, int excl);
 int ruby_float_step(VALUE from, VALUE to, VALUE step, int excl);
 double ruby_float_mod(double x, double y);
+int rb_num_negative_p(VALUE);
 
 /* object.c */
 VALUE rb_obj_equal(VALUE obj1, VALUE obj2);
@@ -191,6 +201,7 @@ VALUE rb_proc_location(VALUE self);
 st_index_t rb_hash_proc(st_index_t hash, VALUE proc);
 
 /* process.c */
+#define RB_MAX_GROUPS (65536)
 
 struct rb_execarg {
     int use_shell;

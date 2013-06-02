@@ -764,10 +764,10 @@ defined
 	}
 	break;
       case DEFINED_ZSUPER:{
-	const rb_method_entry_t *me = GET_CFP()->me;
-	if (me) {
-	    VALUE klass = vm_search_normal_superclass(GET_CFP()->klass);
-	    ID id = me->def ? me->def->original_id : me->called_id;
+	rb_call_info_t cit;
+	if (vm_search_superclass(GET_CFP(), GET_ISEQ(), Qnil, &cit) == 0) {
+	    VALUE klass = cit.klass;
+	    ID id = cit.mid;
 	    if (rb_method_boundp(klass, id, 0)) {
 		expr_type = DEFINED_ZSUPER;
 	    }
@@ -1418,16 +1418,13 @@ opt_mult
 	    val = recv;
 	}
 	else {
-	    volatile long c;
 	    b = FIX2LONG(obj);
-	    c = a * b;
-
-	    if (FIXABLE(c) && c / a == b) {
-		val = LONG2FIX(c);
-	    }
-	    else {
+            if (MUL_OVERFLOW_FIXNUM_P(a, b)) {
 		val = rb_big_mul(rb_int2big(a), rb_int2big(b));
-	    }
+            }
+            else {
+		val = LONG2FIX(a * b);
+            }
 	}
     }
     else if (FLONUM_2_P(recv, obj) &&

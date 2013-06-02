@@ -2,7 +2,7 @@
 
   hash.c -
 
-  $Author: marcandre $
+  $Author: nagachika $
   created at: Mon Nov 22 18:51:18 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -2926,7 +2926,7 @@ env_inspect(void)
  *
  * Converts the environment variables into an array of names and value arrays.
  *
- *   ENV.to_a # => [["TERM" => "xterm-color"], ["SHELL" => "/bin/bash"], ...]
+ *   ENV.to_a # => [["TERM", "xterm-color"], ["SHELL", "/bin/bash"], ...]
  *
  */
 static VALUE

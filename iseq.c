@@ -2,7 +2,7 @@
 
   iseq.c -
 
-  $Author: nobu $
+  $Author: nagachika $
   created at: 2006-07-11(Tue) 09:00:03 +0900
 
   Copyright (C) 2006 Koichi Sasada
@@ -1841,7 +1841,7 @@ iseq_data_to_ary(rb_iseq_t *iseq)
 	    rb_ary_push(body, (VALUE)label);
 	}
 
-	if (iseq->line_info_size < ti && iseq->line_info_table[ti].position == pos) {
+	if (ti < iseq->line_info_size && iseq->line_info_table[ti].position == pos) {
 	    line = iseq->line_info_table[ti].line_no;
 	    rb_ary_push(body, INT2FIX(line));
 	    ti++;

@@ -590,7 +590,7 @@ class TestModule < Test::Unit::TestCase
     assert_raise(TypeError, bug5084) { c1.const_get(1) }
     bug7574 = '[ruby-dev:46749]'
     e = assert_raise(NameError) { Object.const_get("String\0") }
-    assert_equal("wrong constant name \"String\\0\"", e.message, bug7574)
+    assert_equal("wrong constant name \"String\\u0000\"", e.message, bug7574)
   end
 
   def test_const_defined_invalid_name
@@ -600,7 +600,7 @@ class TestModule < Test::Unit::TestCase
     assert_raise(TypeError, bug5084) { c1.const_defined?(1) }
     bug7574 = '[ruby-dev:46749]'
     e = assert_raise(NameError) { Object.const_defined?("String\0") }
-    assert_equal("wrong constant name \"String\\0\"", e.message, bug7574)
+    assert_equal("wrong constant name \"String\\u0000\"", e.message, bug7574)
   end
 
   def test_const_get_no_inherited
@@ -1368,6 +1368,13 @@ class TestModule < Test::Unit::TestCase
     c = labeled_class("c") {prepend b}
     assert_operator(c, :<, b, bug6654)
     assert_operator(c, :<, a, bug6654)
+    bug8357 = '[ruby-core:54736] [Bug #8357]'
+    b = labeled_module("b") {prepend a}
+    c = labeled_class("c") {include b}
+    assert_operator(c, :<, b, bug8357)
+    assert_operator(c, :<, a, bug8357)
+    bug8357 = '[ruby-core:54742] [Bug #8357]'
+    assert_kind_of(b, c.new, bug8357)
   end
 
   def test_prepend_instance_methods
@@ -1382,12 +1389,27 @@ class TestModule < Test::Unit::TestCase
   end
 
   def test_prepend_remove_method
+    c = Class.new do
+      prepend Module.new {def foo; end}
+    end
     assert_raise(NameError) do
-      Class.new do
-        prepend Module.new {def foo; end}
+      c.class_eval do
         remove_method(:foo)
       end
     end
+    c.class_eval do
+      def foo; end
+    end
+    removed = nil
+    c.singleton_class.class_eval do
+      define_method(:method_removed) {|id| removed = id}
+    end
+    assert_nothing_raised(NoMethodError, NameError, '[Bug #7843]') do
+      c.class_eval do
+        remove_method(:foo)
+      end
+    end
+    assert_equal(:foo, removed)
   end
 
   def test_prepend_class_ancestors
@@ -1432,14 +1454,14 @@ class TestModule < Test::Unit::TestCase
 
   def labeled_module(name, &block)
     Module.new do
-      singleton_class.class_eval {define_method(:to_s) {name}}
+      singleton_class.class_eval {define_method(:to_s) {name}; alias inspect to_s}
       class_eval(&block) if block
     end
   end
 
   def labeled_class(name, superclass = Object, &block)
     Class.new(superclass) do
-      singleton_class.class_eval {define_method(:to_s) {name}}
+      singleton_class.class_eval {define_method(:to_s) {name}; alias inspect to_s}
       class_eval(&block) if block
     end
   end
@@ -1448,6 +1470,57 @@ class TestModule < Test::Unit::TestCase
     bug6660 = '[ruby-dev:45863]'
     assert_equal([:m1], Class.new{ prepend Module.new; def m1; end }.instance_methods(false), bug6660)
     assert_equal([:m1], Class.new(Class.new{def m2;end}){ prepend Module.new; def m1; end }.instance_methods(false), bug6660)
+  end
+
+  def test_cyclic_prepend
+    bug7841 = '[ruby-core:52205] [Bug #7841]'
+    m1 = Module.new
+    m2 = Module.new
+    m1.instance_eval { prepend(m2) }
+    assert_raise(ArgumentError, bug7841) do
+      m2.instance_eval { prepend(m1) }
+    end
+  end
+
+  def test_prepend_optmethod
+    bug7983 = '[ruby-dev:47124] [Bug #7983]'
+    assert_separately [], %{
+      module M
+        def /(other)
+          to_f / other
+        end
+      end
+      Fixnum.send(:prepend, M)
+      assert_equal(0.5, 1 / 2, "#{bug7983}")
+    }
+    assert_equal(0, 1 / 2)
+  end
+
+  def test_prepend_visibility
+    bug8005 = '[ruby-core:53106] [Bug #8005]'
+    c = Class.new do
+      prepend Module.new {}
+      def foo() end
+      protected :foo
+    end
+    a = c.new
+    assert_respond_to a, [:foo, true]
+    assert_nothing_raised(NoMethodError) {a.send :foo}
+  end
+
+  def test_prepend_included_modules
+    bug8025 = '[ruby-core:53158] [Bug #8025]'
+    mixin = labeled_module("mixin")
+    c = labeled_module("c") {prepend mixin}
+    im = c.included_modules
+    assert_not_include(im, c, bug8025)
+    assert_include(im, mixin, bug8025)
+    c1 = labeled_class("c1") {prepend mixin}
+    c2 = labeled_class("c2", c1)
+    im = c2.included_modules
+    assert_not_include(im, c1, bug8025)
+    assert_not_include(im, c2, bug8025)
+    assert_include(im, mixin, bug8025)
   end
 
   def test_class_variables
@@ -1622,6 +1695,13 @@ class TestModule < Test::Unit::TestCase
         end
       EOS
     end
+  end
+
+  def test_anonymous_module_public_class_method
+    bug8284 = '[ruby-core:54404] [Bug #8284]'
+    assert_raise(NoMethodError) {Object.define_method}
+    Module.new.public_class_method(:define_method)
+    assert_raise(NoMethodError, bug8284) {Object.define_method}
   end
 
   private

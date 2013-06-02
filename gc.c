@@ -2,7 +2,7 @@
 
   gc.c -
 
-  $Author: zzak $
+  $Author: nagachika $
   created at: Tue Oct  5 09:44:46 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -225,6 +225,7 @@ typedef struct rb_objspace {
         struct heaps_free_bitmap *free_bitmap;
 	RVALUE *range[2];
 	struct heaps_header *freed;
+	size_t marked_num;
 	size_t free_num;
 	size_t free_min;
 	size_t final_num;
@@ -1426,12 +1427,10 @@ finalize_list(rb_objspace_t *objspace, RVALUE *p)
     while (p) {
 	RVALUE *tmp = p->as.free.next;
 	run_final(objspace, (VALUE)p);
+	objspace->total_freed_object_num++;
 	if (!FL_TEST(p, FL_SINGLETON)) { /* not freeing page */
             add_slot_local_freelist(objspace, p);
-            if (!is_lazy_sweeping(objspace)) {
-		objspace->total_freed_object_num++;
-		objspace->heap.free_num++;
-            }
+	    objspace->heap.free_num++;
 	}
 	else {
 	    struct heaps_slot *slot = (struct heaps_slot *)(VALUE)RDATA(p)->dmark;
@@ -1935,9 +1934,9 @@ slot_sweep(rb_objspace_t *objspace, struct heaps_slot *sweep_slot)
         else {
             sweep_slot->free_next = NULL;
         }
-	objspace->total_freed_object_num += freed_num;
 	objspace->heap.free_num += freed_num + empty_num;
     }
+    objspace->total_freed_object_num += freed_num;
     objspace->heap.final_num += final_num;
 
     if (deferred_final_list && !finalizing) {
@@ -1969,8 +1968,9 @@ before_gc_sweep(rb_objspace_t *objspace)
     objspace->heap.do_heap_free = (size_t)((heaps_used * HEAP_OBJ_LIMIT) * 0.65);
     objspace->heap.free_min = (size_t)((heaps_used * HEAP_OBJ_LIMIT)  * 0.2);
     if (objspace->heap.free_min < initial_free_min) {
-	objspace->heap.do_heap_free = heaps_used * HEAP_OBJ_LIMIT;
         objspace->heap.free_min = initial_free_min;
+	if (objspace->heap.do_heap_free < initial_free_min)
+	    objspace->heap.do_heap_free = initial_free_min;
     }
     objspace->heap.sweep_slots = heaps;
     objspace->heap.free_num = 0;
@@ -1996,7 +1996,7 @@ after_gc_sweep(rb_objspace_t *objspace)
     inc = ATOMIC_SIZE_EXCHANGE(malloc_increase, 0);
     if (inc > malloc_limit) {
 	malloc_limit +=
-	  (size_t)((inc - malloc_limit) * (double)objspace_live_num(objspace) / (heaps_used * HEAP_OBJ_LIMIT));
+	  (size_t)((inc - malloc_limit) * (double)objspace->heap.marked_num / (heaps_used * HEAP_OBJ_LIMIT));
 	if (malloc_limit < initial_malloc_limit) malloc_limit = initial_malloc_limit;
     }
 
@@ -2069,7 +2069,7 @@ gc_prepare_free_objects(rb_objspace_t *objspace)
     gc_marks(objspace);
 
     before_gc_sweep(objspace);
-    if (objspace->heap.free_min > (heaps_used * HEAP_OBJ_LIMIT - objspace_live_num(objspace))) {
+    if (objspace->heap.free_min > (heaps_used * HEAP_OBJ_LIMIT - objspace->heap.marked_num)) {
 	set_heaps_increment(objspace);
     }
 
@@ -2557,6 +2557,7 @@ gc_mark_ptr(rb_objspace_t *objspace, VALUE ptr)
     register uintptr_t *bits = GET_HEAP_BITMAP(ptr);
     if (MARKED_IN_BITMAP(bits, ptr)) return 0;
     MARK_IN_BITMAP(bits, ptr);
+    objspace->heap.marked_num++;
     return 1;
 }
 
@@ -2917,6 +2918,7 @@ gc_marks(rb_objspace_t *objspace)
     objspace->mark_func_data = 0;
 
     gc_prof_mark_timer_start(objspace);
+    objspace->heap.marked_num = 0;
     objspace->count++;
 
     SET_STACK_END;
@@ -2961,11 +2963,11 @@ rb_gc_force_recycle(VALUE p)
     rb_objspace_t *objspace = &rb_objspace;
     struct heaps_slot *slot;
 
+    objspace->total_freed_object_num++;
     if (MARKED_IN_BITMAP(GET_HEAP_BITMAP(p), p)) {
         add_slot_local_freelist(objspace, (RVALUE *)p);
     }
     else {
-	objspace->total_freed_object_num++;
 	objspace->heap.free_num++;
         slot = add_slot_local_freelist(objspace, (RVALUE *)p);
         if (slot->free_next == NULL) {

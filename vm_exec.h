@@ -2,7 +2,7 @@
 
   vm.h -
 
-  $Author: nobu $
+  $Author: nagachika $
   created at: 04/01/01 16:56:59 JST
 
   Copyright (C) 2004-2007 Koichi Sasada
@@ -83,7 +83,7 @@ error !
   LABEL(insn): \
   INSN_ENTRY_SIG(insn); \
 
-/* dispather */
+/* dispatcher */
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__)) && __GNUC__ == 3
 #define DISPATCH_ARCH_DEPEND_WAY(addr) \
   asm volatile("jmp *%0;\t# -- inseted by vm.h\t[length = 2]" : : "r" (addr))
@@ -105,7 +105,7 @@ error !
   ;
 
 #else
-/* token threade code */
+/* token threaded code */
 
 #define TC_DISPATCH(insn)  \
   DISPATCH_ARCH_DEPEND_WAY(insns_address_table[GET_CURRENT_INSN()]); \
