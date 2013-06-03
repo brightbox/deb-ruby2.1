@@ -1,1 +1,1 @@
-ccache DEB_BUILD_OPTIONS="parallel=$(nproc) nocheck" fakeroot debian/rules install-arch
+DEB_BUILD_OPTIONS="parallel=$(nproc) nocheck" git buildpackage -us -uc
