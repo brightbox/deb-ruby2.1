@@ -10,3 +10,4 @@ To obtain a view of the individual commits that affect non-Debian-specific
 files, you can clone that repository, and from the master branch, run:
 
   $ ./debian/upstream-changes
+
