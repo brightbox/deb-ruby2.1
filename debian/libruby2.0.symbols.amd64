@@ -622,10 +622,10 @@ libruby-2.0.so.2.0 libruby2.0 #MINVER#
  rb_find_file_ext@Base 2.0.0~rc1
  rb_find_file_ext_safe@Base 2.0.0~rc1
  rb_find_file_safe@Base 2.0.0~rc1
- rb_fix2int@Base 2.0.0~rc1
+ (arch=amd64)rb_fix2int@Base 2.0.0~rc1
  rb_fix2short@Base 2.0.0~rc1
  rb_fix2str@Base 2.0.0~rc1
- rb_fix2uint@Base 2.0.0~rc1
+ (arch=amd64)rb_fix2uint@Base 2.0.0~rc1
  rb_fix2ushort@Base 2.0.0~rc1
  rb_float_new_in_heap@Base 2.0.0~rc1
  rb_fork@Base 2.0.0~rc1
@@ -900,11 +900,11 @@ libruby-2.0.so.2.0 libruby2.0 #MINVER#
  rb_notimplement@Base 2.0.0~rc1
  rb_num2dbl@Base 2.0.0~rc1
  rb_num2fix@Base 2.0.0~rc1
- rb_num2int@Base 2.0.0~rc1
+ (arch=amd64)rb_num2int@Base 2.0.0~rc1
  rb_num2ll@Base 2.0.0~rc1
  rb_num2long@Base 2.0.0~rc1
  rb_num2short@Base 2.0.0~rc1
- rb_num2uint@Base 2.0.0~rc1
+ (arch=amd64)rb_num2uint@Base 2.0.0~rc1
  rb_num2ull@Base 2.0.0~rc1
  rb_num2ulong@Base 2.0.0~rc1
  rb_num2ushort@Base 2.0.0~rc1
@@ -950,7 +950,7 @@ libruby-2.0.so.2.0 libruby2.0 #MINVER#
  rb_objspace_internal_object_p@Base 2.0.0~rc1
  rb_objspace_markable_object_p@Base 2.0.0~rc1
  rb_objspace_reachable_objects_from@Base 2.0.0~rc1
- rb_out_of_int@Base 2.0.0~rc1
+ (arch=amd64)rb_out_of_int@Base 2.0.0~rc1
  rb_output_fs@Base 2.0.0~rc1
  rb_output_rs@Base 2.0.0~rc1
  rb_p@Base 2.0.0~rc1
