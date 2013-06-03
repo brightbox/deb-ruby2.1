@@ -1,27 +1,43 @@
-* lintian errors/warnings:
+E: libruby2.0: binary-or-shlib-defines-rpath usr/lib/x86_64-linux-gnu/ruby/2.0.0/tcltklib.so /usr/lib
 
-E: libruby2.0: binary-or-shlib-defines-rpath usr/lib/ruby/2.0.0/x86_64-linux/tcltklib.so /usr/lib
-
-W: libruby2.0: embedded-javascript-library usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/js/jquery.js
-W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/date_core.so
-W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/digest/rmd160.so
-W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/dl.so
-W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/fiddle.so
-W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/readline.so
-W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/sdbm.so
-W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/stringio.so
-W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/tkutil.so
-W: libruby2.0: hardening-no-relro usr/lib/libruby-2.0.so.2.0.0
-W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/digest/md5.so
-W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/digest/rmd160.so
-W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/digest/sha1.so
-W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/digest/sha2.so
-W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/fiddle.so
-W: libruby2.0: hardening-no-relro usr/lib/ruby/2.0.0/x86_64-linux/openssl.so
+I: ruby2.0 source: vcs-field-not-canonical http://git.debian.org/?p=collab-maint/ruby2.0.git;a=summary http://anonscm.debian.org/gitweb/?p=collab-maint/ruby2.0.git;a=summary
+I: ruby2.0 source: vcs-field-not-canonical git://git.debian.org/collab-maint/ruby2.0.git git://anonscm.debian.org/collab-maint/ruby2.0.git
+W: ruby2.0 source: out-of-date-standards-version 3.9.3 (current is 3.9.4)
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/irb2.0.1.gz:41
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/irb2.0.1.gz:48
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/irb2.0.1.gz:54
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/irb2.0.1.gz:59
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/irb2.0.1.gz:76
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/irb2.0.1.gz:98
+W: ruby2.0: manpage-has-errors-from-man usr/share/man/man1/ri2.0.1.gz  .Nm name ... (#88)
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/ruby2.0.1.gz:208
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/ruby2.0.1.gz:278
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/ruby2.0.1.gz:309
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/ruby2.0.1.gz:313
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/ruby2.0.1.gz:331
+I: ruby2.0: hyphen-used-as-minus-sign usr/share/man/man1/ruby2.0.1.gz:332
+W: ruby2.0: binary-without-manpage usr/bin/gem2.0
+W: ruby2.0: binary-without-manpage usr/bin/rdoc2.0
+W: ruby2.0: binary-without-manpage usr/bin/testrb2.0
+W: ruby2.0: binary-without-manpage usr/bin/x86_64-linux-gnu-ruby2.0
+W: libruby2.0: package-name-doesnt-match-sonames libruby-2.0-2.0
+I: libruby2.0: spelling-error-in-binary usr/lib/x86_64-linux-gnu/libruby-2.0.so.2.0.0 tEH the
+W: libruby2.0: hardening-no-relro usr/lib/x86_64-linux-gnu/libruby-2.0.so.2.0.0
+I: libruby2.0: hardening-no-fortify-functions usr/lib/x86_64-linux-gnu/ruby/2.0.0/date_core.so
+W: libruby2.0: hardening-no-relro usr/lib/x86_64-linux-gnu/ruby/2.0.0/digest/md5.so
+W: libruby2.0: hardening-no-relro usr/lib/x86_64-linux-gnu/ruby/2.0.0/digest/rmd160.so
+W: libruby2.0: hardening-no-relro usr/lib/x86_64-linux-gnu/ruby/2.0.0/digest/sha1.so
+W: libruby2.0: hardening-no-relro usr/lib/x86_64-linux-gnu/ruby/2.0.0/digest/sha2.so
+W: libruby2.0: hardening-no-relro usr/lib/x86_64-linux-gnu/ruby/2.0.0/fiddle.so
+W: libruby2.0: hardening-no-relro usr/lib/x86_64-linux-gnu/ruby/2.0.0/openssl.so
+I: libruby2.0: hardening-no-fortify-functions usr/lib/x86_64-linux-gnu/ruby/2.0.0/readline.so
+I: libruby2.0: hardening-no-fortify-functions usr/lib/x86_64-linux-gnu/ruby/2.0.0/sdbm.so
+I: libruby2.0: hardening-no-fortify-functions usr/lib/x86_64-linux-gnu/ruby/2.0.0/tkutil.so
+I: libruby2.0: spelling-error-in-binary usr/lib/x86_64-linux-gnu/ruby/2.0.0/zlib.so tEH the
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/add.png
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/arrow_up.png
-W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/brick_link.png
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/brick.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/brick_link.png
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/bug.png
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/bullet_black.png
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/bullet_toggle_minus.png
@@ -40,6 +56,14 @@ W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/tag_blue.png
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/tag_green.png
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/transparent.png
-W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/wrench_orange.png
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/wrench.png
+W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/wrench_orange.png
 W: libruby2.0: image-file-in-usr-lib usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/images/zoom.png
+W: libruby2.0: embedded-javascript-library usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/js/jquery.js
+I: libruby2.0: package-contains-empty-directory usr/lib/ruby/2.0.0/racc/rdoc/
+I: libruby2.0: package-contains-empty-directory usr/lib/ruby/gems/2.0.0/build_info/
+I: libruby2.0: package-contains-empty-directory usr/lib/ruby/gems/2.0.0/cache/
+I: libruby2.0: package-contains-empty-directory usr/lib/ruby/gems/2.0.0/doc/
+I: libruby2.0: package-contains-empty-directory usr/lib/ruby/vendor_ruby/2.0.0/
+I: libruby2.0: package-contains-empty-directory usr/lib/x86_64-linux-gnu/ruby/vendor_ruby/2.0.0/
+
