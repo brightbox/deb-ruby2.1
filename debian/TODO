@@ -1,10 +1,6 @@
 * lintian errors/warnings:
 
 E: libruby2.0: binary-or-shlib-defines-rpath usr/lib/ruby/2.0.0/x86_64-linux/tcltklib.so /usr/lib
-E: libruby2.0: ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.0.0/gems/rake-0.9.6/bin/rake
-E: libruby2.0: ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.0.0/gems/rdoc-4.0.0.preview3.1/bin/rdoc
-E: libruby2.0: ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.0.0/gems/rdoc-4.0.0.preview3.1/bin/ri
-E: libruby2.0: ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.0.0/gems/test-unit-2.0.0.0/bin/testrb
 
 W: libruby2.0: embedded-javascript-library usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/js/jquery.js
 W: libruby2.0: hardening-no-fortify-functions usr/lib/ruby/2.0.0/x86_64-linux/date_core.so
