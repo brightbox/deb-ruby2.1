@@ -1,1 +1,1 @@
-DEB_BUILD_OPTIONS="parallel=$(nproc) nocheck" git buildpackage -us -uc -B
+DEB_BUILD_OPTIONS="parallel=$(nproc) nocheck" git buildpackage -us -uc "$@"
