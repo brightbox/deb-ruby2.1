@@ -58,9 +58,6 @@ override_dh_auto_install-arch:
 override_dh_auto_build-indep:
 	$(MAKE) docs
 
-# No tests needed for docs
-override_dh_auto_test-indep:
-
 override_dh_auto_install-indep:
 	$(MAKE) install-doc DESTDIR=$(CURDIR)/debian/ruby2.0-doc
 
