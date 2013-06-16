@@ -47,6 +47,7 @@ Description: Header files for compiling extension modules for the Ruby 2.0
  many gems.
 
 Package: ruby2.0-doc
+Section: doc
 Architecture: all
 Depends: ${misc:Depends}
 Description: Documentation for Ruby 2.0
