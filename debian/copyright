@@ -3,7 +3,7 @@ Upstream-Name: ruby
 Source: http://ftp.ruby-lang.org/pub/ruby/2.0/
 
 Files: *
-Copyright: Yukihiro Matsumoto <matz@netlab.jp>
+Copyright: Yukihiro Matsumoto <matz@netlab.jp> and others
 License: 2C-BSD or Ruby
 
 Files: debian/*
