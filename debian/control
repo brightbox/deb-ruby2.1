@@ -22,6 +22,7 @@ Description: Interpreter of object-oriented scripting language Ruby
 
 Package: libruby2.0
 Section: libs
+Multi-Arch: same
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Libraries necessary to run Ruby 2.0
