@@ -51,7 +51,8 @@ override_dh_auto_build-arch:
 
 override_dh_auto_install-arch:
 	$(MAKE) install-nodoc DESTDIR=$(CURDIR)/debian/tmp
-	dh_link -pruby2.0 usr/bin/ruby2.0 usr/bin/$(DEB_HOST_MULTIARCH)-ruby2.0
+	mv $(CURDIR)/debian/tmp/usr/bin/ruby2.0 $(CURDIR)/debian/tmp/usr/bin/$(DEB_HOST_MULTIARCH)-ruby2.0
+	install -m 0755 debian/ruby2.0.sh $(CURDIR)/debian/tmp/usr/bin/ruby2.0
 	chrpath --delete $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/ruby/2.0.0/tcltklib.so
 	debian/sanity_check
 

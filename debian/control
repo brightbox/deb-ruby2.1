@@ -10,6 +10,7 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby2.0.git
 
 Package: ruby2.0
 Architecture: any
+Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}, rubygems-integration
 Description: Interpreter of object-oriented scripting language Ruby
  Ruby is the interpreted scripting language for quick and easy
