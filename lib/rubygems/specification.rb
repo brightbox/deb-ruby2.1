@@ -2044,7 +2044,7 @@ class Gem::Specification
   def ruby_code(obj)
     case obj
     when String            then obj.dump
-    when Array             then '[' + obj.map { |x| ruby_code x }.join(", ") + ']'
+    when Array             then '[' + obj.sort.map { |x| ruby_code x }.join(", ") + ']'
     when Hash              then
       seg = obj.keys.sort.map { |k| "#{k.to_s.dump} => #{obj[k].to_s.dump}" }
       "{ #{seg.join(', ')} }"
