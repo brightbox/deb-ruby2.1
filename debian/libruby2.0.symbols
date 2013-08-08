@@ -260,7 +260,7 @@ libruby-2.0.so.2.0 libruby2.0 #MINVER#
  rb_binding_new@Base 2.0.0
  rb_block_call@Base 2.0.0
  rb_block_given_p@Base 2.0.0
- rb_block_lambda@Base 2.0.0.247-1
+ rb_block_lambda@Base 2.0.0.247
  rb_block_proc@Base 2.0.0
  rb_bug@Base 2.0.0
  rb_bug_errno@Base 2.0.0
@@ -643,7 +643,7 @@ libruby-2.0.so.2.0 libruby2.0 #MINVER#
  rb_funcall3@Base 2.0.0
  rb_funcall@Base 2.0.0
  rb_funcall_passing_block@Base 2.0.0
- rb_funcall_with_block@Base 2.0.0.247-1
+ rb_funcall_with_block@Base 2.0.0.247
  rb_gc@Base 2.0.0
  rb_gc_call_finalizer_at_exit@Base 2.0.0
  rb_gc_copy_finalizer@Base 2.0.0
@@ -862,7 +862,7 @@ libruby-2.0.so.2.0 libruby2.0 #MINVER#
  rb_method_basic_definition_p@Base 2.0.0
  rb_method_boundp@Base 2.0.0
  rb_method_call@Base 2.0.0
- rb_method_call_with_block@Base 2.0.0.247-1
+ rb_method_call_with_block@Base 2.0.0.247
  rb_method_get_iseq@Base 2.0.0
  rb_mod_ancestors@Base 2.0.0
  rb_mod_class_variables@Base 2.0.0

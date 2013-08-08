@@ -652,6 +652,7 @@ sitearchincludedir
 archincludedir
 sitearchlibdir
 archlibdir
+libdirname
 RI_BASE_NAME
 ridir
 rubysitearchprefix
@@ -873,6 +874,7 @@ with_valgrind
 with_ext
 with_out_ext
 with_static_linked_ext
+enable_multiarch
 with_soname
 enable_shared
 enable_dtrace
@@ -881,7 +883,6 @@ enable_install_rdoc
 enable_install_capi
 enable_dln
 enable_debug_env
-enable_multiarch
 with_rubylibprefix
 with_rubyarchprefix
 with_rubysitearchprefix
@@ -1541,6 +1542,7 @@ Optional Features:
                           obsolete
   --enable-rpath          embed run path into extension libraries. enabled by
                           default on ELF platforms
+  --enable-multiarch      enable multiarch compatible directories
   --enable-shared         build a shared library for Ruby
   --enable-dtrace         enable DTrace for tracing inside ruby. enabled by
                           default on systems having dtrace
@@ -1550,7 +1552,6 @@ Optional Features:
   --disable-install-capi  do not install C API documents during install
   --disable-dln           disable dynamic link feature
   --enable-debug-env      enable RUBY_DEBUG environment variable
-  --enable-multiarch      enable multiarch compatible directories
   --disable-rubygems      disable rubygems by default
 
 Optional Packages:
@@ -3071,6 +3072,7 @@ test -n "$target_alias" &&
   test "$program_prefix$program_suffix$program_transform_name" = \
     NONENONEs,x,x, &&
   program_prefix=${target_alias}-
+test x"$target_alias" = x &&
 target_os=`echo $target_os | sed 's/linux-gnu$/linux/;s/linux-gnu/linux-/'`
 ac_install_sh='' # unusable for extension libraries.
 
@@ -18119,6 +18121,23 @@ case "$target_os" in #(
      ;;
 esac
 
+# Check whether --enable-multiarch was given.
+if test "${enable_multiarch+set}" = set; then :
+  enableval=$enable_multiarch; multiarch=
+else
+  unset multiarch
+fi
+
+if test ${multiarch+set}; then
+   $as_echo "#define ENABLE_MULTIARCH 1" >>confdefs.h
+
+fi
+
+archlibdir='${libdir}/${arch}'
+sitearchlibdir='${libdir}/${sitearch}'
+archincludedir='${includedir}/${arch}'
+sitearchincludedir='${includedir}/${sitearch}'
+
 
 # Check whether --with-soname was given.
 if test "${with_soname+set}" = set; then :
@@ -18139,7 +18158,7 @@ if test "${enable_shared+set}" = set; then :
   enableval=$enable_shared; enable_shared=$enableval
 fi
 
-libprefix='$(libdir)'
+libprefix=${multiarch+'$(archlibdir)'}${multiarch-'$(libdir)'}
 LIBRUBY_RELATIVE=${load_relative-no}
 case "$enable_shared" in #(
   yes) :
@@ -18168,6 +18187,7 @@ esac
 #define LIBDIR_BASENAME "${libdir_basename}"
 _ACEOF
 
+  libdir_basename="${libdir_basename}"${multiarch+'/${arch}'}
 
   case "$target_os" in #(
   freebsd*|dragonfly*) :
@@ -18247,7 +18267,8 @@ esac
 	LIBRUBY_DLDFLAGS='-Wl,-soname,lib$(RUBY_SO_NAME).so.$(MAJOR).$(MINOR)'" $LDFLAGS_OPTDIR"
 	LIBRUBY_ALIASES='lib$(RUBY_SO_NAME).so.$(MAJOR).$(MINOR) lib$(RUBY_SO_NAME).so'
 	if test "$load_relative" = yes; then
-	    LIBRUBY_RPATHFLAGS="'-Wl,-rpath,\$\${ORIGIN}/../${libdir_basename}'"
+	    libprefix="'\$\${ORIGIN}/../${libdir_basename}'"
+	    LIBRUBY_RPATHFLAGS="-Wl,-rpath,${libprefix}"
 	    LIBRUBY_RELATIVE=yes
 	fi
 	 ;; #(
@@ -18490,7 +18511,7 @@ esac
 esac
 if test "$enable_rpath" = yes; then
     test -z "$LIBRUBY_RPATHFLAGS" || LIBRUBY_RPATHFLAGS="$LIBRUBY_RPATHFLAGS "
-    LIBRUBY_RPATHFLAGS="$LIBRUBY_RPATHFLAGS${linker_flag}-R ${linker_flag}${libprefix} -L\$(libdir)"
+    LIBRUBY_RPATHFLAGS="$LIBRUBY_RPATHFLAGS${linker_flag}-R ${linker_flag}${libprefix} -L${libprefix}"
     LIBRUBYARG_SHARED="$LIBRUBY_RPATHFLAGS $LIBRUBYARG_SHARED"
     LIBRUBYARG_STATIC="$LIBRUBY_RPATHFLAGS $LIBRUBYARG_STATIC"
 fi
@@ -19154,19 +19175,6 @@ case "$target_os" in #(
      ;;
 esac
 
-# Check whether --enable-multiarch was given.
-if test "${enable_multiarch+set}" = set; then :
-  enableval=$enable_multiarch; multiarch=
-else
-  unset multiarch
-fi
-
-
-archlibdir='${libdir}/${arch}'
-sitearchlibdir='${libdir}/${sitearch}'
-archincludedir='${includedir}/${arch}'
-sitearchincludedir='${includedir}/${sitearch}'
-
 shvar_to_cpp() {
     var="$1" val="$2"
     exec_prefix_pat="`echo \"${exec_prefix}\" | sed 's/\\./\\\\./g'`"
@@ -19428,6 +19436,8 @@ _ACEOF
 _ACEOF
 
 fi
+
+libdirname=${multiarch+arch}libdir
 
 
 configure_args=$ac_configure_args
