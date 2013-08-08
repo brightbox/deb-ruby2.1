@@ -1,3 +1,12 @@
+# Multiarch
+
+- ruby2.0 packages for different architectures are not co-installable because
+  the generated .gemspec files might differ between architectures (tested with
+  i386 and amd64)
+
+
+# Problems indicated by Lintian
+
 W: ruby2.0: manpage-has-errors-from-man usr/share/man/man1/ri2.0.1.gz  .Nm name ... (#88)
 W: ruby2.0: binary-without-manpage usr/bin/gem2.0
 W: ruby2.0: binary-without-manpage usr/bin/rdoc2.0
