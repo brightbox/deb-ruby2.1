@@ -27,6 +27,7 @@ Init_id(void)
     REGISTER_SYMID(id_core_undef_method, "core#undef_method");
     REGISTER_SYMID(idEmptyP, "empty?");
     REGISTER_SYMID(id_core_set_variable_alias, "core#set_variable_alias");
+    REGISTER_SYMID(idProc, "proc");
     REGISTER_SYMID(id_core_hash_merge_kwd, "core#hash_merge_kwd");
     REGISTER_SYMID(id_core_hash_merge_ptr, "core#hash_merge_ptr");
     REGISTER_SYMID(idRespond_to_missing, "respond_to_missing?");

@@ -1265,7 +1265,7 @@ INSN_ENTRY(trace){
     }
 
     EXEC_EVENT_HOOK(th, flag, GET_SELF(), 0, 0 /* id and klass are resolved at callee */,
-		    (flag & RUBY_EVENT_RETURN | RUBY_EVENT_B_RETURN) ? TOPN(0) : Qundef);
+		    (flag & (RUBY_EVENT_RETURN | RUBY_EVENT_B_RETURN)) ? TOPN(0) : Qundef);
 
 #line 1271 "vm.inc"
 #undef CURRENT_INSN_trace
