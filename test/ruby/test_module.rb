@@ -1165,6 +1165,14 @@ class TestModule < Test::Unit::TestCase
     assert_equal(1, c.x, bug3406)
   end
 
+  def test_attr_writer_with_no_arguments
+    bug8540 = "[ruby-core:55543]"
+    c = Class.new do
+      attr_writer :foo
+    end
+    assert_raise(ArgumentError) { c.new.send :foo= }
+  end
+
   def test_private_constant
     c = Class.new
     c.const_set(:FOO, "foo")
@@ -1190,6 +1198,15 @@ class TestModule < Test::Unit::TestCase
     assert_raise(NameError) { c::BAR }
     assert_equal("foo", c.class_eval("FOO"))
     assert_equal("bar", c.class_eval("BAR"))
+  end
+
+  def test_private_constant_with_no_args
+    assert_in_out_err([], <<-RUBY, [], ["-:3: warning: private_constant with no argument is just ignored"])
+      $-w = true
+      class X
+        private_constant
+      end
+    RUBY
   end
 
   class PrivateClass
@@ -1702,6 +1719,26 @@ class TestModule < Test::Unit::TestCase
     assert_raise(NoMethodError) {Object.define_method}
     Module.new.public_class_method(:define_method)
     assert_raise(NoMethodError, bug8284) {Object.define_method}
+  end
+
+  def test_include_module_with_constants_invalidates_method_cache
+    assert_in_out_err([], <<-RUBY, %w(123 456), [])
+      A = 123
+
+      class Foo
+        def self.a
+          A
+        end
+      end
+
+      module M
+        A = 456
+      end
+
+      puts Foo.a
+      Foo.send(:include, M)
+      puts Foo.a
+    RUBY
   end
 
   private

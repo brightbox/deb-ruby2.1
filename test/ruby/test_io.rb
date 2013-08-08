@@ -2655,4 +2655,59 @@ End
       IO.select(tempfiles)
   }, bug8080
   end
+
+  def test_read_32bit_boundary
+    bug8431 = '[ruby-core:55098] [Bug #8431]'
+    make_tempfile {|t|
+      assert_separately(["-", bug8431, t.path], <<-"end;")
+        msg = ARGV.shift
+        f = open(ARGV[0], "rb")
+        f.seek(0xffff_ffff)
+        assert_nil(f.read(1), msg)
+      end;
+    }
+  end if /mswin|mingw/ =~ RUBY_PLATFORM
+
+  def test_write_32bit_boundary
+    bug8431 = '[ruby-core:55098] [Bug #8431]'
+    make_tempfile {|t|
+      def t.close(unlink_now = false)
+        # TODO: Tempfile should deal with this delay on Windows?
+        # NOTE: re-opening with O_TEMPORARY does not work.
+        path = self.path
+        ret = super
+        if unlink_now
+          begin
+            File.unlink(path)
+          rescue Errno::ENOENT
+          rescue Errno::EACCES
+            sleep(2)
+            retry
+          end
+        end
+        ret
+      end
+
+      begin
+        assert_separately(["-", bug8431, t.path], <<-"end;", timeout: 30)
+          msg = ARGV.shift
+          f = open(ARGV[0], "wb")
+          f.seek(0xffff_ffff)
+          begin
+            # this will consume very long time or fail by ENOSPC on a
+            # filesystem which sparse file is not supported
+            f.write('1')
+            pos = f.tell
+          rescue Errno::ENOSPC
+            skip "non-sparse file system"
+          rescue SystemCallError
+          else
+            assert_equal(0x1_0000_0000, pos, msg)
+          end
+        end;
+      rescue Timeout::Error
+        skip "Timeout because of slow file writing"
+      end
+    }
+  end if /mswin|mingw/ =~ RUBY_PLATFORM
 end

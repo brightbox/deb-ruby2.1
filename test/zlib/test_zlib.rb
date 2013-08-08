@@ -439,6 +439,7 @@ if defined? Zlib
       Zlib::GzipReader.open(t.path) do |f|
         assert_kind_of(IO, f.to_io)
       end
+      t.close(true)
     end
 
     def test_crc
@@ -450,6 +451,7 @@ if defined? Zlib
         f.read
         assert_equal(0x8c736521, f.crc)
       end
+      t.close(true)
     end
 
     def test_mtime
@@ -468,6 +470,7 @@ if defined? Zlib
       Zlib::GzipReader.open(t.path) do |f|
         assert_equal(tim.to_i, f.mtime.to_i)
       end
+      t.close(true)
     end
 
     def test_level
@@ -478,6 +481,7 @@ if defined? Zlib
       Zlib::GzipReader.open(t.path) do |f|
         assert_equal(Zlib::DEFAULT_COMPRESSION, f.level)
       end
+      t.close(true)
     end
 
     def test_os_code
@@ -488,6 +492,7 @@ if defined? Zlib
       Zlib::GzipReader.open(t.path) do |f|
         assert_equal(Zlib::OS_CODE, f.os_code)
       end
+      t.close(true)
     end
 
     def test_orig_name
@@ -503,6 +508,7 @@ if defined? Zlib
       Zlib::GzipReader.open(t.path) do |f|
         assert_equal("foobarbazqux", f.orig_name)
       end
+      t.close(true)
     end
 
     def test_comment
@@ -518,6 +524,7 @@ if defined? Zlib
       Zlib::GzipReader.open(t.path) do |f|
         assert_equal("foobarbazqux", f.comment)
       end
+      t.close(true)
     end
 
     def test_lineno
@@ -532,6 +539,7 @@ if defined? Zlib
         assert_equal([1000, "baz\n"], [f.lineno, f.gets])
         assert_equal([1001, "qux\n"], [f.lineno, f.gets])
       end
+      t.close(true)
     end
 
     def test_closed_p
@@ -546,6 +554,7 @@ if defined? Zlib
         f.close
         assert_equal(true, f.closed?)
       end
+      t.close(true)
     end
 
     def test_sync
@@ -560,6 +569,7 @@ if defined? Zlib
         f.sync = false
         assert_equal(false, f.sync)
       end
+      t.close(true)
     end
 
     def test_pos
@@ -570,6 +580,7 @@ if defined? Zlib
         gz.flush
         assert_equal(3, gz.tell)
       end
+      t.close(true)
     end
 
     def test_path
@@ -599,6 +610,7 @@ if defined? Zlib
       Zlib::GzipReader.new(sio) do |f|
         assert_raise(NoMethodError) { f.path }
       end
+      t.close(true)
     end
   end
 
@@ -670,9 +682,11 @@ if defined? Zlib
       ensure
         f.close
       end
+      t.close(true)
     end
 
     def test_rewind
+      bug8467 = '[ruby-core:55220] [Bug #8467]'
       t = Tempfile.new("test_zlib_gzip_reader_rewind")
       t.close
       Zlib::GzipWriter.open(t.path) {|gz| gz.print("foo") }
@@ -682,6 +696,12 @@ if defined? Zlib
         f.rewind
         assert_equal("foo", f.read)
       end
+      open(t.path, "rb") do |f|
+        gz = Zlib::GzipReader.new(f)
+        gz.rewind
+        assert_equal(["foo"], gz.to_a, bug8467)
+      end
+      t.close(true)
     end
 
     def test_unused
@@ -696,6 +716,7 @@ if defined? Zlib
         assert_equal("bar", f.read)
         assert_equal(nil, f.unused)
       end
+      t.close(true)
     end
 
     def test_unused2
@@ -735,6 +756,7 @@ if defined? Zlib
         assert_raise(ArgumentError) { f.read(-1) }
         assert_equal(str, f.read)
       end
+      t.close(true)
     end
 
     def test_readpartial
@@ -753,6 +775,7 @@ if defined? Zlib
 
         assert_raise(ArgumentError) { f.readpartial(-1) }
       end
+      t.close(true)
     end
 
     def test_getc
@@ -764,6 +787,7 @@ if defined? Zlib
         "foobar".each_char {|c| assert_equal(c, f.getc) }
         assert_nil(f.getc)
       end
+      t.close(true)
     end
 
     def test_getbyte
@@ -775,6 +799,7 @@ if defined? Zlib
         "foobar".each_byte {|c| assert_equal(c, f.getbyte) }
         assert_nil(f.getbyte)
       end
+      t.close(true)
     end
 
     def test_readchar
@@ -786,6 +811,7 @@ if defined? Zlib
         "foobar".each_byte {|c| assert_equal(c, f.readchar.ord) }
         assert_raise(EOFError) { f.readchar }
       end
+      t.close(true)
     end
 
     def test_each_byte
@@ -798,6 +824,7 @@ if defined? Zlib
         f.each_byte {|c| a << c }
         assert_equal("foobar".each_byte.to_a, a)
       end
+      t.close(true)
     end
 
     def test_gets
@@ -823,6 +850,7 @@ if defined? Zlib
         assert_equal("az\n", f.gets(nil, 10))
         assert_nil(f.gets)
       end
+      t.close(true)
     end
 
     def test_gets2
@@ -849,6 +877,7 @@ if defined? Zlib
         assert_equal(ustrs[2][1..-1], f.gets(nil, 20))
         assert_nil(f.gets)
       end
+      t.close(true)
     end
 
     def test_readline
@@ -862,6 +891,7 @@ if defined? Zlib
         assert_equal("baz\n", f.readline)
         assert_raise(EOFError) { f.readline }
       end
+      t.close(true)
     end
 
     def test_each
@@ -873,6 +903,7 @@ if defined? Zlib
         a = ["foo\n", "bar\n", "baz\n"]
         f.each {|l| assert_equal(a.shift, l) }
       end
+      t.close(true)
     end
 
     def test_readlines
@@ -883,6 +914,7 @@ if defined? Zlib
       Zlib::GzipReader.open(t.path) do |f|
         assert_equal(["foo\n", "bar\n", "baz\n"], f.readlines)
       end
+      t.close(true)
     end
 
     def test_reader_wrap
@@ -893,6 +925,7 @@ if defined? Zlib
       f.binmode
       assert_equal("foo", Zlib::GzipReader.wrap(f) {|gz| gz.read })
       assert_raise(IOError) { f.close }
+      t.close(true)
     end
 
     def test_corrupted_header
@@ -923,6 +956,7 @@ if defined? Zlib
       read_size = Zlib::GzipReader.open(t.path) {|gz| gz.read(1024) }
       assert_equal(Encoding::ASCII_8BIT, read_size.encoding)
       assert_equal(content, read_size)
+      t.close(true)
     end
   end
 
@@ -951,6 +985,7 @@ if defined? Zlib
       assert_equal("bar", Zlib::GzipReader.open(t.path) {|gz| gz.read })
 
       assert_raise(Zlib::StreamError) { Zlib::GzipWriter.open(t.path, 10000) }
+      t.close(true)
     end
 
     def test_write
@@ -963,6 +998,7 @@ if defined? Zlib
       def o.to_s; "bar"; end
       Zlib::GzipWriter.open(t.path) {|gz| gz.print(o) }
       assert_equal("bar", Zlib::GzipReader.open(t.path) {|gz| gz.read })
+      t.close(true)
     end
 
     def test_putc
@@ -972,6 +1008,7 @@ if defined? Zlib
       assert_equal("x", Zlib::GzipReader.open(t.path) {|gz| gz.read })
 
       # todo: multibyte char
+      t.close(true)
     end
 
     def test_writer_wrap
@@ -980,6 +1017,7 @@ if defined? Zlib
       Zlib::GzipWriter.wrap(t) {|gz| gz.print("foo") }
       t.close
       assert_equal("foo", Zlib::GzipReader.open(t.path) {|gz| gz.read })
+      t.close(true)
     end
   end
 

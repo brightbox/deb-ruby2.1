@@ -127,6 +127,30 @@ module EnvUtil
     GC.stress = stress
   end
   module_function :under_gc_stress
+
+  def with_default_external(enc)
+    verbose, $VERBOSE = $VERBOSE, nil
+    origenc, Encoding.default_external = Encoding.default_external, enc
+    $VERBOSE = verbose
+    yield
+  ensure
+    verbose, $VERBOSE = $VERBOSE, nil
+    Encoding.default_external = origenc
+    $VERBOSE = verbose
+  end
+  module_function :with_default_external
+
+  def with_default_internal(enc)
+    verbose, $VERBOSE = $VERBOSE, nil
+    origenc, Encoding.default_internal = Encoding.default_internal, enc
+    $VERBOSE = verbose
+    yield
+  ensure
+    verbose, $VERBOSE = $VERBOSE, nil
+    Encoding.default_internal = origenc
+    $VERBOSE = verbose
+  end
+  module_function :with_default_internal
 end
 
 module Test
@@ -262,17 +286,31 @@ module Test
   ensure
     puts [Marshal.dump($!)].pack('m'), "assertions=\#{self._assertions}"
   end
+  class Test::Unit::Runner
+    @@stop_auto_run = true
+  end
 eom
+        args = args.dup
+        $:.each{|l| args.unshift "-I#{l}" }
+        ignore_stderr = opt.delete(:ignore_stderr)
         stdout, stderr, status = EnvUtil.invoke_ruby(args, src, true, true, opt)
         abort = status.coredump? || (status.signaled? && ABORT_SIGNALS.include?(status.termsig))
         assert(!abort, FailDesc[status, stderr])
         self._assertions += stdout[/^assertions=(\d+)/, 1].to_i
         res = Marshal.load(stdout.unpack("m")[0])
-        return unless res
-        res.backtrace.each do |l|
-          l.sub!(/\A-:(\d+)/){"#{file}:#{line + $1.to_i}"}
+        if res
+          res.backtrace.each do |l|
+            l.sub!(/\A-:(\d+)/){"#{file}:#{line + $1.to_i}"}
+          end
+          raise res
         end
-        raise res
+
+        # really is it succeed?
+        unless ignore_stderr
+          # the body of assert_separately must not output anything to detect errror
+          assert_equal("", stderr, "assert_separately failed with error message")
+        end
+        assert_equal(0, status, "assert_separately failed: '#{stderr}'")
       end
 
       def assert_warning(pat, message = nil)

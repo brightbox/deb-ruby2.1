@@ -1,3 +1,322 @@
+Thu Jun 27 20:10:56 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* ext/openssl/lib/openssl/ssl.rb (verify_certificate_identity): fix
+	  hostname verification. Patched by nahi.
+
+	* test/openssl/test_ssl.rb (test_verify_certificate_identity): test for
+	  above.
+
+
+Thu Jun 27 13:16:40 2013  Hiroshi Shirosaki  <h.shirosaki@gmail.com>
+
+	* test/rubygems/test_gem_installer.rb (test_install_extension_flat):
+	  use ruby in build directory in case ruby is not installed.
+	  [ruby-core:53265] [Bug #8058]
+
+Wed Jun 26 23:05:34 2013  Hiroshi Shirosaki  <h.shirosaki@gmail.com>
+
+	* test/ruby/test_io.rb (TestIO#test_write_32bit_boundary): skip if
+	  writing a file is slow.
+	  [ruby-core:55541] [Bug #8519]
+
+Wed Jun 26 22:42:36 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/mkmf.rb: should use expanded values for header directories
+	  unless extmk.  patch by vo.x (Vit Ondruch) at [ruby-core:55653]
+	  [Bug #8115], rhbz#921650.
+
+Wed Jun 26 02:25:52 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* lib/rubygems/ext/builder.rb (Gem::Ext::Builder.make): Pass
+	  DESTDIR via command line to override what's in MAKEFLAGS.  This
+	  fixes an installation problem under a package building
+	  environment where DESTDIR is specified in the (parent) command
+	  line. [Fixes GH-327]
+
+Tue Jun 25 00:12:19 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* array.c: Return value in Array overview example found by @PragTob
+	  [Fix GH-336] https://github.com/ruby/ruby/pull/336
+
+Tue Jun 25 00:11:46 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* array.c (rb_ary_zip): typo by @PragTob [Fix GH-337]
+	  https://github.com/ruby/ruby/pull/337
+
+Tue Jun 25 00:10:54 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* win32/README.win32: grammar typo by @blankenshipz [Fix GH-334]
+	  https://github.com/ruby/ruby/pull/334
+
+Sun Jun 23 00:03:18 2013  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* ext/etc/etc.c (etc_getpwnam): use PRIsVALUE in format string instead
+	  of %s and RSTRING_PTR
+
+	* ext/etc/etc.c (etc_getgrnam): ditto
+
+Sat Jun 22 00:54:41 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/rubygems:  Update to RubyGems 2.0.3
+
+	* test/rubygems:  Tests for the above.
+
+	* NEWS:  Added RubyGems 2.0.3 note.
+
+Wed Jun 19 04:20:31 2013  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* vm_insnhelper.c (vm_call_method): ensure methods of type
+	  VM_METHOD_TYPE_ATTR_SET are called with 1 argument
+
+	* test/ruby/test_module.rb (class TestModule): add test
+
+	[ruby-core:55543] [Bug #8540]
+
+Wed Jun 19 03:54:04 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* defs/id.def (predefined): add "idProc".
+
+	* proc.c (mnew, mproc, mlambda): use predefined IDs.
+
+	* vm.c (Init_VM): ditto.
+
+Wed Jun 19 03:54:04 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* include/ruby/intern.h (rb_block_lambda): add declaration instead of
+	  deprecated rb_f_lambda.
+
+Wed Jun 19 03:24:07 2013  Kazuki Tsujimoto  <kazuki@callcc.net>
+
+	* include/ruby/ruby.h, vm_eval.c (rb_funcall_with_block):
+	  new function to invoke a method with a block passed
+	  as an argument.
+
+	* string.c (sym_call): use the above function to avoid
+	  a block sharing. [ruby-dev:47438] [Bug #8531]
+
+	* vm_insnhelper.c (vm_yield_with_cfunc): don't set block
+	  in the frame.
+
+	* test/ruby/test_symbol.rb (TestSymbol#test_block_given_to_proc):
+	  run related tests.
+
+Wed Jun 19 03:06:57 2013  Kazuki Tsujimoto  <kazuki@callcc.net>
+
+	* test/ruby/test_proc.rb (TestProc#test_block_given_method_to_proc):
+	  run test for r41359.
+
+Wed Jun 19 03:06:57 2013  Kazuki Tsujimoto  <kazuki@callcc.net>
+
+	* include/ruby/intern.h, proc.c (rb_method_call_with_block):
+	  new function to invoke a Method object with a block passed
+	  as an argument.
+
+	* proc.c (bmcall): use the above function to avoid a block sharing.
+	  [ruby-core:54626] [Bug #8341]
+
+	* test/ruby/test_proc.rb (TestProc#test_block_persist_between_calls):
+	  run related tests.
+
+Tue Jun 18 02:49:20 2013  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* test/ruby/envutil.rb (assert_separately): stop_auto_run of
+	  Test::Unit::Runner to prevent auto runner use ARGV.
+
+	* test/ruby/envutil.rb (assert_separately): add $: to separate process.
+
+	* test/ruby/envutil.rb (assert_separately): fail if stderr is not
+	  empty and ignore_stderr is false.
+
+Tue Jun 18 02:21:54 2013  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* test/ruby/envutil.rb (EnvUtil.with_default_external): add for
+	  changing Encoding.default_external without warnings.
+
+	* test/ruby/envutil.rb (EnvUtil.with_default_internal): ditto.
+
+	* test/ruby/test_io_m17n.rb: use above with_default_external.
+
+Tue Jun 18 00:43:27 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* vm_backtrace.c: Update rdoc for Backtrace#label with @_ko1
+
+Tue Jun 18 00:34:57 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+merge revision(s) 41347: [Backport #5048] [Backport #5465] [Backport #8319]
+
+        * ext/tk/extconf.rb: support s390x (Thanks to bkabrda) [Bug #5465]
+
+	* ext/tk/extconf.rb: apply [Bug #5048]
+
+	* ext/tk/lib/tk/canvas.rb,ext/tk/sample/demos-{en,jp}/{tree.rb,widget}:
+	  fix bug (Thanks to zzak) [ruby-trunk - Bug #8319]
+
+Sun Jun 16 01:56:54 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* array.c (FL_SET_EMBED): shared object is frozen even when get
+	  unshared.
+
+	* array.c (rb_ary_modify): ARY_SET_CAPA needs unshared array.
+
+Sun Jun 16 01:32:26 2013  TAKANO Mitsuhiro <tak@no32.tk>
+
+	* insns.def: fix condition.
+
+Sun Jun 16 01:22:35 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* ext/socket/extconf.rb:  Enable RFC 3542 IPV6 socket options for OS X
+	  10.7+.  [ruby-trunk - Bug #8517]
+
+Sun Jun 16 01:11:10 2013  Koichi Sasada  <ko1@atdot.net>
+
+	* compile.c (rb_iseq_compile_node): fix location of a `trace'
+	  instruction (b_return event).
+	  [ruby-core:55305] [ruby-trunk - Bug #8489]
+	  (need a backport to 2.0.0?)
+
+	* test/ruby/test_settracefunc.rb: add a test.
+
+Sun Jun 16 00:30:56 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_eval.c (eval_string_with_cref): propagate absolute path from the
+	  binding if it is given explicitly.  patch by Gat (Dawid Janczak) at
+	  [ruby-core:55123]. [Bug #8436]
+
+Wed Jun 12 23:41:21 2013  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* vm_insnhelper.c (vm_yield_setup_block_args): partially revert r41019.
+	  The code is not useless.
+
+Wed Jun 12 23:41:21 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_insnhelper.c (vm_yield_setup_block_args): split single parameter
+	  if any keyword arguments exist, and then extract keyword arguments.
+	  [ruby-core:55203] [Bug #8463]
+
+Wed Jun 12 23:05:41 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* io.c (io_getc): fix 7bit coderange condition, check if ascii read
+	  data instead of read length. [ruby-core:55444] [Bug #8516]
+
+Sun Jun  9 02:27:07 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/mkmf.rb (install_dirs, with_destdir): prefix with DESTDIR
+	  directories to install only unless bundled extension libraries.
+	  [ruby-core:53502] [Bug #8115]
+
+Sun Jun  9 02:17:16 2013  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* class.c (include_modules_at): invalidate method cache if included
+	  module contains constants
+
+	* test/ruby/test_module.rb: add test
+
+Sun Jun  9 01:59:39 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+merge revision 40783 (partially): [Backport #8413]
+
+	* win32/Makefile.sub: fix a typo in config.h.
+
+Sun Jun  9 01:38:55 2013  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* intern.h: remove dangling rb_class_init_copy declaration
+	  [ruby-core:55120] [Bug #8434]
+
+Sun Jun  9 01:30:57 2013  Shugo Maeda  <shugo@ruby-lang.org>
+
+	* lib/net/imap.rb (capability_response): should ignore trailing
+	  spaces.  Thanks, Peter Kovacs.  [ruby-core:55024] [Bug #8415]
+
+	* test/net/imap/test_imap_response_parser.rb: related test.
+
+Wed Jun  5 00:38:46 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/zlib/zlib.c (gzfile_read, gzfile_read_all, gzfile_getc),
+	  (gzreader_gets): check EOF.  [ruby-core:55220] [Bug #8467]
+
+Wed Jun  5 00:32:18 2013  Tanaka Akira  <akr@fsij.org>
+
+	* test/ruby/test_require.rb: Remove temporally files in the tests.
+
+	* test/ruby/test_rubyoptions.rb: Ditto.
+
+	* test/logger/test_logger.rb: Ditto.
+
+	* test/psych/test_psych.rb: Ditto.
+
+	* test/readline/test_readline.rb: Ditto.
+
+	* test/syslog/test_syslog_logger.rb: Ditto.
+
+	* test/webrick/test_httpauth.rb: Ditto.
+
+	* test/zlib/test_zlib.rb: Ditto.
+
+Wed Jun  5 00:08:55 2013  Yusuke Endoh  <mame@tsg.ne.jp>
+
+	* dir.c (bracket): fix copy-paste error.  When the first and last
+	  characters of fnmatch range have different length, fnmatch may
+	  have wrongly matched a path that does not really match.
+	  Coverity Scan found this bug.
+
+Wed Jun  5 00:04:12 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* string.c (rb_str_quote_unprintable): check if argument is a string.
+
+Tue Jun  4 23:42:18 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* load.c (loaded_feature_path): fix invalid read by index underflow.
+	  the beginning of name is also a boundary as well as just after '/'.
+
+Tue Jun  4 23:32:12 2013  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* variable.c (set_const_visibility): use rb_frame_this_func() instead
+	  of rb_frame_callee() for getting the name of the called method
+
+	* test/ruby/test_module.rb: add test for private_constant with no args
+
+Tue Jun  4 23:27:24 2013  Yusuke Endoh  <mame@tsg.ne.jp>
+
+	* vm_insnhelper.c (vm_callee_setup_keyword_arg,
+	  vm_callee_setup_arg_complex): consider a hash argument for keyword
+	  only when the number of arguments is more than the expected
+	  mandatory parameters.  [ruby-core:53199] [ruby-trunk - Bug #8040]
+
+	* test/ruby/test_keyword.rb: update a test for above.
+
+Tue Jun  4 00:46:05 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* win32/win32.c (setup_overlapped, finish_overlapped): extract from
+	  rb_w32_read() and rb_w32_write().
+
+Tue Jun  4 00:02:45 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_core.h (rb_vm_tag): move jmpbuf between tag and prev so ensure to
+	  be accessible.
+
+Tue Jun  4 00:02:45 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* eval_intern.h (TH_PUSH_TAG): ensure jmpbuf to be accessible before
+	  pushing tag to get rid of unaccessible tag by stack overflow.
+
+Mon Jun  3 23:22:58 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* compile.c (iseq_compile_each): forward anonymous and first keyword
+	  rest argument one.  [ruby-core:55033] [Bug #8416].
+
+Sun Jun  2 22:39:24 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* range.c: Fix rdoc on Range#bsearch [Bug #8242] [ruby-core:54143]
+
+Mon May 20 04:00:48 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* lib/yaml.rb: YAML documentation from #8344 [Bug #8355]
+
+Wed May 15 23:22:09 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* include/ruby/intern.h: should include sys/time.h for struct timeval
+	  if it exists. [ruby-list:49363]
+
 Tue May 14 20:21:41 2013  Eric Hodel  <drbrain@segment7.net>
 
 	* lib/rubygems/config_file.rb:  Lazily load .gem/credentials to only
