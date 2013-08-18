@@ -9,6 +9,7 @@ Vcs-Git: git://anonscm.debian.org/collab-maint/ruby2.0.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby2.0.git
 
 Package: ruby2.0
+Multi-Arch: foreign
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, rubygems-integration
 Description: Interpreter of object-oriented scripting language Ruby
@@ -35,6 +36,7 @@ Description: Libraries necessary to run Ruby 2.0
  (API version 2.0.0)
 
 Package: ruby2.0-dev
+Multi-Arch: same
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Header files for compiling extension modules for the Ruby 2.0
