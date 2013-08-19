@@ -51,8 +51,12 @@ override_dh_auto_build-arch:
 
 override_dh_auto_install-arch:
 	$(MAKE) install-nodoc DESTDIR=$(CURDIR)/debian/tmp
-	dh_link -pruby2.0 usr/bin/ruby2.0 usr/bin/$(DEB_HOST_MULTIARCH)-ruby2.0
+	# remove RPATH from tcltklib bindings
 	chrpath --delete $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/ruby/2.0.0/tcltklib.so
+	# handle embedded copy of jquery
+	$(RM) $(CURDIR)/debian/tmp/usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/js/jquery.js
+	dh_link -plibruby2.0 /usr/share/javascript/jquery/jquery.min.js /usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/js/jquery.js
+	# sanity check
 	debian/sanity_check
 
 override_dh_auto_build-indep:
