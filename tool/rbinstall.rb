@@ -640,7 +640,8 @@ module RbInstall
         @gemspec ||= begin
           spec = Gem::Specification.load(src) || raise("invalid spec in #{src}")
           file_collector = FileCollector.new(File.dirname(src))
-          spec.files = file_collector.collect
+          spec.executables = spec.executables.sort
+          spec.files = file_collector.collect.sort
           spec
         end
       end
