@@ -27,6 +27,10 @@ configure_options += --with-dbm-type=gdbm_compat
 # hardening and other standard Debian build flags
 configure_options += $(shell dpkg-buildflags --export=configure)
 
+# handle tcl/tk with multiarch support; fallback to non-multiarch locations
+configure_options += --with-tclConfig-dir=$(shell find /usr/lib /usr/lib/$(DEB_HOST_MULTIARCH) -maxdepth 1 -name tclConfig.sh | tail -n 1 | xargs dirname)
+configure_options += --with-tkConfig-dir=$(shell find /usr/lib /usr/lib/$(DEB_HOST_MULTIARCH) -maxdepth 1 -name tkConfig.sh | tail -n 1 | xargs dirname)
+
 %:
 	dh $@ --parallel --with autotools-dev --with autoreconf
 
