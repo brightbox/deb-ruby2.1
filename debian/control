@@ -12,6 +12,7 @@ Package: ruby2.0
 Multi-Arch: foreign
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, rubygems-integration
+Provides: ruby-interpreter
 Description: Interpreter of object-oriented scripting language Ruby
  Ruby is the interpreted scripting language for quick and easy
  object-oriented programming.  It has many features to process text
