@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_x509revoked.c 31128 2011-03-19 03:30:59Z akr $
+ * $Id$
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

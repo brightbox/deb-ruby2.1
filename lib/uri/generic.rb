@@ -2,7 +2,7 @@
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
 # License:: You can redistribute it and/or modify it under the same term as Ruby.
-# Revision:: $Id: generic.rb 36476 2012-07-20 01:56:21Z drbrain $
+# Revision:: $Id$
 #
 # See URI for general documentation
 #
@@ -1611,6 +1611,7 @@ module URI
     # http_proxy is not used too if the variable is case insensitive.
     # CGI_HTTP_PROXY can be used instead.
     def find_proxy
+      raise BadURIError, "relative URI: #{self}" if self.relative?
       name = self.scheme.downcase + '_proxy'
       proxy_uri = nil
       if name == 'http_proxy' && ENV.include?('REQUEST_METHOD') # CGI?

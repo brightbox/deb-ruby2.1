@@ -2,7 +2,7 @@
 
   tkutil.c -
 
-  $Author: nobu $
+  $Author$
   created at: Fri Nov  3 00:47:54 JST 1995
 
 ************************************************/

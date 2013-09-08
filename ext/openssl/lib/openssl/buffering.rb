@@ -11,7 +11,7 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: buffering.rb 33485 2011-10-19 20:05:21Z emboss $
+  $Id$
 =end
 
 ##

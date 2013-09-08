@@ -1,5 +1,5 @@
 #
-# $Id: core.rb 36954 2012-09-12 23:04:41Z zzak $
+# $Id$
 #
 # Copyright (c) 2003-2005 Minero Aoki
 #

@@ -2,7 +2,7 @@
 
   node.h -
 
-  $Author: nobu $
+  $Author$
   created at: Fri May 28 15:14:02 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

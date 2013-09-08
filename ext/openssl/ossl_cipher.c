@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_cipher.c 38492 2012-12-20 07:42:56Z emboss $
+ * $Id$
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

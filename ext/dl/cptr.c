@@ -1,5 +1,5 @@
 /* -*- C -*-
- * $Id: cptr.c 34400 2012-01-30 21:47:35Z nobu $
+ * $Id$
  */
 
 #include <ruby/ruby.h>

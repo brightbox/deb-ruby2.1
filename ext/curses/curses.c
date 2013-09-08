@@ -1,5 +1,5 @@
 /* -*- C -*-
- * $Id: curses.c 40388 2013-04-19 17:39:44Z nagachika $
+ * $Id$
  *
  * ext/curses/curses.c
  *

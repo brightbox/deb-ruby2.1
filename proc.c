@@ -2,7 +2,7 @@
 
   proc.c - Proc, Binding, Env
 
-  $Author: nagachika $
+  $Author$
   created at: Wed Jan 17 12:13:14 2007
 
   Copyright (C) 2004-2007 Koichi Sasada

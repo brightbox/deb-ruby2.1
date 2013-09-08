@@ -2,14 +2,14 @@
 
   digest.c -
 
-  $Author: eregon $
+  $Author$
   created at: Fri May 25 08:57:27 JST 2001
 
   Copyright (C) 1995-2001 Yukihiro Matsumoto
   Copyright (C) 2001-2006 Akinori MUSHA
 
   $RoughId: digest.c,v 1.16 2001/07/13 15:38:27 knu Exp $
-  $Id: digest.c 36588 2012-08-01 13:30:51Z eregon $
+  $Id$
 
 ************************************************/
 

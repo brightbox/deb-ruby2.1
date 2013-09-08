@@ -2,7 +2,7 @@
 
   pack.c -
 
-  $Author: eregon $
+  $Author$
   created at: Thu Feb 10 15:17:05 JST 1994
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

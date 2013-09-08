@@ -1,7 +1,7 @@
 #
 #   irb/workspace-binding.rb -
 #   	$Release Version: 0.9.6$
-#   	$Revision: 38612 $
+#   	$Revision$
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

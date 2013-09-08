@@ -3,7 +3,7 @@
  *
  *   Copyright (C) UENO Katsuhiro 2000-2003
  *
- * $Id: zlib.c 41073 2013-06-04 15:44:57Z nagachika $
+ * $Id$
  */
 
 #include <ruby.h>
@@ -1074,11 +1074,13 @@ loop:
 	}
 	if (err == Z_NEED_DICT) {
 	    VALUE self = (VALUE)z->stream.opaque;
-	    VALUE dicts = rb_ivar_get(self, id_dictionaries);
-	    VALUE dict = rb_hash_aref(dicts, rb_uint2inum(z->stream.adler));
-	    if (!NIL_P(dict)) {
-		rb_inflate_set_dictionary(self, dict);
-		goto loop;
+	    if (self) {
+		VALUE dicts = rb_ivar_get(self, id_dictionaries);
+		VALUE dict = rb_hash_aref(dicts, rb_uint2inum(z->stream.adler));
+		if (!NIL_P(dict)) {
+		    rb_inflate_set_dictionary(self, dict);
+		    goto loop;
+		}
 	    }
 	}
 	raise_zlib_error(err, z->stream.msg);

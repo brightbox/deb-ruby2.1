@@ -2,8 +2,8 @@
 
   rubysig.h -
 
-  $Author: nobu $
-  $Date: 2012-06-19 18:43:53 +0900 (Tue, 19 Jun 2012) $
+  $Author$
+  $Date$
   created at: Wed Aug 16 01:15:38 JST 1995
 
   Copyright (C) 1993-2008 Yukihiro Matsumoto

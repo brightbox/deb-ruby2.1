@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_x509store.c 37070 2012-10-02 19:36:26Z drbrain $
+ * $Id$
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

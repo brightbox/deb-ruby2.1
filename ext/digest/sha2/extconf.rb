@@ -1,6 +1,6 @@
 # -*- coding: us-ascii -*-
 # $RoughId: extconf.rb,v 1.4 2001/08/14 19:54:51 knu Exp $
-# $Id: extconf.rb 37878 2012-11-27 00:58:52Z nobu $
+# $Id$
 
 require "mkmf"
 
