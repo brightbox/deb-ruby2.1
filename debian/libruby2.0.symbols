@@ -582,6 +582,7 @@ libruby-2.0.so.2.0 libruby2.0 #MINVER#
  rb_f_exit@Base 2.0.0
  rb_f_global_variables@Base 2.0.0
  rb_f_kill@Base 2.0.0
+ rb_f_lambda@Base 2.0.0.299
  rb_f_notimplement@Base 2.0.0
  rb_f_require@Base 2.0.0
  rb_f_sprintf@Base 2.0.0
@@ -774,6 +775,7 @@ libruby-2.0.so.2.0 libruby2.0 #MINVER#
  rb_isblank@Base 2.0.0
  rb_iscntrl@Base 2.0.0
  rb_isdigit@Base 2.0.0
+ rb_iseq_add_mark_object@Base 2.0.0.299
  rb_iseq_build_from_ary@Base 2.0.0
  rb_iseq_compile@Base 2.0.0
  rb_iseq_compile_node@Base 2.0.0
