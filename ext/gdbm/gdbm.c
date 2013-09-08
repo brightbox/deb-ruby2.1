@@ -2,7 +2,7 @@
 
   gdbm.c -
 
-  $Author: nobu $
+  $Author$
   modified at: Mon Jan 24 15:59:52 JST 1994
 
   Documentation by Peter Adolphs < futzilogik at users dot sourceforge dot net >

@@ -1,4 +1,4 @@
-# $Id: fileasserts.rb 35553 2012-05-07 01:23:07Z nobu $
+# $Id$
 
 module Test
   module Unit

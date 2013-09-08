@@ -1,3 +1,317 @@
+Thu Aug 29 21:51:33 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* ext/zlib/zlib.c (zstream_run):  Fix handling of deflate streams that
+	  need a dictionary but are being decompressed by Zlib::Inflate.inflate
+	  (which has no option to set a dictionary).  Now Zlib::NeedDict is
+	  raised instead of crashing.  [ruby-trunk - Bug #8829]
+	* test/zlib/test_zlib.rb (TestZlibInflate):  Test for the above.
+
+Thu Aug 29 21:28:56 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_insnhelper.c (vm_call_method): a method entry refers the based
+	  class/module, so should search superclass from the origin i-class
+	  where the entry belongs to, to get rid of infinite loop when zsuper
+	  in a prepended class/module.  [ruby-core:54105] [Bug #8238]
+
+Fri Aug 23 01:16:00 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/date/date_parse.c (rfc2822_cb): check if wday is given, since it
+	  can be omitted.
+
+Fri Aug 23 00:55:02 2013  Tanaka Akira  <akr@fsij.org>
+
+	* gc.c (getrusage_time): Fallback clock_gettime to getrusage when
+	  clock_gettime fails.
+	  Reported by Eric Saxby.  [ruby-core:56762] [Bug #8805]
+	  
+Sat Aug 17 00:42:12 2013  Kazuhiro NISHIYAMA  <zn@mbf.nifty.com>
+
+	* parse.y: fix build error with bison-3.0.
+
+Sat Aug 17 00:39:20 2013  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* test/webrick/test_cgi.rb (TestWEBrickCGI#{start_cgi_server,test_cgi}):
+	  mswin is not only mswin32 but also mswin64. [Bug #8746]
+
+Sat Aug 17 00:36:24 2013  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* test/openssl/test_ssl.rb: Fix test for CVE-2013-4073.
+	  Patch by Antonio Terceiro. [Bug #8750] [ruby-core:56437]
+
+Sat Aug 17 00:32:17 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems: update to RubyGems 2.0.6. the patch by drbrain.
+	  [ruby-core:56633] [Backport #8787]
+
+Sat Aug 10 23:59:47 2013  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* test/coverage/test_coverage.rb (TestCoverage#test_big_code): use `1'
+	  instead of `p' to get rid of a side effect.
+	  Kernel#p without any argument seems to do nothing, but flushes stdout.
+	  and, if stdout is redirected to file, fsync() will be called on
+	  Windows.  so, when running test-all on Windows with redirection, such
+	  as CI environment, this test took a lot of time.
+
+Sun Aug  4 22:42:16 2013  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* win32/win32.c (wrename): use MoveFileExW instead of MoveFileW,
+	  because the latter fails on cross device file move of some
+	  environments.
+	  fix [ruby-core:53492] [Bug #8109]
+	  reported by mitchellh (Mitchell Hashimoto)
+
+Sat Aug  3 23:02:09 2013  Tanaka Akira  <akr@fsij.org>
+
+	* ext/extmk.rb (extmake): Invoke Logging::log_close in a ensure
+	  clause.
+
+Sat Aug  3 23:02:09 2013  Tanaka Akira  <akr@fsij.org>
+
+	* ext/extmk.rb (extmake): Use Logging.open to switch stdout and
+	  stderr.  Delay Logging::log_close until the failure message is
+	  written.  Write the failure message only if log file is opened.
+
+	* lib/mkmf.rb (Logging.log_opened?): New method.
+
+	  [ruby-dev:47215] [Bug #8209]
+
+Sat Aug  3 22:46:19 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/mkmf.rb (xsystem): expand environment variable in all macros not
+	  expanded with RbConfig.  [Bug #8702]
+
+	* test/mkmf/test_framework.rb (create_framework): replace all $@ not
+	  only once.
+
+Sat Aug  3 22:40:57 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/mkmf.rb (have_framework): allow header file to check.
+	  [ruby-core:55745] [Bug #8593]
+
+Sat Aug  3 22:24:44 2013  Shota Fukumori  <her@sorah.jp>
+
+	* lib/uri/common.rb (URI.decode_www_form_component):
+	  Don't raise error when str includes multibyte characters.
+
+Sun Jul 28 22:00:10 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* rational.c (f_round_common): Rational is expected to be returned by
+	  Rational#*, but mathn.rb breaks that assumption.  [ruby-core:56177]
+	  [Bug #8687]
+
+Sun Jul 28 21:50:34 2013  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* io.c (io_getpartial): use rb_str_locktmp_ensure().
+	  [ruby-core:56121] [Bug #8669]
+
+	* io.c (rb_io_sysread): ditto.
+
+	* test/ruby/test_io.rb: add tests for above.
+
+Sun Jul 28 21:50:34 2013  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* string.c: add internal API rb_str_locktmp_ensure().
+
+	* io.c (io_fread): use rb_str_locktmp_ensure().
+	  [ruby-core:56121] [Bug #8669]
+
+	* test/ruby/test_io.rb: add a test for above.
+
+Sun Jul 28 21:44:57 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* ext/openssl/ossl_asn1.c (asn1time_to_time):  Implement YYMMDDhhmmZ
+	  format for ASN.1 UTCTime.  [ruby-trunk - Bug #8664]
+	* test/openssl/test_asn1.rb:  Test for the above.
+
+Fri Jul 26 00:38:58 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems: Update to RubyGems 2.0.6. [ruby-core:56160]
+	  [Backport #8682]
+
+Wed Jul 24 22:35:32 2013  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* lib/uri/generic.rb (find_proxy): raise BadURIError if the URI is
+	  a relative URI. [Bug #8645]
+
+Wed Jul 24 01:13:02 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* include/ruby/intern.h (rb_f_lambde): restore the declaration of
+	  rb_f_lambda() for backword compatibility. and mark it as deprecated.
+
+Tue Jul 23 01:36:43 2013  Zachary Scott  <e@zzak.io>
+
+	* lib/rubygems/psych_additions.rb: Ignore Psych docs here
+
+Tue Jul 23 01:34:00 2013  Koichi Sasada  <ko1@atdot.net>
+
+	* test/test_tracer.rb: catch up recent rubygems changes.
+
+Tue Jul 23 01:28:54 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems: Update to RubyGems 2.0.5.
+	  The patch provided by drbrain (Eric Hodel). [ruby-core:55896]
+	  [Backport #8617]
+
+	* test/rubygems:  Tests for the above.
+
+Tue Jul 23 00:00:27 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_eval.c (eval_string_with_cref): use the given file name unless
+	  eval even if scope is given.  additional fix for [Bug #8436].
+	  based on the patch by srawlins at [ruby-core:56099] [Bug #8662].
+
+Sat Jul 20 23:49:33 2013  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* test/drb/drbtest.rb (Drb{Core,Ary}#teardown): retry Process.kill
+	  if it fails with Errno::EPERM on Windows (workaround).
+	  [ruby-dev:47245] [Bug #8251]
+
+Sat Jul 20 23:31:11 2013  Aman Gupta  <tmm1@ruby-lang.org>
+
+	* iseq.c (iseq_location_setup): re-use existing string when iseq has
+	  the same path and absolute_path. [Bug #8149]
+
+Sun Jul 14 00:18:08 2013  Zachary Scott  <e@zzak.io>
+
+	* sprintf.c: Fix typo patch by @hynkle [Fixes GH-357]
+	  https://github.com/ruby/ruby/pull/357
+
+Sun Jul 14 00:17:07 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* man/ri.1: Incorrect use of .Dd macro [Bug #8620] by Tristan Hill
+
+Sun Jul 14 00:15:26 2013  Zachary Scott  <zachary@zacharyscott.net>
+
+	* lib/logger.rb: Use :call-seq: for method signature rdoc
+
+Sun Jul 14 00:13:01 2013  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* test/net/http/test_http.rb (TestNetHTTP_v1_2#test_get,
+	  TestNetHTTP_v1_2_chunked#test_get): shouldn't check
+	  HttpResponse#decode_content if Zlib is not available.
+	  ko1 complained via IRC.
+
+Sat Jul 13 23:50:00 2013  Tadayoshi Funaba  <tadf@dotrb.org>
+
+	* ext/date/date_core.c: fixed coding error [ruby-core:55337].
+	  reported by Riley Lynch.
+
+Sat Jul 13 23:50:00 2013  Tadayoshi Funaba  <tadf@dotrb.org>
+
+	* ext/date/date_core.c: fixed a bug [ruby-core:55295].  reported
+	  by Riley Lynch.
+
+Sat Jul 13 23:41:25 2013  Tadayoshi Funaba  <tadf@dotrb.org>
+
+	* ext/date/date_parse.c (date_zone_to_diff): [ruby-core:55831].
+
+Sat Jul 13 23:34:13 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* object.c: Fix rdoc for Kernel#<=>. [Fix GH-352]
+
+Sat Jul 13 23:29:51 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* lib/fileutils.rb (FileUtils#mode_to_s): Define mode_to_s() also
+	  as singleton method, or FileUtils.chmod fails in verbose mode.
+
+Sat Jul 13 23:27:12 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* lib/fileutils.rb (FileUtils#chown, FileUtils#chown_R): If user
+	  and group are both nil, print ":".
+
+Sat Jul 13 23:16:49 2013  Tanaka Akira  <akr@fsij.org>
+
+	* bignum.c (bigrsh_bang): Fix bignum digits overrun.
+
+Sat Jul 13 23:16:49 2013  Tanaka Akira  <akr@fsij.org>
+
+	* bignum.c (biglsh_bang): Fix bignum digits under-run.
+
+Sat Jul 13 22:45:10 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* configure.in (RUBY_DTRACE_POSTPROCESS): dtrace version SUN D 1.11
+	  introduces a check in the dtrace compiler to ensure that probes
+	  actually exist. If there are no probes, then the -G step will
+	  fail. As this test is only being used to determine whether -G is
+	  necessary (for instance, on OSX it is not), adding a real probe to
+	  the conftest allows it to succeed on newer versions of dtrace.
+	  Patch by Eric Saxby <sax AT livinginthepast.org> at
+	  [ruby-core:55826].  [Fix GH-351], [Bug #8606].
+
+Sat Jul 13 22:41:20 2013  Martin Bosslet  <Martin.Bosslet@gmail.com>
+
+	* test/openssl/test_x509crl.rb: Remove unused variable.
+	  [ruby-core:53501] [Bug #8114]
+
+	  Thanks, Vipul Amler, for pointing this out!
+
+Sun Jul  7 02:00:41 2013  Martin Bosslet  <Martin.Bosslet@gmail.com>
+
+	* lib/openssl/ssl.rb: Fix SSL client connection crash for SAN marked
+	  critical.
+	  The patch for CVE-2013-4073 caused SSL crash when a SSL server returns
+	  the certificate that has critical SAN value.  X509 extension could
+	  include 2 or 3 elements in it:
+
+	  [id, criticality, octet_string] if critical,
+	  [id, octet_string] if not.
+
+	  Making sure to pick the last element of X509 extension and use it as
+	  SAN value.
+	  [ruby-core:55685] [Bug #8575]
+
+	  Thank you @nahi for providing the patch!
+
+Sun Jul  7 01:58:25 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* lib/fileutils.rb (FileUtils#symbolic_modes_to_i): Fix the wrong
+	  character class [+-=], which happened to match all desired
+	  characters but also match undesired characters.
+
+Sun Jul  7 01:54:44 2013  Akinori MUSHA  <knu@iDaemons.org>
+
+	* lib/fileutils.rb (FileUtils#chown, FileUtils#chown_R): Fix the
+	  wrong output message when user is nil, which should be "chown
+	  :group file" instead of "chown group file".
+
+Fri Jul  5 00:55:05 2013  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* regcomp.c (): Merge Onigmo 5.13.5 23b523076d6f1161.
+
+	  * [bug]  (thanks Akinori MUSHA and Ippei Obayashi)
+	           Fix a renumbering bug in condition regexp with a named
+	           capture. [Bug #8583]
+	  * [spec] (thanks Akinori MUSHA)
+	    Allow ENCLOSE_OPTION in look-behind.
+
+Wed Jul  3 23:31:26 2013  Shota Fukumori  <sorah@cookpad.com>
+
+	* lib/mkmf.rb (try_config): Fix to not replace $LDFLAGS with $libs
+	  (1.9.3 behavior) [ruby-core:55752] [Bug #8595]
+
+Tue Jul  2 03:06:38 2013  Kenta Murata  <mrkn@mrkn.jp>
+
+	* ext/bigdecimal/bigdecimal.c (BigMath_s_exp): Fix for the cases when
+	  the argument x is not a BigDecimal.
+	  This change is based on the patch made by Heesob Park and Garth Snyder.
+	  [Bug #6862] [ruby-core:47145]
+	  [Fix GH-332] https://github.com/ruby/ruby/pull/332
+
+Fri Jun 28 02:20:13 2013  Aman Gupta  <ruby@tmm1.net>
+
+	* compile.c (iseq_add_mark_object): Use new rb_iseq_add_mark_object().
+
+	* insns.def (setinlinecache): Ditto.
+
+	* iseq.c (rb_iseq_add_mark_object): New function to allocate
+	  iseq->mark_ary on demand. [Bug #8142]
+
+	* iseq.h (rb_iseq_add_mark_object): Ditto.
+
+	* iseq.c (prepare_iseq_build): Avoid allocating mark_ary until needed.
+
+	* iseq.c (rb_iseq_build_for_ruby2cext): Ditto.
+
 Thu Jun 27 20:10:56 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
 
 	* ext/openssl/lib/openssl/ssl.rb (verify_certificate_identity): fix

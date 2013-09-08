@@ -2,7 +2,7 @@
 
   struct.c -
 
-  $Author: zzak $
+  $Author$
   created at: Tue Mar 22 18:44:30 JST 1995
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

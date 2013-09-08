@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_pkcs7.c 35167 2012-03-29 01:27:17Z emboss $
+ * $Id$
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

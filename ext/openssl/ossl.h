@@ -1,5 +1,5 @@
 /*
- * $Id: ossl.h 36355 2012-07-10 13:57:11Z nobu $
+ * $Id$
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

@@ -1,7 +1,7 @@
 #
 #   help.rb - helper using ri
 #   	$Release Version: 0.9.6$
-#   	$Revision: 38358 $
+#   	$Revision$
 #
 # --
 #

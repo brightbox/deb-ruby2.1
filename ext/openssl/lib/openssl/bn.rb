@@ -14,7 +14,7 @@
 # (See the file 'LICENCE'.)
 #
 # = Version
-# $Id: bn.rb 36895 2012-09-04 00:57:31Z nobu $
+# $Id$
 #
 #++
 

@@ -1,7 +1,7 @@
 #
 #   fork.rb -
 #   	$Release Version: 0.9.6 $
-#   	$Revision: 38358 $
+#   	$Revision$
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --
@@ -9,7 +9,7 @@
 #
 #
 
-@RCS_ID='-$Id: fork.rb 38358 2012-12-13 05:22:30Z zzak $-'
+@RCS_ID='-$Id$-'
 
 # :stopdoc:
 module IRB

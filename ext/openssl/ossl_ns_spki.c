@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_ns_spki.c 33497 2011-10-20 17:22:09Z emboss $
+ * $Id$
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

@@ -2,7 +2,7 @@
 
   safe.c -
 
-  $Author: nobu $
+  $Author$
   created at: Tue Sep 23 09:44:32 JST 2008
 
   Copyright (C) 2008 Yukihiro Matsumoto

@@ -1,5 +1,5 @@
 /* -*- C -*-
- * $Id: cfunc.c 36281 2012-07-03 03:10:02Z usa $
+ * $Id$
  */
 
 #include <ruby/ruby.h>

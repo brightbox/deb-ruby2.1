@@ -2,7 +2,7 @@
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
 # License:: You can redistribute it and/or modify it under the same term as Ruby.
-# Revision:: $Id: ftp.rb 39014 2013-02-02 03:31:56Z zzak $
+# Revision:: $Id$
 #
 # See URI for general documentation
 #

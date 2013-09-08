@@ -569,7 +569,7 @@ date_zone_to_diff(VALUE str)
 			if (cl >= 3)
 			    min  = rb_str_new(&cs[1], 2);
 			if (cl >= 5)
-			    min  = rb_str_new(&cs[3], 2);
+			    sec  = rb_str_new(&cs[3], 2);
 		    }
 		    else {
 			if (cl >= 2)
@@ -2848,7 +2848,9 @@ rfc2822_cb(VALUE m, VALUE hash)
 	    s[i] = rb_reg_nth_match(i, m);
     }
 
-    set_hash("wday", INT2FIX(day_num(s[1])));
+    if (!NIL_P(s[1])) {
+	set_hash("wday", INT2FIX(day_num(s[1])));
+    }
     set_hash("mday", str2num(s[2]));
     set_hash("mon", INT2FIX(mon_num(s[3])));
     y = str2num(s[4]);

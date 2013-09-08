@@ -14,7 +14,7 @@
 # (See the file 'LICENCE'.)
 #
 # = Version
-# $Id: digest.rb 36895 2012-09-04 00:57:31Z nobu $
+# $Id$
 #
 #++
 
@@ -31,7 +31,7 @@ module OpenSSL
     #
     # === Examples
     #
-    #   OpenSSL::Digest.digest("SHA256, "abc")
+    #   OpenSSL::Digest.digest("SHA256", "abc")
     #
     # which is equivalent to:
     #

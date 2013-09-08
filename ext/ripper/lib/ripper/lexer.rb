@@ -1,5 +1,5 @@
 #
-# $Id: lexer.rb 38273 2012-12-08 07:06:24Z marcandre $
+# $Id$
 #
 # Copyright (c) 2004,2005 Minero Aoki
 #

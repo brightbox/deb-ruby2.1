@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_bio.c 33553 2011-10-29 11:02:32Z akr $
+ * $Id$
  * 'OpenSSL for Ruby' team members
  * Copyright (C) 2003
  * All rights reserved.

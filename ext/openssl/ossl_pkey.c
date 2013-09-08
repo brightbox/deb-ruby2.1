@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_pkey.c 35322 2012-04-14 00:36:26Z drbrain $
+ * $Id$
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.
