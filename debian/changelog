@@ -1,3 +1,24 @@
+ruby2.0 (2.0.0.299-1) unstable; urgency=low
+
+  * New upstream release
+    + Includes a fix for override of existing LDFLAGS when building compiled
+      extensions that use pkg-config (Closes: #721799).
+  * debian/rules: forward-port to tcl/tk packages with multi-arch support.
+    Thanks to Tristan Hill for reporting on build for Ubuntu saucy
+  * debian/control: ruby2.0 now provides ruby-interpreter
+  * Now using tarballs generated from the git mirror.
+    + The released tarballs will modify shipped files on clean. Without this
+      we can stop messing around with files that need to be recovered after a
+      `debian/rules clean` to make them match the orig tarball and avoid
+      spurious diffs.
+    + This also lets us drop the diffs against generated files such as
+      tool/config.* and configure.
+    + documented in debian/README.source
+  * debian/libruby2.0.symbols: refreshed with 2 new symbols added since last
+    version.
+
+ -- Antonio Terceiro <terceiro@debian.org>  Sun, 08 Sep 2013 12:38:34 -0300
+
 ruby2.0 (2.0.0.247-1) unstable; urgency=low
 
   * Initial release (Closes: #697703)
