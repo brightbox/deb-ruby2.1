@@ -1,3 +1,14 @@
+Upstream tarballs
+=================
+
+Ruby released tarballs will modify/remove files during the clean target, what
+would force the maintainers to shuffle those files around to make sure the
+source directory matches the upstream tarball after `debian/rules clean`.
+Because of this, and since we are already using dh_autoreconf anyway, the orig
+tarballs used in this package come from the git repository at
+https://github.com/ruby/ruby, branch `ruby_2_0_0`.
+
+
 Additional sources
 ==================
 
