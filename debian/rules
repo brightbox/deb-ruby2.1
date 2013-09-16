@@ -62,3 +62,7 @@ override_dh_auto_install-indep:
 	dh_install -pruby2.0-doc usr/share/doc/ruby-capi/html /usr/share/doc/ruby2.0-doc/
 	find debian/ruby2.0-doc/ -type d -empty
 
+override_dh_install-arch:
+	dh_install
+	# split Ruby/Tk files
+	ruby debian/split-tk-out.rb
