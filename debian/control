@@ -68,5 +68,5 @@ Description: Ruby/Tk for Ruby 2.0
  files and to do system management tasks (as in perl).  It is simple,
  straight-forward, and extensible.
  .
- This packages provides Ruby/Tk, Ruby bindings for the Tk graphical user
+ This package provides Ruby/Tk, Ruby bindings for the Tk graphical user
  interface toolkit.
