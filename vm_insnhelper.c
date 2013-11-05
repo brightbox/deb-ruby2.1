@@ -919,18 +919,23 @@ opt_eq_func(VALUE recv, VALUE obj, CALL_INFO ci)
 }
 
 static VALUE
+vm_call0(rb_thread_t*, VALUE, ID, int, const VALUE*, const rb_method_entry_t*, VALUE);
+
+static VALUE
 check_match(VALUE pattern, VALUE target, enum vm_check_match_type type)
 {
     switch (type) {
       case VM_CHECKMATCH_TYPE_WHEN:
 	return pattern;
-      case VM_CHECKMATCH_TYPE_CASE:
-	return rb_funcall2(pattern, idEqq, 1, &target);
-      case VM_CHECKMATCH_TYPE_RESCUE: {
+      case VM_CHECKMATCH_TYPE_RESCUE:
 	if (!rb_obj_is_kind_of(pattern, rb_cModule)) {
 	    rb_raise(rb_eTypeError, "class or module required for rescue clause");
 	}
-	return RTEST(rb_funcall2(pattern, idEqq, 1, &target));
+	/* fall through */
+      case VM_CHECKMATCH_TYPE_CASE: {
+	VALUE defined_class;
+	rb_method_entry_t *me = rb_method_entry_with_refinements(CLASS_OF(pattern), idEqq, &defined_class);
+	return vm_call0(GET_THREAD(), pattern, idEqq, 1, &target, me, defined_class);
       }
       default:
 	rb_bug("check_match: unreachable");
@@ -1835,7 +1840,13 @@ vm_call_method(rb_thread_t *th, rb_control_frame_t *cfp, rb_call_info_t *ci)
 	      no_refinement_dispatch:
 		if (ci->me->def->body.orig_me) {
 		    ci->me = ci->me->def->body.orig_me;
-		    goto normal_method_dispatch;
+		    if (UNDEFINED_METHOD_ENTRY_P(ci->me)) {
+			ci->me = 0;
+			goto start_method_dispatch;
+		    }
+		    else {
+			goto normal_method_dispatch;
+		    }
 		}
 		else {
 		    klass = ci->me->klass;
@@ -1986,7 +1997,7 @@ vm_search_super_method(rb_thread_t *th, rb_control_frame_t *reg_cfp, rb_call_inf
 {
     VALUE current_defined_class;
     rb_iseq_t *iseq = GET_ISEQ();
-    VALUE sigval = TOPN(ci->orig_argc);
+    VALUE sigval = TOPN(ci->argc);
 
     current_defined_class = GET_CFP()->klass;
     if (NIL_P(current_defined_class)) {

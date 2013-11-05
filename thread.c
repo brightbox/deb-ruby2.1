@@ -4425,11 +4425,6 @@ rb_mutex_unlock(VALUE self)
     rb_mutex_t *mutex;
     GetMutexPtr(self, mutex);
 
-    /* When running trap handler */
-    if (!mutex->allow_trap && GET_THREAD()->interrupt_mask & TRAP_INTERRUPT_MASK) {
-	rb_raise(rb_eThreadError, "can't be called from trap context");
-    }
-
     err = rb_mutex_unlock_th(mutex, GET_THREAD());
     if (err) rb_raise(rb_eThreadError, "%s", err);
 
@@ -4880,6 +4875,18 @@ VALUE
 rb_exec_recursive_outer(VALUE (*func) (VALUE, VALUE, int), VALUE obj, VALUE arg)
 {
     return exec_recursive(func, obj, 0, arg, 1);
+}
+
+/*
+ * If recursion is detected on the current method, obj and paired_obj,
+ * the outermost func will be called with (obj, arg, Qtrue). All inner
+ * func will be short-circuited using throw.
+ */
+
+VALUE
+rb_exec_recursive_paired_outer(VALUE (*func) (VALUE, VALUE, int), VALUE obj, VALUE paired_obj, VALUE arg)
+{
+    return exec_recursive(func, obj, rb_obj_id(paired_obj), arg, 1);
 }
 
 /*

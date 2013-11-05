@@ -1,3 +1,333 @@
+Thu Oct 31 22:28:04 2013  Martin Bosslet  <Martin.Bosslet@gmail.com>
+
+	* test/openssl/test_pkey_ec.rb: Skip tests for "Oakley" curves as
+	  they are not suitable for ECDSA.
+	  [ruby-core:54881] [Bug #8384]
+
+Thu Oct 31 22:28:04 2013  Martin Bosslet  <Martin.Bosslet@gmail.com>
+
+	* ext/openssl/ossl_pkey_ec.c: Ensure compatibility to builds of
+	  OpenSSL with OPENSSL_NO_EC2M defined, but OPENSSL_NO_EC not
+	  defined.
+	* test/openssl/test_pkey_ec.rb: Iterate over built-in curves
+	  (and assert their non-emptiness!) instead of hard-coding them, as
+	  this may cause problems with respect to the different availability
+	  of individual curves in individual OpenSSL builds.
+	  [ruby-core:54881] [Bug #8384]
+
+	  Thanks to Vit Ondruch for providing the patch!
+
+Sun Oct 27 01:04:28 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems: Update to RubyGems 2.0.13. [ruby-core:58031]
+	  [Backport #9052]
+	  the patch is provided by drbrain (Eric Hodel).
+
+Sat Oct 26 16:04:36 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* gc.c (gc_prof_set_heap_info): fix compile error when
+	  GC_PROFILE_MORE_DETAIL != 0.
+	  the patch is provided by ko1 (Koichi Sasada).
+
+Thu Oct 24 23:27:12 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems: Update to RubyGems 2.0.12. [ruby-core:57818]
+	  [Backport #9014]
+	  the patch is provided by drbrain (Eric Hodel).
+
+Thu Oct 24 22:49:28 2013  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* parse.y: Remove +(binary) and -(binary) special cases
+	  [Feature #9048]
+
+Thu Oct 24 22:36:56 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* encoding.c (load_encoding): should preserve outer errinfo, so that
+	  expected exception may not be lost.  [ruby-core:57949] [Bug #9038]
+
+Fri Oct 18 02:10:00 2013  Shugo Maeda  <shugo@ruby-lang.org>
+
+	* vm_insnhelper.c (vm_call_method): set ci->me to 0 when the
+	  original method of a refined method is undef to avoid SEGV.
+
+	* vm_method.c (rb_method_entry_without_refinements): return 0 when
+	  the original method of a refined method is undef to avoid SEGV.
+
+	* test/ruby/test_refinement.rb: related test.
+
+Fri Oct 18 02:05:45 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* win32/file.c (rb_file_expand_path_internal): fix memory leaks at
+	  a non-absolute home exception.
+
+Thu Oct 10 01:14:37 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* compar.c (cmp_eq): fail if recursion.  [ruby-core:57736] [Bug #9003]
+
+	* thread.c (rb_exec_recursive_paired_outer): new function which is
+	  combinnation of paired and outer variants.
+
+Thu Oct 10 01:07:37 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/tempfile.rb (Tempfile#unlink): finalizer is no longer needed
+	  after unlinking.  patched by by normalperson (Eric Wong) at
+	  [ruby-core:56521] [Bug #8768]
+
+Thu Oct 10 00:58:39 2013  Benoit Daloze  <eregontp@gmail.com>
+
+	* test/ruby/test_array.rb (test_count): add a test case for #count
+	  with an argument. See Bug #8654.
+
+Thu Oct 10 00:58:39 2013  Benoit Daloze  <eregontp@gmail.com>
+
+	* array.c (rb_ary_count): check length to avoid SEGV
+	  while iterating. Remove other pointer loop when arg is given.
+
+	* test/ruby/test_array.rb (test_count): add test for bug.
+	  [ruby-core:56072] [Bug #8654]
+
+Thu Oct 10 00:58:39 2013  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* array.c (rb_ary_count): iterate items appropriately.
+	  [Bug #8654]
+
+Thu Oct 10 00:44:28 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* process.c (rb_fork_internal): remove cloexec setting on pipes
+	  created by rb_cloexec_pipe.  patch by normalperson (Eric Wong) at
+	  [ruby-core:56523].  [Bug #8769]
+
+Thu Oct 10 00:24:01 2013  KOSAKI Motohiro  <kosaki.motohiro@gmail.com>
+
+	* cont.c: disable FIBER_USE_NATIVE on GNU/Hurd because it doesn't
+	  support a combination getcontext() and threads. Patch by
+	  Gabriele Giacone (1o5g4r8o@gmail.com). [Bug #8990][ruby-core:57685]
+
+Mon Oct  7 21:03:54 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* configure.in, win32/Makefile.sub (FIBER_USE_NATIVE): move conditions
+	  from cont.c
+
+Thu Oct 10 00:17:56 2013  KOSAKI Motohiro  <kosaki.motohiro@gmail.com>
+
+	* test/dl/test_base.rb: {libc, libm} detection now handle GNU/Hurd
+	  correctly. Patch by Gabriele Giacone (1o5g4r8o@gmail.com).
+	  [Bug #8937][ruby-core:57311]
+	* test/fiddle/helper.rb: ditto.
+
+Thu Oct 10 00:00:30 2013  Tanaka Akira  <akr@fsij.org>
+
+	* lib/time.rb (Time.strptime): Time.strptime('0', '%s') returns local
+	  time Time object as Ruby 2.0 and before.
+
+Thu Oct 10 00:00:30 2013  Tanaka Akira  <akr@fsij.org>
+
+	* lib/time.rb (Time.strptime): Use :offset.
+	  Patch by Felipe Contreras.  [ruby-core:57694]
+
+Wed Oct  9 23:32:37 2013  Koichi Sasada  <ko1@atdot.net>
+
+	* gc.c (rb_gc_disable): do rest_sweep() before disable GC.
+	  This fix may solve a failure of
+	  TestTracepointObj#test_tracks_objspace_events
+	  [test/-ext-/tracepoint/test_tracepoint.rb:43].
+
+Sat Oct  5 02:14:56 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* io.c (rb_io_close_read): duplex IO should wait its child process
+	  even after close_read.
+
+Sat Oct  5 02:14:56 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* io.c (rb_io_close_read): keep fptr in write_io to be discarded, to
+	  fix freed pointer access when it is in use by other threads, and get
+	  rid of potential memory/fd leak.
+
+Sat Oct  5 01:59:50 2013  Shugo Maeda  <shugo@ruby-lang.org>
+
+	* vm_method.c (rb_undef): raise a NameError if the original method
+	  of a refined method is not defined.
+
+	* vm_insnhelper.c (rb_method_entry_eq): added NULL check to avoid SEGV.
+
+	* test/ruby/test_refinement.rb: related test.
+
+Sat Oct  5 00:16:33 2013  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* process.c (rb_daemon): daemon(3) is implemented with fork(2).
+	  Therefore it needs rb_thread_atfork(). (and revert r41903)
+
+Sat Oct  5 00:16:33 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* process.c (fork_daemon): kill the other threads all and abandon the
+	  kept mutexes.
+
+Sat Oct  5 00:16:33 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* process.c (fork_daemon): kill the other threads all and abandon the
+	  kept mutexes.
+
+Tue Oct  1 00:28:40 2013  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* tool/make-snapshot: Fix order of priority for option parameter.
+
+Sat Sep 28 21:40:40 2013  Kenichi Kamiya  <kachick1@gmail.com>
+
+	* random.c (rb_random_ulong_limited): coerce before check negative.
+	  [Fixes GH-379]
+
+Fri Sep 27 01:24:20 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems: Update to Rubygems 2.0.10. [ruby-core:57360]
+	  [Backport #8950]
+	  the patch is provided by drbrain (Eric Hodel).
+	  this update contains a security fix for CVE-2013-4363.
+
+Fri Sep 27 01:11:21 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (lambda): adjust position to the beginning of the block.
+
+Fri Sep 27 01:02:59 2013  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* lib/uri/generic.rb (URI::Generic.find_proxy): return nil if
+	  http_proxy environment variable is empty string.
+	  [ruby-core:57140] [Bug #8898]
+
+Fri Sep 27 00:58:57 2013  Zachary Scott  <e@zzak.io>
+
+	* lib/gserver.rb: [DOC] correct gserver.rb license [Bug #8913]
+
+Sun Sep 15 23:15:32 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems: Update to Rubygems 2.0.9. [ruby-core:57183]
+	  [Backport #8908]
+	  the patch is provided by drbrain (Eric Hodel).
+
+Sun Sep 15 22:59:04 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* tool/rbinstall.rb (Gem::Specification#initialize): default date to
+	  RUBY_RELEASE_DATE.  [ruby-core:57072] [Bug #8878]
+
+	* tool/rbinstall.rb (Gem::Specification#to_ruby): add date.
+
+Sun Sep 15 22:55:44 2013  Zachary Scott  <e@zzak.io>
+
+	* hash.c (rb_hash_aset): [DOC] Document key dup patch by @kachick
+	  [Fixes GH-382] https://github.com/ruby/ruby/pull/382
+
+Sun Sep 15 22:03:01 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vsnprintf.c (MAXEXP, MAXFRACT): calculate depending on constants in
+	  float.h.
+
+	* vsnprintf.c (BSD_vfprintf): limit length for cvt() to get rid of
+	  buffer overflow.  [ruby-core:57023] [Bug #8864]
+
+	* vsnprintf.c (exponent): make expbuf size more precise.
+
+Sat Sep 14 00:01:20 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems: Update to RubyGems 2.0.8. [ruby-core:57155]
+	  [Backport #8900]
+	  the patch is provided by drbrain (Eric Hodel).
+	  this update contains a security fix for CVE-2013-4287.
+
+Fri Sep 13 23:20:29 2013  Kenichi Kamiya  <kachick1@gmail.com>
+
+	* object.c (Init_Object): undef Module#prepend_features on Class, as
+	  well as Module#append_features.  [Fixes GH-376]
+
+	* test_class.rb: Added test for above. And ensure type checking
+	  on similar methods as module_function.
+
+Fri Sep 13 23:16:12 2013  Zachary Scott  <e@zzak.io>
+
+	* enumerator.c: [DOC] Remove reference to Enumerator::Lazy#cycle
+	  Patch by @kachick [Fixes GH-372]
+	  https://github.com/ruby/ruby/pull/372
+
+Fri Sep 13 22:40:28 2013  Koichi Sasada  <ko1@atdot.net>
+
+	* vm_insnhelper.c (vm_search_super_method): use ci->argc instead of
+	  ci->orig_argc. ci->argc can be changed by splat arguments.
+	  [ruby-list:49575]
+	  This fix should be applied to Ruby 2.0.0 series.
+
+	* test/ruby/test_super.rb: add a test for above.
+
+Fri Sep 13 01:44:54 2013  KOSAKI Motohiro  <kosaki.motohiro@gmail.com>
+
+	* thread.c (rb_mutex_unlock): Mutex#unlock no longer raise
+	  an exception even if uses on trap. [Bug #8891]
+
+Fri Sep 13 01:09:59 2013  Shota Fukumori  <sorah@tubusu.net>
+
+	* vm_backtrace.c (vm_backtrace_to_ary): Ignore the second argument if
+	  it is nil. [Bug #8884] [ruby-core:57094]
+
+	* test/ruby/test_backtrace.rb (test_caller_with_nil_length):
+	  Test for above.
+
+Fri Sep 13 00:57:54 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* class.c (method_entry_i): should exclude refined methods from
+	  instance method list.  [ruby-core:57080] [Bug #8881]
+
+Fri Sep 13 00:33:09 2013  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* vm_eval.c (vm_call0): fix prototype, the id parameter should be of
+	  type ID, not VALUE
+
+	* vm_insnhelper.c (check_match): the rb_funcall family of functions
+	  does not care about refinements. We need to use
+	  rb_method_entry_with_refinements instead to call === with
+	  refinements. Thanks to Jon Conley for reporting this bug.
+	  [ruby-core:57051] [Bug #8872]
+
+	* test/ruby/test_refinement.rb: add test
+
+Fri Sep 13 00:18:55 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* enumerator.c (lazy_zip_func): fix non-single argument.  fix
+	  out-of-bound access and pack multiple yielded values.
+	  [ruby-core:56383] [Bug #8735]
+
+Thu Sep 12 01:44:01 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* string.c (str_gsub): use BEG(0) for whole matched position not
+	  return value from rb_reg_search(), for \K matching.
+	  [ruby-dev:47694] [Bug #8856]
+
+Thu Sep 12 01:34:07 2013  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* object.c (rb_class_inherited_p): allow iclasses to be tested for
+	  inheritance. [Bug #8686] [ruby-core:56174]
+
+	* test/ruby/test_method.rb: add test
+
+Thu Sep 12 01:18:44 2013  Michal Rokos  <michal@rokos.cz>
+
+	* configure.in (sys/pstat.h): fix missing header check for
+	  missing/setproctitle.c on HP-UX.  [ruby-core:56644] [Bug #8792]
+
+Thu Sep 12 01:02:56 2013  Benoit Daloze  <eregontp@gmail.com>
+
+	* test/ruby/test_time.rb: use the in_timezone() helper
+	  and define it at the top with other helpers.
+
+Thu Sep 12 01:02:56 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* time.c (time_mload): ignore auxiliary data, offset and zone, if
+	  invalid.  [ruby-core:56648] [Bug #8795]
+
+Thu Sep 12 00:22:22 2013  Kazuki Tsujimoto  <kazuki@callcc.net>
+
+	* variable.c (classname): the name of class that has
+	  non class id should not be nil. This bug was introduced
+	  in r36577.
+
+	* test/thread/test_cv.rb: test for change.
+
 Thu Aug 29 21:51:33 2013  Eric Hodel  <drbrain@segment7.net>
 
 	* ext/zlib/zlib.c (zstream_run):  Fix handling of deflate streams that
@@ -40,7 +370,7 @@ Sat Aug 17 00:36:24 2013  Charlie Somerville  <charliesome@ruby-lang.org>
 
 Sat Aug 17 00:32:17 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
 
-	* lib/rubygems: update to RubyGems 2.0.6. the patch by drbrain.
+	* lib/rubygems: update to RubyGems 2.0.7. the patch by drbrain.
 	  [ruby-core:56633] [Backport #8787]
 
 Sat Aug 10 23:59:47 2013  NAKAMURA Usaku  <usa@ruby-lang.org>
