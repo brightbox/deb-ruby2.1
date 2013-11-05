@@ -1,3 +1,9 @@
+ruby2.0 (2.0.0.343-1) UNRELEASED; urgency=low
+
+  * New upstream version (snapshot from 2.0 maintainance branch).
+
+ -- Antonio Terceiro <terceiro@debian.org>  Tue, 05 Nov 2013 20:33:23 -0300
+
 ruby2.0 (2.0.0.299-2) unstable; urgency=low
 
   * Split Ruby/Tk out of libruby2.0 into its own package, ruby2.0-tcltk. This
