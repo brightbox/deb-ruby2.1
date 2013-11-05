@@ -1482,7 +1482,7 @@ rb_class_inherited_p(VALUE mod, VALUE arg)
     VALUE start = mod;
 
     if (mod == arg) return Qtrue;
-    if (!CLASS_OR_MODULE_P(arg)) {
+    if (!CLASS_OR_MODULE_P(arg) && !RB_TYPE_P(arg, T_ICLASS)) {
 	rb_raise(rb_eTypeError, "compared with non class/module");
     }
     arg = RCLASS_ORIGIN(arg);
@@ -3163,6 +3163,7 @@ Init_Object(void)
     rb_define_alloc_func(rb_cClass, rb_class_s_alloc);
     rb_undef_method(rb_cClass, "extend_object");
     rb_undef_method(rb_cClass, "append_features");
+    rb_undef_method(rb_cClass, "prepend_features");
 
     /*
      * Document-class: Data
