@@ -26,8 +26,7 @@ Package: libruby2.0
 Section: libs
 Multi-Arch: same
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: libjs-jquery
+Depends: ${shlibs:Depends}, ${misc:Depends}, libjs-jquery
 Description: Libraries necessary to run Ruby 2.0
  Ruby is the interpreted scripting language for quick and easy
  object-oriented programming.  It has many features to process text
