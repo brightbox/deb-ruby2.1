@@ -1,6 +1,17 @@
-ruby2.0 (2.0.0.343-1) UNRELEASED; urgency=low
+ruby2.0 (2.0.0.343-1) unstable; urgency=low
 
   * New upstream version (snapshot from 2.0 maintainance branch).
+  * fix typo in ruby2.0-tcltk description
+  * Backported upstream patches from Tanaka Akira to fix FTBFS on:
+    - GNU/kFreeBSD (Closes: #726095)
+    - x32 (Closes: #727010)
+  * Make date for io-console gemspec predictable (Closes: #724974)
+  * libruby2.0 now depends on libjs-jquery because of rdoc (Closes: #725056)
+  * Backport upstream patch by Nobuyoshi Nakada to fix include directory in
+    `pkg-config --cflags` (Closes: #725166)
+  * Document missing licenses in debian/copyright (Closes: #723161)
+  * debian/libruby2.0.symbols: add new symbol rb_exec_recursive_paired_outer
+    (not in the public API though)
 
  -- Antonio Terceiro <terceiro@debian.org>  Tue, 05 Nov 2013 20:33:23 -0300
 
