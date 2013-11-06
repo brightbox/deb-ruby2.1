@@ -5,3 +5,4 @@ ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.0.0/gems/test-unit-2.0.0.0/bin/t
 package-name-doesnt-match-sonames
 image-file-in-usr-lib
 package-contains-empty-directory
+possible-gpl-code-linked-with-openssl
