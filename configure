@@ -709,6 +709,7 @@ LIBRUBY_RELATIVE
 EXTOUT
 XRUBY
 RUNRUBY
+RUNRUBY_COMMAND
 PREP
 BTESTRUBY
 MINIRUBY
@@ -15658,6 +15659,18 @@ case "$target_os" in #(
   *) :
      ;;
 esac
+for ac_header in sys/pstat.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/pstat.h" "ac_cv_header_sys_pstat_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_pstat_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SYS_PSTAT_H 1
+_ACEOF
+
+fi
+
+done
+
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for signbit" >&5
@@ -18064,7 +18077,8 @@ if test x"$cross_compiling" = xyes; then
 
 
   PREP='$(arch)-fake.rb'
-  RUNRUBY='$(MINIRUBY) -I`cd $(srcdir)/lib; pwd`'
+  RUNRUBY_COMMAND='$(MINIRUBY) -I`cd $(srcdir)/lib; pwd`'
+  RUNRUBY='$(RUNRUBY_COMMAND)'
   XRUBY='$(MINIRUBY)'
   TEST_RUNNABLE=no
   CROSS_COMPILING=yes
@@ -18086,11 +18100,13 @@ else
   MINIRUBY='./miniruby$(EXEEXT) -I$(srcdir)/lib -I.'
   MINIRUBY="$MINIRUBY"' -I$(EXTOUT)/common'
   PREP='miniruby$(EXEEXT)'
-  RUNRUBY='$(MINIRUBY) $(srcdir)/tool/runruby.rb --extout=$(EXTOUT)'
+  RUNRUBY_COMMAND='$(MINIRUBY) $(srcdir)/tool/runruby.rb --extout=$(EXTOUT) $(RUNRUBYOPT)'
+  RUNRUBY='$(RUNRUBY_COMMAND) --'
   XRUBY='$(RUNRUBY)'
   TEST_RUNNABLE=yes
   CROSS_COMPILING=no
 fi
+
 
 
 
@@ -18584,15 +18600,21 @@ if ${rb_cv_prog_dtrace_g+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
- echo "int main(void){ return 0; }" > conftest.c
- echo "provider conftest{};" > conftest_provider.d
- $CC $CFLAGS -c -o conftest.o conftest.c
- if $DTRACE -G -s conftest_provider.d conftest.o 2>/dev/null; then
-   rb_cv_prog_dtrace_g=yes
- else
-   rb_cv_prog_dtrace_g=no
- fi
- rm -f conftest.o conftest.c conftest_provider.d conftest_provider.o
+  if {
+    echo "provider conftest{ probe fire(); };" > conftest_provider.d &&
+    dtrace -h -o conftest_provider.h -s conftest_provider.d >/dev/null 2>/dev/null &&
+    cat >conftest.c <<_CONF &&
+    #include "conftest_provider.h"
+    int main(void){ CONFTEST_FIRE(); return 0; }
+_CONF
+    $CC $CFLAGS -c -o conftest.o conftest.c &&
+    $DTRACE -G -s conftest_provider.d conftest.o 2>/dev/null
+  }; then
+    rb_cv_prog_dtrace_g=yes
+  else
+    rb_cv_prog_dtrace_g=no
+  fi
+  rm -f conftest.co conftest_provider.dho
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $rb_cv_prog_dtrace_g" >&5

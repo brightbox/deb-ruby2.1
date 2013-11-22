@@ -4344,17 +4344,8 @@ wrename(const WCHAR *oldpath, const WCHAR *newpath)
 	if (newatts != -1 && newatts & FILE_ATTRIBUTE_READONLY)
 	    SetFileAttributesW(newpath, newatts & ~ FILE_ATTRIBUTE_READONLY);
 
-	if (!MoveFileW(oldpath, newpath))
+	if (!MoveFileExW(oldpath, newpath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
 	    res = -1;
-
-	if (res) {
-	    switch (GetLastError()) {
-	      case ERROR_ALREADY_EXISTS:
-	      case ERROR_FILE_EXISTS:
-		if (MoveFileExW(oldpath, newpath, MOVEFILE_REPLACE_EXISTING))
-		    res = 0;
-	    }
-	}
 
 	if (res)
 	    errno = map_errno(GetLastError());
@@ -5867,6 +5858,49 @@ rb_w32_close(int fd)
     return 0;
 }
 
+static int
+setup_overlapped(OVERLAPPED *ol, int fd)
+{
+    memset(ol, 0, sizeof(*ol));
+    if (!(_osfile(fd) & (FDEV | FPIPE))) {
+	LONG high = 0;
+	DWORD method = _osfile(fd) & FAPPEND ? FILE_END : FILE_CURRENT;
+	DWORD low = SetFilePointer((HANDLE)_osfhnd(fd), 0, &high, method);
+#ifndef INVALID_SET_FILE_POINTER
+#define INVALID_SET_FILE_POINTER ((DWORD)-1)
+#endif
+	if (low == INVALID_SET_FILE_POINTER) {
+	    DWORD err = GetLastError();
+	    if (err != NO_ERROR) {
+		errno = map_errno(err);
+		return -1;
+	    }
+	}
+	ol->Offset = low;
+	ol->OffsetHigh = high;
+    }
+    ol->hEvent = CreateEvent(NULL, TRUE, TRUE, NULL);
+    if (!ol->hEvent) {
+	errno = map_errno(GetLastError());
+	return -1;
+    }
+    return 0;
+}
+
+static void
+finish_overlapped(OVERLAPPED *ol, int fd, DWORD size)
+{
+    CloseHandle(ol->hEvent);
+
+    if (!(_osfile(fd) & (FDEV | FPIPE))) {
+	LONG high = ol->OffsetHigh;
+	DWORD low = ol->Offset + size;
+	if (low < ol->Offset)
+	    ++high;
+	SetFilePointer((HANDLE)_osfhnd(fd), low, &high, FILE_BEGIN);
+    }
+}
+
 #undef read
 /* License: Ruby's */
 ssize_t
@@ -5927,25 +5961,7 @@ rb_w32_read(int fd, void *buf, size_t size)
 
     /* if have cancel_io, use Overlapped I/O */
     if (cancel_io) {
-	memset(&ol, 0, sizeof(ol));
-	if (!(_osfile(fd) & (FDEV | FPIPE))) {
-	    LONG high = 0;
-	    DWORD low = SetFilePointer((HANDLE)_osfhnd(fd), 0, &high,
-				       FILE_CURRENT);
-#ifndef INVALID_SET_FILE_POINTER
-#define INVALID_SET_FILE_POINTER ((DWORD)-1)
-#endif
-	    if (low == INVALID_SET_FILE_POINTER) {
-		errno = map_errno(GetLastError());
-		MTHREAD_ONLY(LeaveCriticalSection(&_pioinfo(fd)->lock));
-		return -1;
-	    }
-	    ol.Offset = low;
-	    ol.OffsetHigh = high;
-	}
-	ol.hEvent = CreateEvent(NULL, TRUE, TRUE, NULL);
-	if (!ol.hEvent) {
-	    errno = map_errno(GetLastError());
+	if (setup_overlapped(&ol, fd)) {
 	    MTHREAD_ONLY(LeaveCriticalSection(&_pioinfo(fd)->lock));
 	    return -1;
 	}
@@ -6003,15 +6019,7 @@ rb_w32_read(int fd, void *buf, size_t size)
     }
 
     if (pol) {
-	CloseHandle(ol.hEvent);
-
-	if (!(_osfile(fd) & (FDEV | FPIPE))) {
-	    LONG high = ol.OffsetHigh;
-	    DWORD low = ol.Offset + read;
-	    if (low < ol.Offset)
-		++high;
-	    SetFilePointer((HANDLE)_osfhnd(fd), low, &high, FILE_BEGIN);
-	}
+	finish_overlapped(&ol, fd, read);
     }
 
     ret += read;
@@ -6071,25 +6079,7 @@ rb_w32_write(int fd, const void *buf, size_t size)
 
     /* if have cancel_io, use Overlapped I/O */
     if (cancel_io) {
-	memset(&ol, 0, sizeof(ol));
-	if (!(_osfile(fd) & (FDEV | FPIPE))) {
-	    LONG high = 0;
-	    DWORD method = _osfile(fd) & FAPPEND ? FILE_END : FILE_CURRENT;
-	    DWORD low = SetFilePointer((HANDLE)_osfhnd(fd), 0, &high, method);
-#ifndef INVALID_SET_FILE_POINTER
-#define INVALID_SET_FILE_POINTER ((DWORD)-1)
-#endif
-	    if (low == INVALID_SET_FILE_POINTER) {
-		errno = map_errno(GetLastError());
-		MTHREAD_ONLY(LeaveCriticalSection(&_pioinfo(fd)->lock));
-		return -1;
-	    }
-	    ol.Offset = low;
-	    ol.OffsetHigh = high;
-	}
-	ol.hEvent = CreateEvent(NULL, TRUE, TRUE, NULL);
-	if (!ol.hEvent) {
-	    errno = map_errno(GetLastError());
+	if (setup_overlapped(&ol, fd)) {
 	    MTHREAD_ONLY(LeaveCriticalSection(&_pioinfo(fd)->lock));
 	    return -1;
 	}
@@ -6135,15 +6125,7 @@ rb_w32_write(int fd, const void *buf, size_t size)
     }
 
     if (pol) {
-	CloseHandle(ol.hEvent);
-
-	if (!(_osfile(fd) & (FDEV | FPIPE))) {
-	    LONG high = ol.OffsetHigh;
-	    DWORD low = ol.Offset + written;
-	    if (low < ol.Offset)
-		++high;
-	    SetFilePointer((HANDLE)_osfhnd(fd), low, &high, FILE_BEGIN);
-	}
+	finish_overlapped(&ol, fd, written);
     }
 
     ret += written;

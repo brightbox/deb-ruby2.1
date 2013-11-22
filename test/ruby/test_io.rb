@@ -1218,6 +1218,19 @@ class TestIO < Test::Unit::TestCase
     end
   end
 
+  def test_close_read_write_separately
+    bug = '[ruby-list:49598]'
+    (1..10).each do |i|
+      assert_nothing_raised(IOError, "#{bug} trying ##{i}") do
+        IO.popen(EnvUtil.rubybin, "r+") {|f|
+          th = Thread.new {f.close_write}
+          f.close_read
+          th.join
+        }
+      end
+    end
+  end
+
   def test_pid
     r, w = IO.pipe
     assert_equal(nil, r.pid)
@@ -1232,6 +1245,17 @@ class TestIO < Test::Unit::TestCase
     assert_equal(pid2, pipe.pid)
     pipe.close
     assert_raise(IOError) { pipe.pid }
+  end
+
+  def tesst_pid_after_close_read
+    pid1 = pid2 = nil
+    IO.popen(["echo", ""], "r+") do |io|
+      pid1 = io.pid
+      io.close_read
+      pid2 = io.pid
+    end
+    assert_not_nil(pid1)
+    assert_equal(pid1, pid2)
   end
 
   def make_tempfile
@@ -2654,5 +2678,102 @@ End
 
       IO.select(tempfiles)
   }, bug8080
+  end
+
+  def test_read_32bit_boundary
+    bug8431 = '[ruby-core:55098] [Bug #8431]'
+    make_tempfile {|t|
+      assert_separately(["-", bug8431, t.path], <<-"end;")
+        msg = ARGV.shift
+        f = open(ARGV[0], "rb")
+        f.seek(0xffff_ffff)
+        assert_nil(f.read(1), msg)
+      end;
+    }
+  end if /mswin|mingw/ =~ RUBY_PLATFORM
+
+  def test_write_32bit_boundary
+    bug8431 = '[ruby-core:55098] [Bug #8431]'
+    make_tempfile {|t|
+      def t.close(unlink_now = false)
+        # TODO: Tempfile should deal with this delay on Windows?
+        # NOTE: re-opening with O_TEMPORARY does not work.
+        path = self.path
+        ret = super
+        if unlink_now
+          begin
+            File.unlink(path)
+          rescue Errno::ENOENT
+          rescue Errno::EACCES
+            sleep(2)
+            retry
+          end
+        end
+        ret
+      end
+
+      begin
+        assert_separately(["-", bug8431, t.path], <<-"end;", timeout: 30)
+          msg = ARGV.shift
+          f = open(ARGV[0], "wb")
+          f.seek(0xffff_ffff)
+          begin
+            # this will consume very long time or fail by ENOSPC on a
+            # filesystem which sparse file is not supported
+            f.write('1')
+            pos = f.tell
+          rescue Errno::ENOSPC
+            skip "non-sparse file system"
+          rescue SystemCallError
+          else
+            assert_equal(0x1_0000_0000, pos, msg)
+          end
+        end;
+      rescue Timeout::Error
+        skip "Timeout because of slow file writing"
+      end
+    }
+  end if /mswin|mingw/ =~ RUBY_PLATFORM
+
+  def test_read_unlocktmp_ensure
+    bug8669 = '[ruby-core:56121] [Bug #8669]'
+
+    str = ""
+    r, = IO.pipe
+    t = Thread.new { r.read(nil, str) }
+    sleep 0.1 until t.stop?
+    t.raise
+    sleep 0.1 while t.alive?
+    assert_nothing_raised(RuntimeError, bug8669) { str.clear }
+  ensure
+    t.kill
+  end
+
+  def test_readpartial_unlocktmp_ensure
+    bug8669 = '[ruby-core:56121] [Bug #8669]'
+
+    str = ""
+    r, = IO.pipe
+    t = Thread.new { r.readpartial(4096, str) }
+    sleep 0.1 until t.stop?
+    t.raise
+    sleep 0.1 while t.alive?
+    assert_nothing_raised(RuntimeError, bug8669) { str.clear }
+  ensure
+    t.kill
+  end
+
+  def test_sysread_unlocktmp_ensure
+    bug8669 = '[ruby-core:56121] [Bug #8669]'
+
+    str = ""
+    r, = IO.pipe
+    t = Thread.new { r.sysread(4096, str) }
+    sleep 0.1 until t.stop?
+    t.raise
+    sleep 0.1 while t.alive?
+    assert_nothing_raised(RuntimeError, bug8669) { str.clear }
+  ensure
+    t.kill
   end
 end

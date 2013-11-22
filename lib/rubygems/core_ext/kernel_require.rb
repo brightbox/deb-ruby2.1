@@ -4,7 +4,11 @@
 # See LICENSE.txt for permissions.
 #++
 
+require 'monitor'
+
 module Kernel
+
+  RUBYGEMS_ACTIVATION_MONITOR = Monitor.new # :nodoc:
 
   if defined?(gem_original_require) then
     # Ruby ships with a custom_require, override its require
@@ -32,6 +36,10 @@ module Kernel
   # that file has already been loaded is preserved.
 
   def require path
+    RUBYGEMS_ACTIVATION_MONITOR.enter
+
+    path = path.to_path if path.respond_to? :to_path
+
     spec = Gem.find_unresolved_default_spec(path)
     if spec
       Gem.remove_unresolved_default_spec(spec)
@@ -111,6 +119,8 @@ module Kernel
     end
 
     raise load_error
+  ensure
+    RUBYGEMS_ACTIVATION_MONITOR.exit
   end
 
   private :require

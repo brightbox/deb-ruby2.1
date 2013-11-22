@@ -771,12 +771,30 @@ rb_obj_tap(VALUE obj)
  *     Undefining one
  */
 
+/*
+ * Document-method: extended
+ *
+ * call-seq:
+ *    extended(othermod)
+ *
+ * The equivalent of <tt>included</tt>, but for extended modules.
+ *
+ *        module A
+ *          def self.extended(mod)
+ *            puts "#{self} extended in #{mod}"
+ *          end
+ *        end
+ *        module Enumerable
+ *          extend A
+ *        end
+ *         # => prints "A extended in Enumerable"
+ */
 
 /*
  * Document-method: included
  *
  * call-seq:
- *    included( othermod )
+ *    included(othermod)
  *
  * Callback invoked whenever the receiver is included in another
  * module or class. This should be used in preference to
@@ -798,7 +816,7 @@ rb_obj_tap(VALUE obj)
  * Document-method: prepended
  *
  * call-seq:
- *    prepended( othermod )
+ *    prepended(othermod)
  *
  * The equivalent of <tt>included</tt>, but for prepended modules.
  *
@@ -1320,7 +1338,8 @@ rb_obj_not_match(VALUE obj1, VALUE obj2)
  *  call-seq:
  *     obj <=> other -> 0 or nil
  *
- *  Returns 0 if obj === other, otherwise nil.
+ *  Returns 0 if +obj+ and +other+ are the same object
+ *  or <code>obj == other</code>, otherwise nil.
  *
  *  The <=> is used by various methods to compare objects, for example
  *  Enumerable#sort, Enumerable#max etc.
@@ -1330,7 +1349,7 @@ rb_obj_not_match(VALUE obj1, VALUE obj2)
  *  1 means self is bigger than other. Nil means the two values could not be
  *  compared.
  *
- *  When you defined <=>, you can include Comparable to gain the methods <=, <,
+ *  When you define <=>, you can include Comparable to gain the methods <=, <,
  *  ==, >=, > and between?.
  */
 static VALUE
@@ -1463,7 +1482,7 @@ rb_class_inherited_p(VALUE mod, VALUE arg)
     VALUE start = mod;
 
     if (mod == arg) return Qtrue;
-    if (!CLASS_OR_MODULE_P(arg)) {
+    if (!CLASS_OR_MODULE_P(arg) && !RB_TYPE_P(arg, T_ICLASS)) {
 	rb_raise(rb_eTypeError, "compared with non class/module");
     }
     arg = RCLASS_ORIGIN(arg);
@@ -3144,6 +3163,7 @@ Init_Object(void)
     rb_define_alloc_func(rb_cClass, rb_class_s_alloc);
     rb_undef_method(rb_cClass, "extend_object");
     rb_undef_method(rb_cClass, "append_features");
+    rb_undef_method(rb_cClass, "prepend_features");
 
     /*
      * Document-class: Data

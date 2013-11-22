@@ -8,7 +8,7 @@
 
   $Idaemons: /home/cvs/rb/enumerator/enumerator.c,v 1.1.1.1 2001/07/15 10:12:48 knu Exp $
   $RoughId: enumerator.c,v 1.6 2003/07/27 11:03:24 nobu Exp $
-  $Id: enumerator.c 39587 2013-03-04 15:50:02Z nagachika $
+  $Id: enumerator.c 42935 2013-09-13 14:18:33Z nagachika $
 
 ************************************************/
 
@@ -1347,8 +1347,8 @@ lazy_set_method(VALUE lazy, VALUE args, VALUE (*size_fn)(ANYARGS))
  *
  * Returns a lazy enumerator, whose methods map/collect,
  * flat_map/collect_concat, select/find_all, reject, grep, zip, take,
- * take_while, drop, drop_while, and cycle enumerate values only on an
- * as-needed basis.  However, if a block is given to zip or cycle, values
+ * take_while, drop, and drop_while enumerate values only on an
+ * as-needed basis.  However, if a block is given to zip, values
  * are enumerated immediately.
  *
  * === Example
@@ -1661,7 +1661,12 @@ lazy_zip_func(VALUE val, VALUE zip_args, int argc, VALUE *argv)
     }
 
     ary = rb_ary_new2(RARRAY_LEN(arg) + 1);
-    rb_ary_push(ary, argv[1]);
+    v = Qnil;
+    if (--argc > 0) {
+	++argv;
+	v = argc > 1 ? rb_ary_new4(argc, argv) : *argv;
+    }
+    rb_ary_push(ary, v);
     for (i = 0; i < RARRAY_LEN(arg); i++) {
 	v = rb_rescue2(call_next, RARRAY_PTR(arg)[i], next_stopped, 0,
 		       rb_eStopIteration, (VALUE)0);

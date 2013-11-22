@@ -189,21 +189,21 @@ module MakeMakefile
       ]
     elsif $configure_args.has_key?('--vendor')
       dirs = [
-        ['BINDIR',        '$(bindir)'],
-        ['RUBYCOMMONDIR', '$(vendordir)$(target_prefix)'],
-        ['RUBYLIBDIR',    '$(vendorlibdir)$(target_prefix)'],
-        ['RUBYARCHDIR',   '$(vendorarchdir)$(target_prefix)'],
-        ['HDRDIR',        '$(rubyhdrdir)/ruby$(target_prefix)'],
-        ['ARCHHDRDIR',    '$(rubyhdrdir)/$(arch)/ruby$(target_prefix)'],
+        ['BINDIR',        '$(DESTDIR)$(bindir)'],
+        ['RUBYCOMMONDIR', '$(DESTDIR)$(vendordir)$(target_prefix)'],
+        ['RUBYLIBDIR',    '$(DESTDIR)$(vendorlibdir)$(target_prefix)'],
+        ['RUBYARCHDIR',   '$(DESTDIR)$(vendorarchdir)$(target_prefix)'],
+        ['HDRDIR',        '$(DESTDIR)$(rubyhdrdir)/ruby$(target_prefix)'],
+        ['ARCHHDRDIR',    '$(DESTDIR)$(rubyhdrdir)/$(arch)/ruby$(target_prefix)'],
       ]
     else
       dirs = [
-        ['BINDIR',        '$(bindir)'],
-        ['RUBYCOMMONDIR', '$(sitedir)$(target_prefix)'],
-        ['RUBYLIBDIR',    '$(sitelibdir)$(target_prefix)'],
-        ['RUBYARCHDIR',   '$(sitearchdir)$(target_prefix)'],
-        ['HDRDIR',        '$(rubyhdrdir)/ruby$(target_prefix)'],
-        ['ARCHHDRDIR',    '$(rubyhdrdir)/$(arch)/ruby$(target_prefix)'],
+        ['BINDIR',        '$(DESTDIR)$(bindir)'],
+        ['RUBYCOMMONDIR', '$(DESTDIR)$(sitedir)$(target_prefix)'],
+        ['RUBYLIBDIR',    '$(DESTDIR)$(sitelibdir)$(target_prefix)'],
+        ['RUBYARCHDIR',   '$(DESTDIR)$(sitearchdir)$(target_prefix)'],
+        ['HDRDIR',        '$(DESTDIR)$(rubyhdrdir)/ruby$(target_prefix)'],
+        ['ARCHHDRDIR',    '$(DESTDIR)$(rubyhdrdir)/$(arch)/ruby$(target_prefix)'],
       ]
     end
     dirs << ['target_prefix', (target_prefix ? "/#{target_prefix}" : "")]
@@ -225,11 +225,10 @@ module MakeMakefile
     path = dir
   end
   $extmk ||= false
-  if not $extmk and File.exist?(RbConfig::CONFIG["rubyhdrdir"] + "/ruby/ruby.h")
-    $hdrdir = CONFIG["rubyhdrdir"]
+  if not $extmk and File.exist?(($hdrdir = RbConfig::CONFIG["rubyhdrdir"]) + "/ruby/ruby.h")
     $topdir = $hdrdir
     $top_srcdir = $hdrdir
-    $arch_hdrdir = CONFIG["rubyarchhdrdir"]
+    $arch_hdrdir = RbConfig::CONFIG["rubyarchhdrdir"]
   elsif File.exist?(($hdrdir = ($top_srcdir ||= topdir) + "/include")  + "/ruby.h")
     $topdir ||= RbConfig::CONFIG["topdir"]
     $arch_hdrdir = "$(extout)/include/$(arch)"
@@ -300,6 +299,10 @@ module MakeMakefile
       @log.sync = true
     end
 
+    def self::log_opened?
+      @log and not @log.closed?
+    end
+
     def self::open
       log_open
       $stderr.reopen(@log)
@@ -353,7 +356,7 @@ module MakeMakefile
   def xsystem command, opts = nil
     varpat = /\$\((\w+)\)|\$\{(\w+)\}/
     if varpat =~ command
-      vars = Hash.new {|h, k| h[k] = ''; ENV[k]}
+      vars = Hash.new {|h, k| h[k] = ENV[k]}
       command = command.dup
       nil while command.gsub!(varpat) {vars[$1||$2]}
     end
@@ -1055,9 +1058,17 @@ SRC
   # the +HAVE_FRAMEWORK_RUBY+ preprocessor macro would be passed to the
   # compiler.
   #
+  # If +fw+ is a pair of the framework name and its header file name
+  # that header file is checked, instead of the normally used header
+  # file which is named same as the framework.
   def have_framework(fw, &b)
+    if Array === fw
+      fw, header = *fw
+    else
+      header = "#{fw}.h"
+    end
     checking_for fw do
-      src = cpp_include("#{fw}/#{fw}.h") << "\n" "int main(void){return 0;}"
+      src = cpp_include("#{fw}/#{header}") << "\n" "int main(void){return 0;}"
       opt = " -framework #{fw}"
       if try_link(src, "-ObjC#{opt}", &b)
         $defs.push(format("-DHAVE_FRAMEWORK_%s", fw.tr_cpp))
@@ -1710,12 +1721,13 @@ SRC
       # default to package specific config command, as a last resort.
       get = proc {|opt| `#{pkgconfig} --#{opt}`.strip}
     end
+    orig_ldflags = $LDFLAGS
     if get and try_ldflags(ldflags = get['libs'])
       cflags = get['cflags']
       libs = get['libs-only-l']
       ldflags = (Shellwords.shellwords(ldflags) - Shellwords.shellwords(libs)).quote.join(" ")
       $CFLAGS += " " << cflags
-      $LDFLAGS += " " << ldflags
+      $LDFLAGS = [orig_ldflags, ldflags].join(' ')
       $libs += " " << libs
       Logging::message "package configuration for %s\n", pkg
       Logging::message "cflags: %s\nldflags: %s\nlibs: %s\n\n",
@@ -1728,6 +1740,7 @@ SRC
   end
 
   def with_destdir(dir)
+    return dir unless $extmk
     dir = dir.sub($dest_prefix_pattern, '')
     /\A\$[\(\{]/ =~ dir ? dir : "$(DESTDIR)"+dir
   end
@@ -1786,8 +1799,8 @@ ECHO = $(ECHO1:0=@echo)
 #### Start of system configuration section. ####
 #{"top_srcdir = " + $top_srcdir.sub(%r"\A#{Regexp.quote($topdir)}/", "$(topdir)/") if $extmk}
 srcdir = #{srcdir.gsub(/\$\((srcdir)\)|\$\{(srcdir)\}/) {mkintpath(CONFIG[$1||$2]).unspace}}
-topdir = #{mkintpath($extmk ? CONFIG["topdir"] : $topdir).unspace}
-hdrdir = #{mkintpath(CONFIG["hdrdir"]).unspace}
+topdir = #{mkintpath(topdir = $extmk ? CONFIG["topdir"] : $topdir).unspace}
+hdrdir = #{(hdrdir = CONFIG["hdrdir"]) == topdir ? "$(topdir)" : mkintpath(hdrdir).unspace}
 arch_hdrdir = #{$arch_hdrdir.quote}
 PATH_SEPARATOR = #{CONFIG['PATH_SEPARATOR']}
 VPATH = #{vpath.join(CONFIG['PATH_SEPARATOR'])}

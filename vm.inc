@@ -1265,7 +1265,7 @@ INSN_ENTRY(trace){
     }
 
     EXEC_EVENT_HOOK(th, flag, GET_SELF(), 0, 0 /* id and klass are resolved at callee */,
-		    (flag & RUBY_EVENT_RETURN | RUBY_EVENT_B_RETURN) ? TOPN(0) : Qundef);
+		    (flag & (RUBY_EVENT_RETURN | RUBY_EVENT_B_RETURN)) ? TOPN(0) : Qundef);
 
 #line 1271 "vm.inc"
 #undef CURRENT_INSN_trace
@@ -1767,7 +1767,7 @@ INSN_ENTRY(setinlinecache){
 {
 #line 1239 "insns.def"
     if (ic->ic_value.value == Qundef) {
-	rb_ary_push(GET_ISEQ()->mark_ary, val);
+	rb_iseq_add_mark_object(GET_ISEQ(), val);
     }
     ic->ic_value.value = val;
     ic->ic_vmstat = GET_VM_STATE_VERSION() - ruby_vm_const_missing_count;
