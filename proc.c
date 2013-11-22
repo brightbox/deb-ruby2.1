@@ -28,7 +28,7 @@ VALUE rb_cMethod;
 VALUE rb_cBinding;
 VALUE rb_cProc;
 
-static VALUE bmcall(VALUE, VALUE);
+static VALUE bmcall(VALUE, VALUE, int, VALUE *, VALUE);
 static int method_arity(VALUE);
 static int method_min_max_arity(VALUE, int *max);
 static ID attached;
@@ -481,6 +481,14 @@ rb_block_proc(void)
     return proc_new(rb_cProc, FALSE);
 }
 
+/*
+ * call-seq:
+ *   lambda { |...| block }  -> a_proc
+ *
+ * Equivalent to <code>Proc.new</code>, except the resulting Proc objects
+ * check the number of parameters passed when called.
+ */
+
 VALUE
 rb_block_lambda(void)
 {
@@ -491,20 +499,6 @@ VALUE
 rb_f_lambda(void)
 {
     rb_warn("rb_f_lambda() is deprecated; use rb_block_proc() instead");
-    return rb_block_lambda();
-}
-
-/*
- * call-seq:
- *   lambda { |...| block }  -> a_proc
- *
- * Equivalent to <code>Proc.new</code>, except the resulting Proc objects
- * check the number of parameters passed when called.
- */
-
-static VALUE
-proc_lambda(void)
-{
     return rb_block_lambda();
 }
 
@@ -952,7 +946,7 @@ mnew(VALUE klass, VALUE obj, ID id, VALUE mclass, int scope)
   again:
     me = rb_method_entry_without_refinements(klass, id, &defined_class);
     if (UNDEFINED_METHOD_ENTRY_P(me)) {
-	ID rmiss = rb_intern("respond_to_missing?");
+	ID rmiss = idRespond_to_missing;
 	VALUE sym = ID2SYM(id);
 
 	if (obj != Qundef && !rb_method_basic_definition_p(klass, rmiss)) {
@@ -1525,6 +1519,13 @@ method_clone(VALUE self)
 VALUE
 rb_method_call(int argc, VALUE *argv, VALUE method)
 {
+    VALUE proc = rb_block_given_p() ? rb_block_proc() : Qnil;
+    return rb_method_call_with_block(argc, argv, method, proc);
+}
+
+VALUE
+rb_method_call_with_block(int argc, VALUE *argv, VALUE method, VALUE pass_procval)
+{
     VALUE result = Qnil;	/* OK */
     struct METHOD *data;
     int state;
@@ -1544,8 +1545,15 @@ rb_method_call(int argc, VALUE *argv, VALUE method)
     }
     if ((state = EXEC_TAG()) == 0) {
 	rb_thread_t *th = GET_THREAD();
+	rb_block_t *block = 0;
 
-	PASS_PASSED_BLOCK_TH(th);
+	if (!NIL_P(pass_procval)) {
+	    rb_proc_t *pass_proc;
+	    GetProcPtr(pass_procval, pass_proc);
+	    block = &pass_proc->block;
+	}
+
+	th->passed_block = block;
 	result = rb_vm_call(th, data->recv, data->id,  argc, argv, data->me, data->defined_class);
     }
     POP_TAG();
@@ -1979,21 +1987,20 @@ method_inspect(VALUE method)
 static VALUE
 mproc(VALUE method)
 {
-    return rb_funcall(Qnil, rb_intern("proc"), 0);
+    return rb_funcall2(rb_mRubyVMFrozenCore, idProc, 0, 0);
 }
 
 static VALUE
 mlambda(VALUE method)
 {
-    return rb_funcall(Qnil, rb_intern("lambda"), 0);
+    return rb_funcall(rb_mRubyVMFrozenCore, idLambda, 0, 0);
 }
 
 static VALUE
-bmcall(VALUE args, VALUE method)
+bmcall(VALUE args, VALUE method, int argc, VALUE *argv, VALUE passed_proc)
 {
     volatile VALUE a;
     VALUE ret;
-    int argc;
 
     if (CLASS_OF(args) != rb_cArray) {
 	args = rb_ary_new3(1, args);
@@ -2002,7 +2009,7 @@ bmcall(VALUE args, VALUE method)
     else {
 	argc = check_argc(RARRAY_LEN(args));
     }
-    ret = rb_method_call(argc, RARRAY_PTR(args), method);
+    ret = rb_method_call_with_block(argc, RARRAY_PTR(args), method, passed_proc);
     RB_GC_GUARD(a) = args;
     return ret;
 }
@@ -2326,7 +2333,7 @@ Init_Proc(void)
 
     /* utility functions */
     rb_define_global_function("proc", rb_block_proc, 0);
-    rb_define_global_function("lambda", proc_lambda, 0);
+    rb_define_global_function("lambda", rb_block_lambda, 0);
 
     /* Method */
     rb_cMethod = rb_define_class("Method", rb_cObject);

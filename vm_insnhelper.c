@@ -919,18 +919,23 @@ opt_eq_func(VALUE recv, VALUE obj, CALL_INFO ci)
 }
 
 static VALUE
+vm_call0(rb_thread_t*, VALUE, ID, int, const VALUE*, const rb_method_entry_t*, VALUE);
+
+static VALUE
 check_match(VALUE pattern, VALUE target, enum vm_check_match_type type)
 {
     switch (type) {
       case VM_CHECKMATCH_TYPE_WHEN:
 	return pattern;
-      case VM_CHECKMATCH_TYPE_CASE:
-	return rb_funcall2(pattern, idEqq, 1, &target);
-      case VM_CHECKMATCH_TYPE_RESCUE: {
+      case VM_CHECKMATCH_TYPE_RESCUE:
 	if (!rb_obj_is_kind_of(pattern, rb_cModule)) {
 	    rb_raise(rb_eTypeError, "class or module required for rescue clause");
 	}
-	return RTEST(rb_funcall2(pattern, idEqq, 1, &target));
+	/* fall through */
+      case VM_CHECKMATCH_TYPE_CASE: {
+	VALUE defined_class;
+	rb_method_entry_t *me = rb_method_entry_with_refinements(CLASS_OF(pattern), idEqq, &defined_class);
+	return vm_call0(GET_THREAD(), pattern, idEqq, 1, &target, me, defined_class);
       }
       default:
 	rb_bug("check_match: unreachable");
@@ -1091,12 +1096,12 @@ extract_keywords(VALUE *orighash)
 }
 
 static inline int
-vm_callee_setup_keyword_arg(const rb_iseq_t *iseq, int argc, VALUE *orig_argv, VALUE *kwd)
+vm_callee_setup_keyword_arg(const rb_iseq_t *iseq, int argc, int m, VALUE *orig_argv, VALUE *kwd)
 {
     VALUE keyword_hash, orig_hash;
     int i, j;
 
-    if (argc > 0 &&
+    if (argc > m &&
 	!NIL_P(orig_hash = rb_check_hash_type(orig_argv[argc-1])) &&
 	(keyword_hash = extract_keywords(&orig_hash)) != 0) {
 	if (!orig_hash) {
@@ -1140,7 +1145,7 @@ vm_callee_setup_arg_complex(rb_thread_t *th, rb_call_info_t *ci, const rb_iseq_t
 
     /* keyword argument */
     if (iseq->arg_keyword != -1) {
-	argc = vm_callee_setup_keyword_arg(iseq, argc, orig_argv, &keyword_hash);
+	argc = vm_callee_setup_keyword_arg(iseq, argc, m, orig_argv, &keyword_hash);
     }
 
     /* mandatory */
@@ -1739,6 +1744,8 @@ vm_call_method(rb_thread_t *th, rb_control_frame_t *cfp, rb_call_info_t *ci)
   start_method_dispatch:
     if (ci->me != 0) {
 	if ((ci->me->flag == 0)) {
+	    VALUE klass;
+
 	  normal_method_dispatch:
 	    switch (ci->me->def->type) {
 	      case VM_METHOD_TYPE_ISEQ:{
@@ -1750,7 +1757,7 @@ vm_call_method(rb_thread_t *th, rb_control_frame_t *cfp, rb_call_info_t *ci)
 		CI_SET_FASTPATH(ci, vm_call_cfunc, enable_fastpath);
 		return vm_call_cfunc(th, cfp, ci);
 	      case VM_METHOD_TYPE_ATTRSET:{
-		rb_check_arity(ci->argc, 0, 1);
+		rb_check_arity(ci->argc, 1, 1);
 		ci->aux.index = 0;
 		CI_SET_FASTPATH(ci, vm_call_attrset, enable_fastpath && !(ci->flag & VM_CALL_ARGS_SPLAT));
 		return vm_call_attrset(th, cfp, ci);
@@ -1771,10 +1778,10 @@ vm_call_method(rb_thread_t *th, rb_control_frame_t *cfp, rb_call_info_t *ci)
 		return vm_call_bmethod(th, cfp, ci);
 	      }
 	      case VM_METHOD_TYPE_ZSUPER:{
-		VALUE klass;
-
+		klass = ci->me->klass;
+		klass = RCLASS_ORIGIN(klass);
 	      zsuper_method_dispatch:
-		klass = RCLASS_SUPER(ci->me->klass);
+		klass = RCLASS_SUPER(klass);
 		ci_temp = *ci;
 		ci = &ci_temp;
 
@@ -1833,9 +1840,16 @@ vm_call_method(rb_thread_t *th, rb_control_frame_t *cfp, rb_call_info_t *ci)
 	      no_refinement_dispatch:
 		if (ci->me->def->body.orig_me) {
 		    ci->me = ci->me->def->body.orig_me;
-		    goto normal_method_dispatch;
+		    if (UNDEFINED_METHOD_ENTRY_P(ci->me)) {
+			ci->me = 0;
+			goto start_method_dispatch;
+		    }
+		    else {
+			goto normal_method_dispatch;
+		    }
 		}
 		else {
+		    klass = ci->me->klass;
 		    goto zsuper_method_dispatch;
 		}
 	      }
@@ -1983,7 +1997,7 @@ vm_search_super_method(rb_thread_t *th, rb_control_frame_t *reg_cfp, rb_call_inf
 {
     VALUE current_defined_class;
     rb_iseq_t *iseq = GET_ISEQ();
-    VALUE sigval = TOPN(ci->orig_argc);
+    VALUE sigval = TOPN(ci->argc);
 
     current_defined_class = GET_CFP()->klass;
     if (NIL_P(current_defined_class)) {
@@ -2053,7 +2067,6 @@ vm_yield_with_cfunc(rb_thread_t *th, const rb_block_t *block,
     NODE *ifunc = (NODE *) block->iseq;
     VALUE val, arg, blockarg;
     int lambda = block_proc_is_lambda(block->proc);
-    rb_control_frame_t *cfp;
 
     if (lambda) {
 	arg = rb_ary_new4(argc, argv);
@@ -2077,13 +2090,10 @@ vm_yield_with_cfunc(rb_thread_t *th, const rb_block_t *block,
 	blockarg = Qnil;
     }
 
-    cfp = vm_push_frame(th, (rb_iseq_t *)ifunc, VM_FRAME_MAGIC_IFUNC, self,
-			0, VM_ENVVAL_PREV_EP_PTR(block->ep), 0,
-			th->cfp->sp, 1, 0);
+    vm_push_frame(th, (rb_iseq_t *)ifunc, VM_FRAME_MAGIC_IFUNC, self,
+		  0, VM_ENVVAL_PREV_EP_PTR(block->ep), 0,
+		  th->cfp->sp, 1, 0);
 
-    if (blockargptr) {
-	VM_CF_LEP(cfp)[0] = VM_ENVVAL_BLOCK_PTR(blockargptr);
-    }
     val = (*ifunc->nd_cfnc) (arg, ifunc->nd_tval, argc, argv, blockarg);
 
     th->cfp++;
@@ -2166,11 +2176,6 @@ vm_yield_setup_block_args(rb_thread_t *th, const rb_iseq_t * iseq,
 
     th->mark_stack_len = argc;
 
-    /* keyword argument */
-    if (iseq->arg_keyword != -1) {
-	argc = vm_callee_setup_keyword_arg(iseq, argc, argv, &keyword_hash);
-    }
-
     /*
      * yield [1, 2]
      *  => {|a|} => a = [1, 2]
@@ -2178,7 +2183,10 @@ vm_yield_setup_block_args(rb_thread_t *th, const rb_iseq_t * iseq,
      */
     arg0 = argv[0];
     if (!(iseq->arg_simple & 0x02) &&                           /* exclude {|a|} */
-	((m + iseq->arg_post_len) > 0 || iseq->arg_opts > 2) &&        /* this process is meaningful */
+	((m + iseq->arg_post_len) > 0 ||			/* positional arguments exist */
+	 iseq->arg_opts > 2 ||					/* multiple optional arguments exist */
+	 iseq->arg_keyword != -1 ||				/* any keyword arguments */
+	 0) &&
 	argc == 1 && !NIL_P(ary = rb_check_array_type(arg0))) { /* rhs is only an array */
 	th->mark_stack_len = argc = RARRAY_LENINT(ary);
 
@@ -2187,7 +2195,18 @@ vm_yield_setup_block_args(rb_thread_t *th, const rb_iseq_t * iseq,
 	MEMCPY(argv, RARRAY_PTR(ary), VALUE, argc);
     }
     else {
+	/* vm_push_frame current argv is at the top of sp because vm_invoke_block
+	 * set sp at the first element of argv.
+	 * Therefore when rb_check_array_type(arg0) called to_ary and called to_ary
+	 * or method_missing run vm_push_frame, it initializes local variables.
+	 * see also https://bugs.ruby-lang.org/issues/8484
+	 */
 	argv[0] = arg0;
+    }
+
+    /* keyword argument */
+    if (iseq->arg_keyword != -1) {
+	argc = vm_callee_setup_keyword_arg(iseq, argc, m, argv, &keyword_hash);
     }
 
     for (i=argc; i<m; i++) {

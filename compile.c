@@ -416,7 +416,7 @@ static int
 iseq_add_mark_object(rb_iseq_t *iseq, VALUE v)
 {
     if (!SPECIAL_CONST_P(v)) {
-	rb_ary_push(iseq->mark_ary, v);
+	rb_iseq_add_mark_object(iseq, v);
     }
     return COMPILE_OK;
 }
@@ -483,8 +483,8 @@ rb_iseq_compile_node(VALUE self, NODE *node)
 		ADD_LABEL(ret, start);
 		ADD_TRACE(ret, FIX2INT(iseq->location.first_lineno), RUBY_EVENT_B_CALL);
 		COMPILE(ret, "block body", node->nd_body);
-		ADD_TRACE(ret, nd_line(node), RUBY_EVENT_B_RETURN);
 		ADD_LABEL(ret, end);
+		ADD_TRACE(ret, nd_line(node), RUBY_EVENT_B_RETURN);
 
 		/* wide range catch handler must put at last */
 		ADD_CATCH_ENTRY(CATCH_TYPE_REDO, start, end, 0, start);
@@ -1264,7 +1264,8 @@ iseq_set_arguments(rb_iseq_t *iseq, LINK_ANCHOR *optargs, NODE *node_args)
 	}
 
 	if (iseq->type == ISEQ_TYPE_BLOCK) {
-	    if (iseq->arg_opts == 0 && iseq->arg_post_len == 0 && iseq->arg_rest == -1) {
+	    if (iseq->arg_opts == 0 && iseq->arg_post_len == 0 &&
+		iseq->arg_rest == -1 && iseq->arg_keyword == -1) {
 		if (iseq->argc == 1 && last_comma == 0) {
 		    /* {|a|} */
 		    iseq->arg_simple |= 0x02;
@@ -4471,7 +4472,7 @@ iseq_compile_each(rb_iseq_t *iseq, LINK_ANCHOR *ret, NODE * node, int poped)
 		    }
 		}
 
-		if (liseq->arg_keyword > 0) {
+		if (liseq->arg_keyword >= 0) {
 		    int local_size = liseq->local_size;
 		    int idx = local_size - liseq->arg_keyword;
 		    argc++;

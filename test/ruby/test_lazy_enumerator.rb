@@ -292,6 +292,18 @@ class TestLazyEnumerator < Test::Unit::TestCase
     assert_equal [[1, 42], [2, :foo]], zip.force
   end
 
+  def test_zip_nonsingle
+    bug8735 = '[ruby-core:56383] [Bug #8735]'
+
+    obj = Object.new
+    def obj.each
+      yield
+      yield 1, 2
+    end
+
+    assert_equal(obj.to_enum.zip(obj.to_enum), obj.to_enum.lazy.zip(obj.to_enum).force, bug8735)
+  end
+
   def test_take_rewound
     bug7696 = '[ruby-core:51470]'
     e=(1..42).lazy.take(2)
@@ -438,8 +450,8 @@ EOS
 
   def test_map_zip
     bug7507 = '[ruby-core:50545]'
-    assert_ruby_status(["-e", "GC.stress = true", "-e", "(1..10).lazy.map{}.zip(){}"], bug7507)
-    assert_ruby_status(["-e", "GC.stress = true", "-e", "(1..10).lazy.map{}.zip().to_a"], bug7507)
+    assert_ruby_status(["-e", "GC.stress = true", "-e", "(1..10).lazy.map{}.zip(){}"], "", bug7507)
+    assert_ruby_status(["-e", "GC.stress = true", "-e", "(1..10).lazy.map{}.zip().to_a"], "", bug7507)
   end
 
   def test_require_block

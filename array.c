@@ -67,7 +67,6 @@ memfill(register VALUE *mem, register long size, register VALUE val)
 #define ARY_OWNS_HEAP_P(a) (!FL_TEST((a), ELTS_SHARED|RARRAY_EMBED_FLAG))
 #define FL_SET_EMBED(a) do { \
     assert(!ARY_SHARED_P(a)); \
-    assert(!OBJ_FROZEN(a)); \
     FL_SET((a), RARRAY_EMBED_FLAG); \
 } while (0)
 #define FL_UNSET_EMBED(ary) FL_UNSET((ary), RARRAY_EMBED_FLAG|RARRAY_EMBED_LEN_MASK)
@@ -268,10 +267,10 @@ rb_ary_modify(VALUE ary)
         }
 	else if (ARY_SHARED_NUM(shared) == 1 && len > (RARRAY_LEN(shared)>>1)) {
 	    long shift = RARRAY_PTR(ary) - RARRAY_PTR(shared);
+	    FL_UNSET_SHARED(ary);
 	    ARY_SET_PTR(ary, RARRAY_PTR(shared));
 	    ARY_SET_CAPA(ary, RARRAY_LEN(shared));
 	    MEMMOVE(RARRAY_PTR(ary), RARRAY_PTR(ary)+shift, VALUE, len);
-	    FL_UNSET_SHARED(ary);
 	    FL_SET_EMBED(shared);
 	    rb_ary_decrement_share(shared);
 	}
@@ -3065,7 +3064,7 @@ take_items(VALUE obj, long n)
  *  corresponding elements from each argument.
  *
  *  This generates a sequence of <code>ary.size</code> _n_-element arrays,
- *  where _n_ is one more that the count of arguments.
+ *  where _n_ is one more than the count of arguments.
  *
  *  If the size of any argument is less than the size of the initial array,
  *  +nil+ values are supplied.
@@ -4114,27 +4113,28 @@ rb_ary_compact(VALUE ary)
 static VALUE
 rb_ary_count(int argc, VALUE *argv, VALUE ary)
 {
-    long n = 0;
+    long i, n = 0;
 
     if (argc == 0) {
-	VALUE *p, *pend;
+	VALUE v;
 
 	if (!rb_block_given_p())
 	    return LONG2NUM(RARRAY_LEN(ary));
 
-	for (p = RARRAY_PTR(ary), pend = p + RARRAY_LEN(ary); p < pend; p++) {
-	    if (RTEST(rb_yield(*p))) n++;
+	for (i = 0; i < RARRAY_LEN(ary); i++) {
+	    v = RARRAY_PTR(ary)[i];
+	    if (RTEST(rb_yield(v))) n++;
 	}
     }
     else {
-	VALUE obj, *p, *pend;
+	VALUE obj;
 
 	rb_scan_args(argc, argv, "1", &obj);
 	if (rb_block_given_p()) {
 	    rb_warn("given block not used");
 	}
-	for (p = RARRAY_PTR(ary), pend = p + RARRAY_LEN(ary); p < pend; p++) {
-	    if (rb_equal(*p, obj)) n++;
+	for (i = 0; i < RARRAY_LEN(ary); i++) {
+	    if (rb_equal(RARRAY_PTR(ary)[i], obj)) n++;
 	}
     }
 
@@ -5416,7 +5416,7 @@ rb_ary_drop_while(VALUE ary)
  *
  *     arr = [1, 2, 3, 4, 5, 6]
  *     arr.select { |a| a > 3 }     #=> [4, 5, 6]
- *     arr.reject { |a| a < 3 }     #=> [4, 5, 6]
+ *     arr.reject { |a| a < 3 }     #=> [3, 4, 5, 6]
  *     arr.drop_while { |a| a < 4 } #=> [4, 5, 6]
  *     arr                          #=> [1, 2, 3, 4, 5, 6]
  *

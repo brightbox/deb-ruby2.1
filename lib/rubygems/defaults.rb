@@ -54,7 +54,9 @@ module Gem
   # Path for gems in the user's home directory
 
   def self.user_dir
-    File.join Gem.user_home, '.gem', ruby_engine, ConfigMap[:ruby_version]
+    parts = [Gem.user_home, '.gem', ruby_engine]
+    parts << ConfigMap[:ruby_version] unless ConfigMap[:ruby_version].empty?
+    File.join parts
   end
 
   ##
@@ -109,5 +111,19 @@ module Gem
     else
       'ruby'
     end
+  end
+
+  ##
+  # The default signing key path
+
+  def self.default_key_path
+    File.join Gem.user_home, ".gem", "gem-private_key.pem"
+  end
+
+  ##
+  # The default signing certificate chain path
+
+  def self.default_cert_path
+    File.join Gem.user_home, ".gem", "gem-public_cert.pem"
   end
 end

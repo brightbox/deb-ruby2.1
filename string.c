@@ -1826,6 +1826,13 @@ rb_str_unlocktmp(VALUE str)
     return str;
 }
 
+VALUE
+rb_str_locktmp_ensure(VALUE str, VALUE (*func)(VALUE), VALUE arg)
+{
+    rb_str_locktmp(str);
+    return rb_ensure(func, arg, rb_str_unlocktmp, str);
+}
+
 void
 rb_str_set_len(VALUE str, long len)
 {
@@ -2338,6 +2345,7 @@ str_eql(const VALUE str1, const VALUE str2)
 	return Qtrue;
     return Qfalse;
 }
+
 /*
  *  call-seq:
  *     str == obj   -> true or false
@@ -3897,7 +3905,7 @@ str_gsub(int argc, VALUE *argv, VALUE str, int bang)
 
 	if (OBJ_TAINTED(val)) tainted = 1;
 
-	len = beg - offset;	/* copy pre-match substr */
+	len = beg0 - offset;	/* copy pre-match substr */
         if (len) {
             rb_enc_str_buf_cat(dest, cp, len, str_enc);
         }
@@ -7822,8 +7830,10 @@ rb_str_quote_unprintable(VALUE str)
     rb_encoding *enc;
     const char *ptr;
     long len;
-    rb_encoding *resenc = rb_default_internal_encoding();
+    rb_encoding *resenc;
 
+    Check_Type(str, T_STRING);
+    resenc = rb_default_internal_encoding();
     if (resenc == NULL) resenc = rb_default_external_encoding();
     enc = STR_ENC_GET(str);
     ptr = RSTRING_PTR(str);
@@ -7918,7 +7928,7 @@ sym_to_sym(VALUE sym)
 }
 
 static VALUE
-sym_call(VALUE args, VALUE sym, int argc, VALUE *argv)
+sym_call(VALUE args, VALUE sym, int argc, VALUE *argv, VALUE passed_proc)
 {
     VALUE obj;
 
@@ -7926,7 +7936,7 @@ sym_call(VALUE args, VALUE sym, int argc, VALUE *argv)
 	rb_raise(rb_eArgError, "no receiver given");
     }
     obj = argv[0];
-    return rb_funcall_passing_block(obj, (ID)sym, argc - 1, argv + 1);
+    return rb_funcall_with_block(obj, (ID)sym, argc - 1, argv + 1, passed_proc);
 }
 
 /*

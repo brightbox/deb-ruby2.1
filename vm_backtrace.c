@@ -177,10 +177,27 @@ location_label(rb_backtrace_location_t *loc)
  *
  * Usually consists of method, class, module, etc names with decoration.
  *
- * For example, using +caller_locations.rb+ from Thread::Backtrace::Location
+ * Consider the following example:
  *
- *	loc = c(0..1).first
- *	loc.label #=> a
+ *	def foo
+ *	  puts caller_locations(0).first.label
+ *
+ *	  1.times do
+ *	    puts caller_locations(0).first.label
+ *
+ *	    1.times do
+ *	      puts caller_locations(0).first.label
+ *	    end
+ *
+ *	  end
+ *	end
+ *
+ * The result of calling +foo+ is this:
+ *
+ *	label: foo
+ *	label: block in foo
+ *	label: block (2 levels) in foo
+ *
  */
 static VALUE
 location_label_m(VALUE self)
@@ -769,6 +786,8 @@ vm_backtrace_to_ary(rb_thread_t *th, int argc, VALUE *argv, int lev_default, int
     GetCoreDataFromValue(btval, rb_backtrace_t, bt);
 
     rb_scan_args(argc, argv, "02", &level, &vn);
+
+    if (argc == 2 && NIL_P(vn)) argc--;
 
     switch (argc) {
       case 0:

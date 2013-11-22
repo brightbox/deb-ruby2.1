@@ -2,7 +2,7 @@
 
   variable.c -
 
-  $Author: naruse $
+  $Author: nagachika $
   created at: Tue Apr 19 23:55:15 JST 1994
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -175,8 +175,13 @@ classname(VALUE klass, int *permanent)
 		path = find_class_path(klass, (ID)0);
 	    }
 	    if (NIL_P(path)) {
-		if (!cid || !st_lookup(RCLASS_IV_TBL(klass), (st_data_t)tmp_classpath, &n)) {
+		if (!cid) {
 		    return Qnil;
+		}
+		if (!st_lookup(RCLASS_IV_TBL(klass), (st_data_t)tmp_classpath, &n)) {
+		    path = rb_str_dup(rb_id2str(cid));
+		    OBJ_FREEZE(path);
+		    return path;
 		}
 		*permanent = 0;
 		path = (VALUE)n;
@@ -2227,7 +2232,7 @@ set_const_visibility(VALUE mod, int argc, VALUE *argv, rb_const_flag_t flag)
 
     if (argc == 0) {
 	rb_warning("%"PRIsVALUE" with no argument is just ignored",
-		   QUOTE_ID(rb_frame_callee()));
+		   QUOTE_ID(rb_frame_this_func()));
     }
 
     for (i = 0; i < argc; i++) {
