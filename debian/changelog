@@ -1,3 +1,10 @@
+ruby2.0 (2.0.0.353-1bbox1) precise; urgency=high
+
+  * New upstream release
+  * Fixes CVE-2013-4164
+
+ -- John Leach <john@brightbox.co.uk>  Sat, 23 Nov 2013 00:03:00 +0000
+
 ruby2.0 (2.0.0.195-2bbox1) precise; urgency=low
 
   * New upstream release
