@@ -1,3 +1,9 @@
+ruby2.0 (2.0.0.353-1bbox2) precise; urgency=low
+
+  * Fixed ruby2.0 dependency on libruby2.0
+
+ -- John Leach <john@brightbox.co.uk>  Tue, 26 Nov 2013 23:27:14 +0000
+
 ruby2.0 (2.0.0.353-1bbox1) precise; urgency=high
 
   * New upstream release
