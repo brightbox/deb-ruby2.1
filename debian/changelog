@@ -1,3 +1,11 @@
+ruby2.0 (2.0.0.353-1) unstable; urgency=low
+
+  * New upstream release
+    + Includes fix for Heap Overflow in Floating Point Parsing (CVE-2013-4164)
+      Closes: #730190
+
+ -- Antonio Terceiro <terceiro@debian.org>  Mon, 25 Nov 2013 22:34:25 -0300
+
 ruby2.0 (2.0.0.343-1) unstable; urgency=low
 
   * New upstream version (snapshot from 2.0 maintainance branch).
