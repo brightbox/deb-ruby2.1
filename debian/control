@@ -1,7 +1,7 @@
 Source: ruby2.0
 Section: ruby
 Priority: extra
-Maintainer: Antonio Terceiro <terceiro@debian.org>
+Maintainer: John Leach <john@brightbox.co.uk>
 Build-Depends: debhelper (>= 8.0.0), autotools-dev, dh-autoreconf, ruby1.9.1, bison, libgdbm-dev, libncursesw5-dev, libncurses5-dev, libreadline6-dev, tcl-dev, tk-dev, zlib1g-dev, libssl-dev, procps, file, libffi-dev, libyaml-dev, openssl, chrpath, coreutils (>= 7.5)
 Standards-Version: 3.9.4
 Homepage: http://www.ruby-lang.org/
