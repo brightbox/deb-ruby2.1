@@ -1,3 +1,76 @@
+Fri Nov 22 13:18:28 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* util.c (ruby_strtod): BigMath requires more precision.
+
+Fri Nov 22 12:46:08 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* util.c (ruby_strtod): ignore too long fraction part, which does not
+	  affect the result.
+
+Wed Nov 20 15:20:00 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* test/ruby/test_thread.rb (test_mutex_unlock_on_trap): extend waiting
+	  time to invocation of signal handler from 0.01 sec to 0.2 sec.
+	  RubyCI report error on mswin. reported by @unak
+
+Wed Nov 13 11:57:01 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems: Update to RubyGems 2.0.14. [ruby-core:58300]
+	  [Backport #9104]
+	  the patch is provided by drbrain (Eric Hodel).
+
+Tue Nov 12 23:41:43 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* load.c (rb_feature_p): deal with default loadable suffixes.
+
+	* load.c (load_lock): initialize statically linked extensions.
+
+	* load.c (search_required, rb_require_safe): deal with statically
+	  linked extensions.
+
+	* load.c (ruby_init_ext): defer initialization of statically linked
+	  extensions until required actually.  [Bug #8883]
+
+Tue Nov 12 23:41:43 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* load.c (ruby_init_ext): share feature names between frame name and
+	  provided features.
+
+Tue Nov 12 23:33:08 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* tool/rbinstall.rb (Gem::Specification.load): obtain spec date from
+	  VCS for the case using git, RUBY_RELEASE_DATE is the last resort.
+	  probably fixes [Bug #9085].
+
+Tue Nov 12 23:24:35 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* configure.in (RUNRUBY): append -- only after runruby.rb, not
+	  cross-compiling baseruby, so that $(RUN_OPT) can be command line
+	  options.  [ruby-dev:47703] [Bug #8893]
+
+Tue Nov 12 23:24:35 2013  Masaki Matsushita  <glass.saga@gmail.com>
+
+	(partially merged from r42862)
+	* common.mk: use RUNRUBY instead of MINIRUBY because MINIRUBY can't
+	  require extension libraries. The patch is from nobu
+	  (Nobuyoshi Nakada).
+
+Mon Nov 11 23:54:51 2013  Tanaka Akira  <akr@fsij.org>
+
+	* ext/socket/init.c (cloexec_accept): Fix a compile error on
+	  Debian GNU/kFreeBSD.  Consider HAVE_ACCEPT4 is defined
+	  but SOCK_CLOEXEC is not defined.
+
+Mon Nov 11 22:14:37 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* include/ruby/win32.h (rb_infinity_float): suppress overflow in
+	  constant arithmetic warnings.  [ruby-core:57981] [Bug #9044]
+
+Mon Nov 11 22:14:37 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* win32/Makefile.sub (config.h): VC 2013 supports C99 mathematics
+	  functions.  [ruby-core:57981] [Bug #9044]
+
 Thu Oct 31 22:28:04 2013  Martin Bosslet  <Martin.Bosslet@gmail.com>
 
 	* test/openssl/test_pkey_ec.rb: Skip tests for "Oakley" curves as
