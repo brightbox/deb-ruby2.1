@@ -1,3 +1,14 @@
+ruby2.1 (2.1.0-1bbox1) precise; urgency=low
+
+  * New major upstream release, 2.1
+  * Updated packaging for 2.1
+  * Removed 20100829-rubygems_disable_update_system.diff
+  * Removed backported_multiarch_support.patch
+  * Added 20140107-rubygems-performance-fix.patch to fix a rubygems 2.2.0
+    gem install slowdown (fixed in rubygems 2.2.1)
+
+ -- John Leach <john@brightbox.co.uk>  Tue, 07 Jan 2014 18:51:58 +0000
+
 ruby2.0 (2.0.0.353-1bbox2) precise; urgency=low
 
   * Fixed ruby2.0 dependency on libruby2.0
