@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_pkey_rsa.c 36355 2012-07-10 13:57:11Z nobu $
+ * $Id: ossl_pkey_rsa.c 40316 2013-04-16 02:24:09Z zzak $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.
@@ -291,8 +291,9 @@ ossl_rsa_is_private(VALUE self)
 
 /*
  * call-seq:
- *   rsa.to_pem                      => PEM-format String
- *   rsa.to_pem(cipher, pass_phrase) => PEM-format String
+ *   rsa.export([cipher, pass_phrase]) => PEM-format String
+ *   rsa.to_pem([cipher, pass_phrase]) => PEM-format String
+ *   rsa.to_s([cipher, pass_phrase]) => PEM-format String
  *
  * Outputs this keypair in PEM encoding.  If +cipher+ and +pass_phrase+ are
  * given they will be used to encrypt the key.  +cipher+ must be an

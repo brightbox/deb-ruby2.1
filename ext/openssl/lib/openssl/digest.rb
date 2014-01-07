@@ -14,7 +14,7 @@
 # (See the file 'LICENCE'.)
 #
 # = Version
-# $Id: digest.rb 36895 2012-09-04 00:57:31Z nobu $
+# $Id: digest.rb 44116 2013-12-10 07:16:03Z nobu $
 #
 #++
 
@@ -31,38 +31,37 @@ module OpenSSL
     #
     # === Examples
     #
-    #   OpenSSL::Digest.digest("SHA256, "abc")
+    #   OpenSSL::Digest.digest("SHA256", "abc")
     #
     # which is equivalent to:
     #
     #   OpenSSL::Digest::SHA256.digest("abc")
 
     def self.digest(name, data)
-        super(data, name)
+      super(data, name)
     end
 
     alg.each{|name|
-      klass = Class.new(Digest){
-        define_method(:initialize){|*data|
-          if data.length > 1
-            raise ArgumentError,
-              "wrong number of arguments (#{data.length} for 1)"
-          end
-          super(name, data.first)
-        }
+      klass = Class.new(self) {
+        define_method(:initialize, ->(data = nil) {super(name, data)})
       }
       singleton = (class << klass; self; end)
       singleton.class_eval{
-        define_method(:digest){|data| Digest.digest(name, data) }
-        define_method(:hexdigest){|data| Digest.hexdigest(name, data) }
+        define_method(:digest){|data| new.digest(data) }
+        define_method(:hexdigest){|data| new.hexdigest(data) }
       }
       const_set(name, klass)
     }
 
-    # This class is only provided for backwards compatibility.  Use OpenSSL::Digest in the future.
-    class Digest < Digest
+    # Deprecated.
+    #
+    # This class is only provided for backwards compatibility.
+    class Digest < Digest # :nodoc:
+      # Deprecated.
+      #
+      # See OpenSSL::Digest.new
       def initialize(*args)
-        # add warning
+        warn('Digest::Digest is deprecated; use Digest')
         super(*args)
       end
     end

@@ -15,7 +15,7 @@
 # NOTE: You can find Japanese version of this document at:
 # http://www.ruby-lang.org/ja/man/html/net_pop.html
 #
-#   $Id: pop.rb 40295 2013-04-14 15:19:46Z nagachika $
+#   $Id: pop.rb 44164 2013-12-13 02:38:55Z a_matsuda $
 #
 # See Net::POP3 for documentation.
 #
@@ -195,7 +195,7 @@ module Net
   class POP3 < Protocol
 
     # svn revision of this library
-    Revision = %q$Revision: 40295 $.split[1]
+    Revision = %q$Revision: 44164 $.split[1]
 
     #
     # Class Parameters
@@ -707,7 +707,7 @@ module Net
       @mails.each {|m| m.uid = uidl[m.number] }
     end
 
-    # deguging output for +msg+
+    # debugging output for +msg+
     def logging(msg)
       @debug_output << msg + "\n" if @debug_output
     end
@@ -889,7 +889,7 @@ module Net
 
     def initialize(sock)
       @socket = sock
-      @error_occured = false
+      @error_occurred = false
       res = check_response(critical { recv_response() })
       @apop_stamp = res.slice(/<[!-~]+@[!-~]+>/)
     end
@@ -1007,11 +1007,11 @@ module Net
     end
 
     def critical
-      return '+OK dummy ok response' if @error_occured
+      return '+OK dummy ok response' if @error_occurred
       begin
         return yield()
       rescue Exception
-        @error_occured = true
+        @error_occurred = true
         raise
       end
     end

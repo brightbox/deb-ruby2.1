@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_x509attr.c 31103 2011-03-13 09:11:45Z akr $
+ * $Id: ossl_x509attr.c 41527 2013-06-21 07:39:15Z charliesome $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001 Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.
@@ -165,8 +165,8 @@ ossl_x509attr_get_oid(VALUE self)
 #  define OSSL_X509ATTR_IS_SINGLE(attr)  ((attr)->single)
 #  define OSSL_X509ATTR_SET_SINGLE(attr) ((attr)->single = 1)
 #else
-#  define OSSL_X509ATTR_IS_SINGLE(attr)  (!(attr)->set)
-#  define OSSL_X509ATTR_SET_SINGLE(attr) ((attr)->set = 0)
+#  define OSSL_X509ATTR_IS_SINGLE(attr)  (!(attr)->value.set)
+#  define OSSL_X509ATTR_SET_SINGLE(attr) ((attr)->value.set = 0)
 #endif
 
 /*

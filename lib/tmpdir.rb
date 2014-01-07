@@ -1,7 +1,7 @@
 #
 # tmpdir - retrieve temporary directory path
 #
-# $Id: tmpdir.rb 38348 2012-12-12 12:40:51Z nobu $
+# $Id: tmpdir.rb 40825 2013-05-19 03:10:21Z ktsj $
 #
 
 require 'fileutils'
@@ -39,7 +39,7 @@ class Dir
   # Dir.mktmpdir creates a temporary directory.
   #
   # The directory is created with 0700 permission.
-  # Application should not change the permission to make the temporary directory accesible from other users.
+  # Application should not change the permission to make the temporary directory accessible from other users.
   #
   # The prefix and suffix of the name of the directory is specified by
   # the optional first argument, <i>prefix_suffix</i>.

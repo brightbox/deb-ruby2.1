@@ -2,13 +2,13 @@
 
   enumerator.c - provides Enumerator class
 
-  $Author: nagachika $
+  $Author: nobu $
 
   Copyright (C) 2001-2003 Akinori MUSHA
 
   $Idaemons: /home/cvs/rb/enumerator/enumerator.c,v 1.1.1.1 2001/07/15 10:12:48 knu Exp $
   $RoughId: enumerator.c,v 1.6 2003/07/27 11:03:24 nobu Exp $
-  $Id: enumerator.c 39587 2013-03-04 15:50:02Z nagachika $
+  $Id: enumerator.c 43929 2013-11-30 07:25:17Z nobu $
 
 ************************************************/
 
@@ -120,7 +120,7 @@ struct enumerator {
     VALUE feedvalue;
     VALUE stop_exc;
     VALUE size;
-    VALUE (*size_fn)(ANYARGS);
+    rb_enumerator_size_func *size_fn;
 };
 
 static VALUE rb_cGenerator, rb_cYielder;
@@ -168,6 +168,7 @@ static const rb_data_type_t enumerator_data_type = {
 	enumerator_free,
 	enumerator_memsize,
     },
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 static struct enumerator *
@@ -266,10 +267,11 @@ enumerator_allocate(VALUE klass)
 }
 
 static VALUE
-enumerator_init(VALUE enum_obj, VALUE obj, VALUE meth, int argc, VALUE *argv, VALUE (*size_fn)(ANYARGS), VALUE size)
+enumerator_init(VALUE enum_obj, VALUE obj, VALUE meth, int argc, VALUE *argv, rb_enumerator_size_func *size_fn, VALUE size)
 {
     struct enumerator *ptr;
 
+    rb_check_frozen(enum_obj);
     TypedData_Get_Struct(enum_obj, struct enumerator, &enumerator_data_type, ptr);
 
     if (!ptr) {
@@ -338,10 +340,11 @@ enumerator_initialize(int argc, VALUE *argv, VALUE obj)
 	rb_check_arity(argc, 0, 1);
 	recv = generator_init(generator_allocate(rb_cGenerator), rb_block_proc());
 	if (argc) {
-            if (NIL_P(argv[0]) || rb_obj_is_proc(argv[0]) ||
+            if (NIL_P(argv[0]) || rb_respond_to(argv[0], id_call) ||
                 (RB_TYPE_P(argv[0], T_FLOAT) && RFLOAT_VALUE(argv[0]) == INFINITY)) {
                 size = argv[0];
-            } else {
+            }
+            else {
                 size = rb_to_int(argv[0]);
             }
             argc = 0;
@@ -401,10 +404,10 @@ rb_enumeratorize(VALUE obj, VALUE meth, int argc, VALUE *argv)
 }
 
 static VALUE
-lazy_to_enum_i(VALUE self, VALUE meth, int argc, VALUE *argv, VALUE (*size_fn)(ANYARGS));
+lazy_to_enum_i(VALUE self, VALUE meth, int argc, VALUE *argv, rb_enumerator_size_func *size_fn);
 
 VALUE
-rb_enumeratorize_with_size(VALUE obj, VALUE meth, int argc, VALUE *argv, VALUE (*size_fn)(ANYARGS))
+rb_enumeratorize_with_size(VALUE obj, VALUE meth, int argc, VALUE *argv, rb_enumerator_size_func *size_fn)
 {
     /* Similar effect as calling obj.to_enum, i.e. dispatching to either
        Kernel#to_enum vs Lazy#to_enum */
@@ -412,7 +415,7 @@ rb_enumeratorize_with_size(VALUE obj, VALUE meth, int argc, VALUE *argv, VALUE (
 	return lazy_to_enum_i(obj, meth, argc, argv, size_fn);
     else
 	return enumerator_init(enumerator_allocate(rb_cEnumerator),
-	    obj, meth, argc, argv, size_fn, Qnil);
+			       obj, meth, argc, argv, size_fn, Qnil);
 }
 
 static VALUE
@@ -432,10 +435,38 @@ enumerator_block_call(VALUE obj, rb_block_call_func *func, VALUE arg)
 
 /*
  * call-seq:
- *   enum.each {...}
+ *   enum.each { |elm| block }                    -> obj
+ *   enum.each                                    -> enum
+ *   enum.each(*appending_args) { |elm| block }   -> obj
+ *   enum.each(*appending_args)                   -> an_enumerator
  *
- * Iterates over the block according to how this Enumerable was constructed.
- * If no block is given, returns self.
+ * Iterates over the block according to how this Enumerator was constructed.
+ * If no block and no arguments are given, returns self.
+ *
+ * === Examples
+ *
+ *   "Hello, world!".scan(/\w+/)                     #=> ["Hello", "world"]
+ *   "Hello, world!".to_enum(:scan, /\w+/).to_a      #=> ["Hello", "world"]
+ *   "Hello, world!".to_enum(:scan).each(/\w+/).to_a #=> ["Hello", "world"]
+ *
+ *   obj = Object.new
+ *
+ *   def obj.each_arg(a, b=:b, *rest)
+ *     yield a
+ *     yield b
+ *     yield rest
+ *     :method_returned
+ *   end
+ *
+ *   enum = obj.to_enum :each_arg, :a, :x
+ *
+ *   enum.each.to_a                  #=> [:a, :x, []]
+ *   enum.each.equal?(enum)          #=> true
+ *   enum.each { |elm| elm }         #=> :method_returned
+ *
+ *   enum.each(:y, :z).to_a          #=> [:a, :x, [:y, :z]]
+ *   enum.each(:y, :z).equal?(enum)  #=> false
+ *   enum.each(:y, :z) { |elm| elm } #=> :method_returned
  *
  */
 static VALUE
@@ -445,6 +476,10 @@ enumerator_each(int argc, VALUE *argv, VALUE obj)
 	struct enumerator *e = enumerator_ptr(obj = rb_obj_dup(obj));
 	VALUE args = e->args;
 	if (args) {
+#if SIZEOF_INT < SIZEOF_LONG
+	    /* check int range overflow */
+	    rb_long2int(RARRAY_LEN(args) + argc);
+#endif
 	    args = rb_ary_dup(args);
 	    rb_ary_cat(args, argv, argc);
 	}
@@ -458,13 +493,11 @@ enumerator_each(int argc, VALUE *argv, VALUE obj)
 }
 
 static VALUE
-enumerator_with_index_i(VALUE val, VALUE m, int argc, VALUE *argv)
+enumerator_with_index_i(RB_BLOCK_CALL_FUNC_ARGLIST(val, m))
 {
-    VALUE idx;
-    VALUE *memo = (VALUE *)m;
-
-    idx = INT2FIX(*memo);
-    ++*memo;
+    NODE *memo = (NODE *)m;
+    VALUE idx = memo->u1.value;
+    memo->u1.value = rb_int_succ(idx);
 
     if (argc <= 1)
 	return rb_yield_values(2, val, idx);
@@ -474,6 +507,12 @@ enumerator_with_index_i(VALUE val, VALUE m, int argc, VALUE *argv)
 
 static VALUE
 enumerator_size(VALUE obj);
+
+static VALUE
+enumerator_enum_size(VALUE obj, VALUE args, VALUE eobj)
+{
+    return enumerator_size(obj);
+}
 
 /*
  * call-seq:
@@ -493,9 +532,12 @@ enumerator_with_index(int argc, VALUE *argv, VALUE obj)
     VALUE memo;
 
     rb_scan_args(argc, argv, "01", &memo);
-    RETURN_SIZED_ENUMERATOR(obj, argc, argv, enumerator_size);
-    memo = NIL_P(memo) ? 0 : (VALUE)NUM2LONG(memo);
-    return enumerator_block_call(obj, enumerator_with_index_i, (VALUE)&memo);
+    RETURN_SIZED_ENUMERATOR(obj, argc, argv, enumerator_enum_size);
+    if (NIL_P(memo))
+	memo = INT2FIX(0);
+    else
+	memo = rb_to_int(memo);
+    return enumerator_block_call(obj, enumerator_with_index_i, (VALUE)NEW_MEMO(memo, 0, 0));
 }
 
 /*
@@ -515,7 +557,7 @@ enumerator_each_with_index(VALUE obj)
 }
 
 static VALUE
-enumerator_with_object_i(VALUE val, VALUE memo, int argc, VALUE *argv)
+enumerator_with_object_i(RB_BLOCK_CALL_FUNC_ARGLIST(val, memo))
 {
     if (argc <= 1)
 	return rb_yield_values(2, val, memo);
@@ -525,6 +567,8 @@ enumerator_with_object_i(VALUE val, VALUE memo, int argc, VALUE *argv)
 
 /*
  * call-seq:
+ *   e.each_with_object(obj) {|(*args), obj| ... }
+ *   e.each_with_object(obj)
  *   e.with_object(obj) {|(*args), obj| ... }
  *   e.with_object(obj)
  *
@@ -553,14 +597,14 @@ enumerator_with_object_i(VALUE val, VALUE memo, int argc, VALUE *argv)
 static VALUE
 enumerator_with_object(VALUE obj, VALUE memo)
 {
-    RETURN_SIZED_ENUMERATOR(obj, 1, &memo, enumerator_size);
+    RETURN_SIZED_ENUMERATOR(obj, 1, &memo, enumerator_enum_size);
     enumerator_block_call(obj, enumerator_with_object_i, memo);
 
     return memo;
 }
 
 static VALUE
-next_ii(VALUE i, VALUE obj, int argc, VALUE *argv)
+next_ii(RB_BLOCK_CALL_FUNC_ARGLIST(i, obj))
 {
     struct enumerator *e = enumerator_ptr(obj);
     VALUE feedvalue = Qnil;
@@ -693,7 +737,7 @@ ary2sv(VALUE args, int dup)
         return Qnil;
 
       case 1:
-        return RARRAY_PTR(args)[0];
+        return RARRAY_AREF(args, 0);
 
       default:
         if (dup)
@@ -815,6 +859,24 @@ enumerator_peek(VALUE obj)
  *
  * This value is cleared after being yielded.
  *
+ *   # Array#map passes the array's elements to "yield" and collects the
+ *   # results of "yield" as an array.
+ *   # Following example shows that "next" returns the passed elements and
+ *   # values passed to "feed" are collected as an array which can be
+ *   # obtained by StopIteration#result.
+ *   e = [1,2,3].map
+ *   p e.next           #=> 1
+ *   e.feed "a"
+ *   p e.next           #=> 2
+ *   e.feed "b"
+ *   p e.next           #=> 3
+ *   e.feed "c"
+ *   begin
+ *     e.next
+ *   rescue StopIteration
+ *     p $!.result      #=> ["a", "b", "c"]
+ *   end
+ *
  *   o = Object.new
  *   def o.each
  *     x = yield         # (2) blocks
@@ -870,24 +932,24 @@ enumerator_rewind(VALUE obj)
     return obj;
 }
 
+static VALUE append_method(VALUE obj, VALUE str, ID default_method, VALUE default_args);
+
 static VALUE
 inspect_enumerator(VALUE obj, VALUE dummy, int recur)
 {
     struct enumerator *e;
-    const char *cname;
-    VALUE eobj, eargs, str, method;
-    int tainted, untrusted;
+    VALUE eobj, str, cname;
 
     TypedData_Get_Struct(obj, struct enumerator, &enumerator_data_type, e);
 
-    cname = rb_obj_classname(obj);
+    cname = rb_obj_class(obj);
 
     if (!e || e->obj == Qundef) {
-	return rb_sprintf("#<%s: uninitialized>", cname);
+	return rb_sprintf("#<%"PRIsVALUE": uninitialized>", rb_class_path(cname));
     }
 
     if (recur) {
-	str = rb_sprintf("#<%s: ...>", cname);
+	str = rb_sprintf("#<%"PRIsVALUE": ...>", rb_class_path(cname));
 	OBJ_TAINT(str);
 	return str;
     }
@@ -897,30 +959,38 @@ inspect_enumerator(VALUE obj, VALUE dummy, int recur)
 	eobj = e->obj;
     }
 
-    tainted   = OBJ_TAINTED(eobj);
-    untrusted = OBJ_UNTRUSTED(eobj);
-
     /* (1..100).each_cons(2) => "#<Enumerator: 1..100:each_cons(2)>" */
-    str = rb_sprintf("#<%s: ", cname);
-    rb_str_concat(str, rb_inspect(eobj));
+    str = rb_sprintf("#<%"PRIsVALUE": %+"PRIsVALUE, rb_class_path(cname), eobj);
+    append_method(obj, str, e->meth, e->args);
+
+    rb_str_buf_cat2(str, ">");
+
+    return str;
+}
+
+static VALUE
+append_method(VALUE obj, VALUE str, ID default_method, VALUE default_args)
+{
+    VALUE method, eargs;
+
     method = rb_attr_get(obj, id_method);
-    if (NIL_P(method)) {
+    if (method != Qfalse) {
+	ID mid = default_method;
+	if (!NIL_P(method)) {
+	    Check_Type(method, T_SYMBOL);
+	    mid = SYM2ID(method);
+	}
 	rb_str_buf_cat2(str, ":");
-	rb_str_buf_cat2(str, rb_id2name(e->meth));
-    }
-    else if (method != Qfalse) {
-	Check_Type(method, T_SYMBOL);
-	rb_str_buf_cat2(str, ":");
-	rb_str_buf_cat2(str, rb_id2name(SYM2ID(method)));
+	rb_str_buf_append(str, rb_id2str(mid));
     }
 
     eargs = rb_attr_get(obj, id_arguments);
     if (NIL_P(eargs)) {
-	eargs = e->args;
+	eargs = default_args;
     }
     if (eargs != Qfalse) {
 	long   argc = RARRAY_LEN(eargs);
-	VALUE *argv = RARRAY_PTR(eargs);
+	const VALUE *argv = RARRAY_CONST_PTR(eargs); /* WB: no new reference */
 
 	if (argc > 0) {
 	    rb_str_buf_cat2(str, "(");
@@ -928,19 +998,13 @@ inspect_enumerator(VALUE obj, VALUE dummy, int recur)
 	    while (argc--) {
 		VALUE arg = *argv++;
 
-		rb_str_concat(str, rb_inspect(arg));
+		rb_str_append(str, rb_inspect(arg));
 		rb_str_buf_cat2(str, argc > 0 ? ", " : ")");
-
-		if (OBJ_TAINTED(arg)) tainted = TRUE;
-		if (OBJ_UNTRUSTED(arg)) untrusted = TRUE;
+		OBJ_INFECT(str, arg);
 	    }
 	}
     }
 
-    rb_str_buf_cat2(str, ">");
-
-    if (tainted) OBJ_TAINT(str);
-    if (untrusted) OBJ_UNTRUST(str);
     return str;
 }
 
@@ -972,16 +1036,19 @@ static VALUE
 enumerator_size(VALUE obj)
 {
     struct enumerator *e = enumerator_ptr(obj);
+    int argc = 0;
+    const VALUE *argv = NULL;
+    VALUE size;
 
     if (e->size_fn) {
 	return (*e->size_fn)(e->obj, e->args, obj);
     }
-    if (rb_obj_is_proc(e->size)) {
-        if (e->args)
-	    return rb_proc_call(e->size, e->args);
-        else
-            return rb_proc_call_with_block(e->size, 0, 0, Qnil);
+    if (e->args) {
+	argc = (int)RARRAY_LEN(e->args);
+	argv = RARRAY_CONST_PTR(e->args);
     }
+    size = rb_check_funcall(e->size, id_call, argc, argv);
+    if (size != Qundef) return size;
     return e->size;
 }
 
@@ -1010,6 +1077,7 @@ static const rb_data_type_t yielder_data_type = {
 	yielder_free,
 	yielder_memsize,
     },
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 static struct yielder *
@@ -1079,7 +1147,7 @@ static VALUE yielder_yield_push(VALUE obj, VALUE args)
 }
 
 static VALUE
-yielder_yield_i(VALUE obj, VALUE memo, int argc, VALUE *argv)
+yielder_yield_i(RB_BLOCK_CALL_FUNC_ARGLIST(obj, memo))
 {
     return rb_yield_values2(argc, argv);
 }
@@ -1115,6 +1183,7 @@ static const rb_data_type_t generator_data_type = {
 	generator_free,
 	generator_memsize,
     },
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 static struct generator *
@@ -1147,6 +1216,7 @@ generator_init(VALUE obj, VALUE proc)
 {
     struct generator *ptr;
 
+    rb_check_frozen(obj);
     TypedData_Get_Struct(obj, struct generator, &generator_data_type, ptr);
 
     if (!ptr) {
@@ -1230,6 +1300,12 @@ enum_size(VALUE self)
 }
 
 static VALUE
+lazyenum_size(VALUE self, VALUE args, VALUE eobj)
+{
+    return enum_size(self);
+}
+
+static VALUE
 lazy_size(VALUE self)
 {
     return enum_size(rb_ivar_get(self, id_receiver));
@@ -1242,7 +1318,7 @@ lazy_receiver_size(VALUE generator, VALUE args, VALUE lazy)
 }
 
 static VALUE
-lazy_init_iterator(VALUE val, VALUE m, int argc, VALUE *argv)
+lazy_init_iterator(RB_BLOCK_CALL_FUNC_ARGLIST(val, m))
 {
     VALUE result;
     if (argc == 1) {
@@ -1260,7 +1336,7 @@ lazy_init_iterator(VALUE val, VALUE m, int argc, VALUE *argv)
 	if (argc > 0) {
 	    rb_ary_cat(args, argv, argc);
 	}
-	result = rb_yield_values2(len, RARRAY_PTR(args));
+	result = rb_yield_values2(len, RARRAY_CONST_PTR(args));
 	RB_GC_GUARD(args);
     }
     if (result == Qundef) rb_iter_break();
@@ -1268,7 +1344,7 @@ lazy_init_iterator(VALUE val, VALUE m, int argc, VALUE *argv)
 }
 
 static VALUE
-lazy_init_block_i(VALUE val, VALUE m, int argc, VALUE *argv)
+lazy_init_block_i(RB_BLOCK_CALL_FUNC_ARGLIST(val, m))
 {
     rb_block_call(m, id_each, argc-1, argv+1, lazy_init_iterator, val);
     return Qnil;
@@ -1325,7 +1401,7 @@ lazy_initialize(int argc, VALUE *argv, VALUE self)
 }
 
 static VALUE
-lazy_set_method(VALUE lazy, VALUE args, VALUE (*size_fn)(ANYARGS))
+lazy_set_method(VALUE lazy, VALUE args, rb_enumerator_size_func *size_fn)
 {
     ID id = rb_frame_this_func();
     struct enumerator *e = enumerator_ptr(lazy);
@@ -1347,8 +1423,8 @@ lazy_set_method(VALUE lazy, VALUE args, VALUE (*size_fn)(ANYARGS))
  *
  * Returns a lazy enumerator, whose methods map/collect,
  * flat_map/collect_concat, select/find_all, reject, grep, zip, take,
- * take_while, drop, drop_while, and cycle enumerate values only on an
- * as-needed basis.  However, if a block is given to zip or cycle, values
+ * take_while, drop, and drop_while enumerate values only on an
+ * as-needed basis.  However, if a block is given to zip, values
  * are enumerated immediately.
  *
  * === Example
@@ -1375,17 +1451,17 @@ lazy_set_method(VALUE lazy, VALUE args, VALUE (*size_fn)(ANYARGS))
 static VALUE
 enumerable_lazy(VALUE obj)
 {
-    VALUE result = lazy_to_enum_i(obj, sym_each, 0, 0, enum_size);
+    VALUE result = lazy_to_enum_i(obj, sym_each, 0, 0, lazyenum_size);
     /* Qfalse indicates that the Enumerator::Lazy has no method name */
     rb_ivar_set(result, id_method, Qfalse);
     return result;
 }
 
 static VALUE
-lazy_to_enum_i(VALUE obj, VALUE meth, int argc, VALUE *argv, VALUE (*size_fn)(ANYARGS))
+lazy_to_enum_i(VALUE obj, VALUE meth, int argc, VALUE *argv, rb_enumerator_size_func *size_fn)
 {
     return enumerator_init(enumerator_allocate(rb_cLazy),
-	obj, meth, argc, argv, size_fn, Qnil);
+			   obj, meth, argc, argv, size_fn, Qnil);
 }
 
 /*
@@ -1428,7 +1504,7 @@ lazy_to_enum(int argc, VALUE *argv, VALUE self)
 }
 
 static VALUE
-lazy_map_func(VALUE val, VALUE m, int argc, VALUE *argv)
+lazy_map_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, m))
 {
     VALUE result = rb_yield_values2(argc - 1, &argv[1]);
 
@@ -1449,7 +1525,7 @@ lazy_map(VALUE obj)
 }
 
 static VALUE
-lazy_flat_map_i(VALUE i, VALUE yielder, int argc, VALUE *argv)
+lazy_flat_map_i(RB_BLOCK_CALL_FUNC_ARGLIST(i, yielder))
 {
     return rb_funcall2(yielder, id_yield, argc, argv);
 }
@@ -1471,20 +1547,20 @@ lazy_flat_map_to_ary(VALUE obj, VALUE yielder)
     else {
 	long i;
 	for (i = 0; i < RARRAY_LEN(ary); i++) {
-	    rb_funcall(yielder, id_yield, 1, RARRAY_PTR(ary)[i]);
+	    rb_funcall(yielder, id_yield, 1, RARRAY_AREF(ary, i));
 	}
     }
     return Qnil;
 }
 
 static VALUE
-lazy_flat_map_func(VALUE val, VALUE m, int argc, VALUE *argv)
+lazy_flat_map_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, m))
 {
     VALUE result = rb_yield_values2(argc - 1, &argv[1]);
     if (RB_TYPE_P(result, T_ARRAY)) {
 	long i;
 	for (i = 0; i < RARRAY_LEN(result); i++) {
-	    rb_funcall(argv[0], id_yield, 1, RARRAY_PTR(result)[i]);
+	    rb_funcall(argv[0], id_yield, 1, RARRAY_AREF(result, i));
 	}
     }
     else {
@@ -1500,6 +1576,7 @@ lazy_flat_map_func(VALUE val, VALUE m, int argc, VALUE *argv)
 
 /*
  *  call-seq:
+ *     lazy.collect_concat { |obj| block } -> a_lazy_enumerator
  *     lazy.flat_map       { |obj| block } -> a_lazy_enumerator
  *
  *  Returns a new lazy enumerator with the concatenated results of running
@@ -1533,7 +1610,7 @@ lazy_flat_map(VALUE obj)
 }
 
 static VALUE
-lazy_select_func(VALUE val, VALUE m, int argc, VALUE *argv)
+lazy_select_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, m))
 {
     VALUE element = rb_enum_values_pack(argc - 1, argv + 1);
 
@@ -1556,7 +1633,7 @@ lazy_select(VALUE obj)
 }
 
 static VALUE
-lazy_reject_func(VALUE val, VALUE m, int argc, VALUE *argv)
+lazy_reject_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, m))
 {
     VALUE element = rb_enum_values_pack(argc - 1, argv + 1);
 
@@ -1579,7 +1656,7 @@ lazy_reject(VALUE obj)
 }
 
 static VALUE
-lazy_grep_func(VALUE val, VALUE m, int argc, VALUE *argv)
+lazy_grep_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, m))
 {
     VALUE i = rb_enum_values_pack(argc - 1, argv + 1);
     VALUE result = rb_funcall(m, id_eqq, 1, i);
@@ -1591,7 +1668,7 @@ lazy_grep_func(VALUE val, VALUE m, int argc, VALUE *argv)
 }
 
 static VALUE
-lazy_grep_iter(VALUE val, VALUE m, int argc, VALUE *argv)
+lazy_grep_iter(RB_BLOCK_CALL_FUNC_ARGLIST(val, m))
 {
     VALUE i = rb_enum_values_pack(argc - 1, argv + 1);
     VALUE result = rb_funcall(m, id_eqq, 1, i);
@@ -1625,7 +1702,7 @@ next_stopped(VALUE obj)
 }
 
 static VALUE
-lazy_zip_arrays_func(VALUE val, VALUE arrays, int argc, VALUE *argv)
+lazy_zip_arrays_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, arrays))
 {
     VALUE yielder, ary, memo;
     long i, count;
@@ -1637,7 +1714,7 @@ lazy_zip_arrays_func(VALUE val, VALUE arrays, int argc, VALUE *argv)
     ary = rb_ary_new2(RARRAY_LEN(arrays) + 1);
     rb_ary_push(ary, argv[1]);
     for (i = 0; i < RARRAY_LEN(arrays); i++) {
-	rb_ary_push(ary, rb_ary_entry(RARRAY_PTR(arrays)[i], count));
+	rb_ary_push(ary, rb_ary_entry(RARRAY_AREF(arrays, i), count));
     }
     rb_funcall(yielder, id_yield, 1, ary);
     rb_ivar_set(yielder, id_memo, LONG2NUM(++count));
@@ -1645,7 +1722,7 @@ lazy_zip_arrays_func(VALUE val, VALUE arrays, int argc, VALUE *argv)
 }
 
 static VALUE
-lazy_zip_func(VALUE val, VALUE zip_args, int argc, VALUE *argv)
+lazy_zip_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, zip_args))
 {
     VALUE yielder, ary, arg, v;
     long i;
@@ -1655,15 +1732,20 @@ lazy_zip_func(VALUE val, VALUE zip_args, int argc, VALUE *argv)
     if (NIL_P(arg)) {
 	arg = rb_ary_new2(RARRAY_LEN(zip_args));
 	for (i = 0; i < RARRAY_LEN(zip_args); i++) {
-	    rb_ary_push(arg, rb_funcall(RARRAY_PTR(zip_args)[i], id_to_enum, 0));
+	    rb_ary_push(arg, rb_funcall(RARRAY_AREF(zip_args, i), id_to_enum, 0));
 	}
 	rb_ivar_set(yielder, id_memo, arg);
     }
 
     ary = rb_ary_new2(RARRAY_LEN(arg) + 1);
-    rb_ary_push(ary, argv[1]);
+    v = Qnil;
+    if (--argc > 0) {
+	++argv;
+	v = argc > 1 ? rb_ary_new_from_values(argc, argv) : *argv;
+    }
+    rb_ary_push(ary, v);
     for (i = 0; i < RARRAY_LEN(arg); i++) {
-	v = rb_rescue2(call_next, RARRAY_PTR(arg)[i], next_stopped, 0,
+	v = rb_rescue2(call_next, RARRAY_AREF(arg, i), next_stopped, 0,
 		       rb_eStopIteration, (VALUE)0);
 	rb_ary_push(ary, v);
     }
@@ -1705,7 +1787,7 @@ lazy_zip(int argc, VALUE *argv, VALUE obj)
 }
 
 static VALUE
-lazy_take_func(VALUE val, VALUE args, int argc, VALUE *argv)
+lazy_take_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, args))
 {
     long remain;
     VALUE memo = rb_attr_get(argv[0], id_memo);
@@ -1727,7 +1809,7 @@ static VALUE
 lazy_take_size(VALUE generator, VALUE args, VALUE lazy)
 {
     VALUE receiver = lazy_size(lazy);
-    long len = NUM2LONG(RARRAY_PTR(rb_ivar_get(lazy, id_arguments))[0]);
+    long len = NUM2LONG(RARRAY_AREF(rb_ivar_get(lazy, id_arguments), 0));
     if (NIL_P(receiver) || (FIXNUM_P(receiver) && FIX2LONG(receiver) < len))
 	return receiver;
     return LONG2NUM(len);
@@ -1743,7 +1825,7 @@ lazy_take(VALUE obj, VALUE n)
 	rb_raise(rb_eArgError, "attempt to take negative size");
     }
     if (len == 0) {
-	VALUE len = INT2NUM(0);
+	VALUE len = INT2FIX(0);
 	lazy = lazy_to_enum_i(obj, sym_cycle, 1, &len, 0);
     }
     else {
@@ -1754,7 +1836,7 @@ lazy_take(VALUE obj, VALUE n)
 }
 
 static VALUE
-lazy_take_while_func(VALUE val, VALUE args, int argc, VALUE *argv)
+lazy_take_while_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, args))
 {
     VALUE result = rb_yield_values2(argc - 1, &argv[1]);
     if (!RTEST(result)) return Qundef;
@@ -1776,7 +1858,7 @@ lazy_take_while(VALUE obj)
 static VALUE
 lazy_drop_size(VALUE generator, VALUE args, VALUE lazy)
 {
-    long len = NUM2LONG(RARRAY_PTR(rb_ivar_get(lazy, id_arguments))[0]);
+    long len = NUM2LONG(RARRAY_AREF(rb_ivar_get(lazy, id_arguments), 0));
     VALUE receiver = lazy_size(lazy);
     if (NIL_P(receiver))
 	return receiver;
@@ -1788,7 +1870,7 @@ lazy_drop_size(VALUE generator, VALUE args, VALUE lazy)
 }
 
 static VALUE
-lazy_drop_func(VALUE val, VALUE args, int argc, VALUE *argv)
+lazy_drop_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, args))
 {
     long remain;
     VALUE memo = rb_attr_get(argv[0], id_memo);
@@ -1818,7 +1900,7 @@ lazy_drop(VALUE obj, VALUE n)
 }
 
 static VALUE
-lazy_drop_while_func(VALUE val, VALUE args, int argc, VALUE *argv)
+lazy_drop_while_func(RB_BLOCK_CALL_FUNC_ARGLIST(val, args))
 {
     VALUE memo = rb_attr_get(argv[0], id_memo);
     if (NIL_P(memo) && !RTEST(rb_yield_values2(argc - 1, &argv[1]))) {

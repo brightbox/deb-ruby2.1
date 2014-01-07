@@ -152,14 +152,13 @@ class TestSuper < Test::Unit::TestCase
     a = A.new
     a.uu(12)
     assert_equal("A#tt", a.tt(12), "[ruby-core:3856]")
-    e = assert_raise(RuntimeError, "[ruby-core:24244]") {
+    assert_raise_with_message(RuntimeError, /implicit argument passing of super from method defined by define_method/, "[ruby-core:24244]") {
       lambda {
         Class.new {
           define_method(:a) {super}
         }.new.a
       }.call
     }
-    assert_match(/implicit argument passing of super from method defined by define_method/, e.message)
   end
 
   class SubSeq
@@ -384,5 +383,28 @@ class TestSuper < Test::Unit::TestCase
 
   def test_super_in_BEGIN
     assert_super_in_block("BEGIN")
+  end
+
+  class X
+    def foo(*args)
+      args
+    end
+  end
+
+  class Y < X
+    define_method(:foo) do |*args|
+      super(*args)
+    end
+  end
+
+  def test_super_splat
+    # [ruby-list:49575]
+    y = Y.new
+    assert_equal([1, 2], y.foo(1, 2))
+    assert_equal([1, false], y.foo(1, false))
+    assert_equal([1, 2, 3, 4, 5], y.foo(1, 2, 3, 4, 5))
+    assert_equal([false, true], y.foo(false, true))
+    assert_equal([false, false], y.foo(false, false))
+    assert_equal([1, 2, 3, false, 5], y.foo(1, 2, 3, false, 5))
   end
 end

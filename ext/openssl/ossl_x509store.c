@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_x509store.c 37070 2012-10-02 19:36:26Z drbrain $
+ * $Id: ossl_x509store.c 40316 2013-04-16 02:24:09Z zzak $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.
@@ -135,9 +135,9 @@ ossl_x509store_initialize(int argc, VALUE *argv, VALUE self)
     ossl_x509store_set_vfy_cb(self, Qnil);
 
 #if (OPENSSL_VERSION_NUMBER < 0x00907000L)
-    rb_iv_set(self, "@flags", INT2NUM(0));
-    rb_iv_set(self, "@purpose", INT2NUM(0));
-    rb_iv_set(self, "@trust", INT2NUM(0));
+    rb_iv_set(self, "@flags", INT2FIX(0));
+    rb_iv_set(self, "@purpose", INT2FIX(0));
+    rb_iv_set(self, "@trust", INT2FIX(0));
 #endif
 
     /* last verification status */
@@ -257,7 +257,7 @@ ossl_x509store_add_path(VALUE self, VALUE dir)
 
 /*
  * call-seq:
- *   store.set_default_path
+ *   store.set_default_paths
  *
  * Adds the default certificates to the certificate store.  These certificates
  * are loaded from the default configuration directory which can usually be

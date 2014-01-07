@@ -9,18 +9,18 @@
   or insns2vm.rb
  */
 
-#define TS_ISEQ 'S'
-#define TS_GENTRY 'G'
 #define TS_OFFSET 'O'
-#define TS_CALLINFO 'C'
-#define TS_VARIABLE '.'
-#define TS_CDHASH 'H'
-#define TS_IC 'K'
-#define TS_ID 'I'
-#define TS_FUNCPTR 'F'
-#define TS_VALUE 'V'
-#define TS_LINDEX 'L'
 #define TS_NUM 'N'
+#define TS_LINDEX 'L'
+#define TS_VALUE 'V'
+#define TS_ID 'I'
+#define TS_GENTRY 'G'
+#define TS_IC 'K'
+#define TS_CALLINFO 'C'
+#define TS_CDHASH 'H'
+#define TS_ISEQ 'S'
+#define TS_VARIABLE '.'
+#define TS_FUNCPTR 'F'
 
 static const char *const insn_name_info[] = {
   "nop",
@@ -65,6 +65,7 @@ static const char *const insn_name_info[] = {
   "trace",
   "defineclass",
   "send",
+  "opt_str_freeze",
   "opt_send_simple",
   "invokesuper",
   "invokeblock",
@@ -74,8 +75,8 @@ static const char *const insn_name_info[] = {
   "branchif",
   "branchunless",
   "getinlinecache",
-  "onceinlinecache",
   "setinlinecache",
+  "once",
   "opt_case_dispatch",
   "opt_plus",
   "opt_minus",
@@ -153,6 +154,7 @@ static const char *const insn_operand_info[] = {
   "N", 
   "ISN", 
   "C", 
+  "V", 
   "C", 
   "C", 
   "C", 
@@ -162,8 +164,8 @@ static const char *const insn_operand_info[] = {
   "O", 
   "O", 
   "OK", 
-  "OK", 
   "K", 
+  "SK", 
   "HO", 
   "C", 
   "C", 
@@ -185,7 +187,7 @@ static const char *const insn_operand_info[] = {
   "C", 
   "C", 
   "V", 
-  "", 
+  "C", 
   "F", 
   "", 
   "", 
@@ -244,36 +246,37 @@ static const int insn_len_info[] = {
   2,
   2,
   2,
-  1,
-  2,
-  2,
-  2,
-  2,
-  3,
-  3,
-  2,
-  3,
-  2,
-  2,
-  2,
-  2,
-  2,
-  2,
-  3,
-  2,
-  2,
-  2,
-  2,
-  2,
-  2,
-  2,
-  2,
-  2,
-  2,
-  2,
-  2,
   2,
   1,
+  2,
+  2,
+  2,
+  2,
+  3,
+  2,
+  3,
+  3,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  3,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
+  2,
   2,
   1,
   1,
@@ -328,6 +331,7 @@ static const int insn_stack_push_num_info[] = {
   1,
   1,
   0,
+  1,
   1,
   1,
   1,
@@ -538,6 +542,9 @@ insn_stack_increase(int depth, int insn, VALUE *opes)
         inc += - (int)(ci->orig_argc + ((ci->flag & VM_CALL_ARGS_BLOCKARG) ? 1 : 0));;
         return depth + inc;
         }
+        case BIN(opt_str_freeze):{
+          return depth + 1;
+        }
         case BIN(opt_send_simple):{
           int inc = 0;
         CALL_INFO ci = (CALL_INFO)(opes[0]);
@@ -574,11 +581,11 @@ insn_stack_increase(int depth, int insn, VALUE *opes)
         case BIN(getinlinecache):{
           return depth + 1;
         }
-        case BIN(onceinlinecache):{
-          return depth + 1;
-        }
         case BIN(setinlinecache):{
           return depth + 0;
+        }
+        case BIN(once):{
+          return depth + 1;
         }
         case BIN(opt_case_dispatch):{
           int inc = 0;

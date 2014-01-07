@@ -2,7 +2,7 @@
 
   rubyio.h -
 
-  $Author: nagachika $
+  $Author: nobu $
   created at: Fri Nov 12 16:47:09 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -49,9 +49,7 @@ extern "C" {
 #  define RB_WAITFD_OUT 0x004
 #endif
 
-#if defined __GNUC__ && __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
+RUBY_SYMBOL_EXPORT_BEGIN
 
 typedef struct {
     char *ptr;                  /* off + len <= capa */
@@ -199,9 +197,12 @@ void rb_io_read_check(rb_io_t*);
 int rb_io_read_pending(rb_io_t*);
 DEPRECATED(void rb_read_check(FILE*));
 
-#if defined __GNUC__ && __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
+struct stat;
+VALUE rb_stat_new(const struct stat *);
+
+/* gc.c */
+
+RUBY_SYMBOL_EXPORT_END
 
 #if defined(__cplusplus)
 #if 0

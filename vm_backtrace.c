@@ -112,6 +112,7 @@ location_memsize(const void *ptr)
 static const rb_data_type_t location_data_type = {
     "frame_info",
     {location_mark, location_free, location_memsize,},
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 static inline rb_backtrace_location_t *
@@ -177,10 +178,27 @@ location_label(rb_backtrace_location_t *loc)
  *
  * Usually consists of method, class, module, etc names with decoration.
  *
- * For example, using +caller_locations.rb+ from Thread::Backtrace::Location
+ * Consider the following example:
  *
- *	loc = c(0..1).first
- *	loc.label #=> a
+ *	def foo
+ *	  puts caller_locations(0).first.label
+ *
+ *	  1.times do
+ *	    puts caller_locations(0).first.label
+ *
+ *	    1.times do
+ *	      puts caller_locations(0).first.label
+ *	    end
+ *
+ *	  end
+ *	end
+ *
+ * The result of calling +foo+ is this:
+ *
+ *	label: foo
+ *	label: block in foo
+ *	label: block (2 levels) in foo
+ *
  */
 static VALUE
 location_label_m(VALUE self)
@@ -354,6 +372,7 @@ typedef struct rb_backtrace_struct {
     rb_backtrace_location_t *backtrace_base;
     int backtrace_size;
     VALUE strary;
+    VALUE locary;
 } rb_backtrace_t;
 
 static void
@@ -365,8 +384,9 @@ backtrace_mark(void *ptr)
 
 	for (i=0; i<s; i++) {
 	    location_mark_entry(&bt->backtrace[i]);
-	    rb_gc_mark(bt->strary);
 	}
+	rb_gc_mark(bt->strary);
+	rb_gc_mark(bt->locary);
     }
 }
 
@@ -390,6 +410,7 @@ backtrace_memsize(const void *ptr)
 static const rb_data_type_t backtrace_data_type = {
     "backtrace",
     {backtrace_mark, backtrace_free, backtrace_memsize,},
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 int
@@ -612,6 +633,18 @@ backtrace_to_location_ary(VALUE self, long lev, long n)
     return r;
 }
 
+VALUE
+rb_backtrace_to_location_ary(VALUE self)
+{
+    rb_backtrace_t *bt;
+    GetCoreDataFromValue(self, rb_backtrace_t, bt);
+
+    if (!bt->locary) {
+	bt->locary = backtrace_to_location_ary(self, 0, 0);
+    }
+    return bt->locary;
+}
+
 static VALUE
 backtrace_dump_data(VALUE self)
 {
@@ -629,13 +662,13 @@ backtrace_load_data(VALUE self, VALUE str)
 }
 
 VALUE
-vm_backtrace_str_ary(rb_thread_t *th, long lev, long n)
+rb_vm_backtrace_str_ary(rb_thread_t *th, long lev, long n)
 {
     return backtrace_to_str_ary(backtrace_object(th), lev, n);
 }
 
 VALUE
-vm_backtrace_location_ary(rb_thread_t *th, long lev, long n)
+rb_vm_backtrace_location_ary(rb_thread_t *th, long lev, long n)
 {
     return backtrace_to_location_ary(backtrace_object(th), lev, n);
 }
@@ -751,10 +784,39 @@ rb_backtrace(void)
     vm_backtrace_print(stderr);
 }
 
+static void
+oldbt_print_to(void *data, VALUE file, int lineno, VALUE name)
+{
+    VALUE output = (VALUE)data;
+    VALUE str = rb_sprintf("\tfrom %"PRIsVALUE":%d:in ", file, lineno);
+
+    if (NIL_P(name)) {
+	rb_str_cat2(str, "unknown method\n");
+    }
+    else {
+	rb_str_catf(str, " `%"PRIsVALUE"'\n", name);
+    }
+    rb_io_write(output, str);
+}
+
+void
+rb_backtrace_print_to(VALUE output)
+{
+    struct oldbt_arg arg;
+
+    arg.func = oldbt_print_to;
+    arg.data = (void *)output;
+    backtrace_each(GET_THREAD(),
+		   oldbt_init,
+		   oldbt_iter_iseq,
+		   oldbt_iter_cfunc,
+		   &arg);
+}
+
 VALUE
 rb_make_backtrace(void)
 {
-    return vm_backtrace_str_ary(GET_THREAD(), 0, 0);
+    return rb_vm_backtrace_str_ary(GET_THREAD(), 0, 0);
 }
 
 static VALUE
@@ -769,6 +831,8 @@ vm_backtrace_to_ary(rb_thread_t *th, int argc, VALUE *argv, int lev_default, int
     GetCoreDataFromValue(btval, rb_backtrace_t, bt);
 
     rb_scan_args(argc, argv, "02", &level, &vn);
+
+    if (argc == 2 && NIL_P(vn)) argc--;
 
     switch (argc) {
       case 0:
@@ -839,13 +903,13 @@ thread_backtrace_to_ary(int argc, VALUE *argv, VALUE thval, int to_str)
 }
 
 VALUE
-vm_thread_backtrace(int argc, VALUE *argv, VALUE thval)
+rb_vm_thread_backtrace(int argc, VALUE *argv, VALUE thval)
 {
     return thread_backtrace_to_ary(argc, argv, thval, 1);
 }
 
 VALUE
-vm_thread_backtrace_locations(int argc, VALUE *argv, VALUE thval)
+rb_vm_thread_backtrace_locations(int argc, VALUE *argv, VALUE thval)
 {
     return thread_backtrace_to_ary(argc, argv, thval, 0);
 }
@@ -996,13 +1060,9 @@ Init_vm_backtrace(void)
 
 /* debugger API */
 
-#if defined __GNUC__ && __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
+RUBY_SYMBOL_EXPORT_BEGIN
 
-#if defined __GNUC__ && __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
+RUBY_SYMBOL_EXPORT_END
 
 struct rb_debug_inspector_struct {
     rb_thread_t *th;
@@ -1123,7 +1183,7 @@ rb_debug_inspector_open(rb_debug_inspector_func_t func, void *data)
 
     dbg_context.th = th;
     dbg_context.cfp = dbg_context.th->cfp;
-    dbg_context.backtrace = vm_backtrace_location_ary(th, 0, 0);
+    dbg_context.backtrace = rb_vm_backtrace_location_ary(th, 0, 0);
     dbg_context.backtrace_size = RARRAY_LEN(dbg_context.backtrace);
     dbg_context.contexts = collect_caller_bindings(th);
 
@@ -1185,3 +1245,138 @@ rb_debug_inspector_backtrace_locations(const rb_debug_inspector_t *dc)
     return dc->backtrace;
 }
 
+int
+rb_profile_frames(int start, int limit, VALUE *buff, int *lines)
+{
+    int i;
+    rb_thread_t *th = GET_THREAD();
+    rb_control_frame_t *cfp = th->cfp, *end_cfp = RUBY_VM_END_CONTROL_FRAME(th);
+
+    for (i=0; i<limit && cfp != end_cfp;) {
+	if (cfp->iseq && cfp->pc) { /* should be NORMAL_ISEQ */
+	    if (start > 0) {
+		start--;
+		continue;
+	    }
+
+	    /* record frame info */
+	    buff[i] = cfp->iseq->self;
+	    if (lines) lines[i] = calc_lineno(cfp->iseq, cfp->pc);
+	    i++;
+	}
+	cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+    }
+
+    return i;
+}
+
+#define frame2iseq(frame) frame
+
+VALUE
+rb_profile_frame_path(VALUE frame)
+{
+    return rb_iseq_path(frame2iseq(frame));
+}
+
+VALUE
+rb_profile_frame_absolute_path(VALUE frame)
+{
+    return rb_iseq_absolute_path(frame2iseq(frame));
+}
+
+VALUE
+rb_profile_frame_label(VALUE frame)
+{
+    return rb_iseq_label(frame2iseq(frame));
+}
+
+VALUE
+rb_profile_frame_base_label(VALUE frame)
+{
+    return rb_iseq_base_label(frame2iseq(frame));
+}
+
+VALUE
+rb_profile_frame_first_lineno(VALUE frame)
+{
+    return rb_iseq_first_lineno(frame2iseq(frame));
+}
+
+VALUE
+rb_profile_frame_classpath(VALUE frame)
+{
+    VALUE klass = rb_iseq_klass(frame2iseq(frame));
+
+    if (klass && !NIL_P(klass)) {
+	if (RB_TYPE_P(klass, T_ICLASS)) {
+	    klass = RBASIC(klass)->klass;
+	}
+	else if (FL_TEST(klass, FL_SINGLETON)) {
+	    klass = rb_ivar_get(klass, id__attached__);
+	    if (!RB_TYPE_P(klass, T_CLASS))
+		return rb_sprintf("#<%s:%p>", rb_class2name(rb_obj_class(klass)), (void*)klass);
+	}
+	return rb_class_path(klass);
+    }
+    else {
+	return Qnil;
+    }
+}
+
+VALUE
+rb_profile_frame_singleton_method_p(VALUE frame)
+{
+    VALUE klass = rb_iseq_klass(frame2iseq(frame));
+    if (klass && !NIL_P(klass) && FL_TEST(klass, FL_SINGLETON)) {
+	return Qtrue;
+    }
+    else {
+	return Qfalse;
+    }
+}
+
+VALUE
+rb_profile_frame_method_name(VALUE frame)
+{
+    return rb_iseq_method_name(frame2iseq(frame));
+}
+
+VALUE
+rb_profile_frame_qualified_method_name(VALUE frame)
+{
+    VALUE method_name = rb_iseq_method_name(frame2iseq(frame));
+    if (method_name != Qnil) {
+	VALUE classpath = rb_profile_frame_classpath(frame);
+	VALUE singleton_p = rb_profile_frame_singleton_method_p(frame);
+
+	if (classpath != Qnil) {
+	    return rb_sprintf("%"PRIsVALUE"%s%"PRIsVALUE,
+			      classpath, singleton_p == Qtrue ? "." : "#", method_name);
+	}
+	else {
+	    return method_name;
+	}
+    }
+    else {
+	return Qnil;
+    }
+}
+
+VALUE
+rb_profile_frame_full_label(VALUE frame)
+{
+    VALUE label = rb_profile_frame_label(frame);
+    VALUE base_label = rb_profile_frame_base_label(frame);
+    VALUE qualified_method_name = rb_profile_frame_qualified_method_name(frame);
+
+    if (NIL_P(qualified_method_name) || base_label == qualified_method_name) {
+	return label;
+    }
+    else {
+	long label_length = RSTRING_LEN(label);
+	long base_label_length = RSTRING_LEN(base_label);
+	int prefix_len = rb_long2int(label_length - base_label_length);
+
+	return rb_sprintf("%.*s%"PRIsVALUE, prefix_len, RSTRING_PTR(label), qualified_method_name);
+    }
+}
