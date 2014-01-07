@@ -1,7 +1,7 @@
 #
 #   irb/completor.rb -
 #   	$Release Version: 0.9$
-#   	$Revision: 38656 $
+#   	$Revision: 41062 $
 #   	by Keiju ISHITSUKA(keiju@ishitsuka.com)
 #       From Original Idea of shugo@ruby-lang.org
 #
@@ -11,28 +11,28 @@ require "readline"
 module IRB
   module InputCompletor # :nodoc:
 
-    @RCS_ID='-$Id: completion.rb 38656 2012-12-29 12:59:06Z keiju $-'
+    @RCS_ID='-$Id: completion.rb 41062 2013-06-04 14:17:17Z eregon $-'
 
     # Set of reserved words used by Ruby, you should not use these for
     # constants or variables
-    ReservedWords = [
-      "BEGIN", "END",
-      "alias", "and",
-      "begin", "break",
-      "case", "class",
-      "def", "defined", "do",
-      "else", "elsif", "end", "ensure",
-      "false", "for",
-      "if", "in",
-      "module",
-      "next", "nil", "not",
-      "or",
-      "redo", "rescue", "retry", "return",
-      "self", "super",
-      "then", "true",
-      "undef", "unless", "until",
-      "when", "while",
-      "yield",
+    ReservedWords = %w[
+      BEGIN END
+      alias and
+      begin break
+      case class
+      def defined do
+      else elsif end ensure
+      false for
+      if in
+      module
+      next nil not
+      or
+      redo rescue retry return
+      self super
+      then true
+      undef unless until
+      when while
+      yield
     ]
 
     CompletionProc = proc { |input|
@@ -211,9 +211,7 @@ module IRB
     }
 
     # Set of available operators in Ruby
-    Operators = ["%", "&", "*", "**", "+",  "-",  "/",
-      "<", "<<", "<=", "<=>", "==", "===", "=~", ">", ">=", ">>",
-      "[]", "[]=", "^", "!", "!=", "!~"]
+    Operators = %w[% & * ** + - / < << <= <=> == === =~ > >= >> [] []= ^ ! != !~]
 
     def self.select_message(receiver, message, candidates, sep = ".")
       candidates.grep(/^#{message}/).collect do |e|

@@ -1,6 +1,6 @@
 # Copyright (C) 2001, 2002, 2003 by Michael Neumann (mneumann@ntecs.de)
 #
-# $Id: httpserver.rb 36958 2012-09-13 02:22:10Z zzak $
+# $Id: httpserver.rb 44091 2013-12-09 07:04:43Z a_matsuda $
 #
 
 
@@ -134,7 +134,7 @@ private
   # If an Exception is raised while handling the request, the client will receive
   # a 500 "Internal Server Error" message.
   def serve(io) # :doc:
-    # perform IP authentification
+    # perform IP authentication
     unless @handler.ip_auth_handler(io)
       io << http_resp(403, "Forbidden")
       return

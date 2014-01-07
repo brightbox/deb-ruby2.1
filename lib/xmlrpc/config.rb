@@ -1,5 +1,5 @@
 #
-# $Id: config.rb 36958 2012-09-13 02:22:10Z zzak $
+# $Id: config.rb 42045 2013-07-18 13:50:32Z zzak $
 # Configuration file for XML-RPC for Ruby
 #
 
@@ -27,7 +27,7 @@ module XMLRPC # :nodoc:
     # allows integers greater than 32-bit if +true+
     ENABLE_BIGINT        = false
 
-    # enable marshalling ruby objects which include XMLRPC::Marshallable
+    # enable marshalling Ruby objects which include XMLRPC::Marshallable
     ENABLE_MARSHALLING   = true
 
     # enable multiCall extension by default

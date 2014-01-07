@@ -9,6 +9,7 @@
 **********************************************************************/
 
 #include "ruby/config.h"
+#include "ruby/missing.h"
 #include "addr2line.h"
 
 #include <stdio.h>
@@ -16,11 +17,6 @@
 
 #ifdef USE_ELF
 
-#ifdef __OpenBSD__
-#include <elf_abi.h>
-#else
-#include <elf.h>
-#endif
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -31,6 +27,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#ifdef __OpenBSD__
+#include <elf_abi.h>
+#else
+#include <elf.h>
+#endif
 
 /* Make alloca work the best possible way.  */
 #ifdef __GNUC__
@@ -731,7 +733,7 @@ ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
 		*++p = upper ? toupper(c) : c;
 	} while (num /= base);
 	if (lenp)
-		*lenp = p - nbuf;
+		*lenp = (int)(p - nbuf);
 	return (p);
 }
 
@@ -946,7 +948,7 @@ reswitch:	switch (ch = (unsigned char)*fmt++) {
 			if (p == NULL)
 				p = "(null)";
 			if (!dot)
-				n = strlen (p);
+				n = (int)strlen (p);
 			else
 				for (n = 0; n < dwidth && p[n]; n++)
 					continue;

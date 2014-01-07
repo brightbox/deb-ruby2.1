@@ -24,20 +24,8 @@ module REXML
   COPYRIGHT = "Copyright © 2001-2008 Sean Russell <ser@germane-software.com>"
   DATE = "2008/019"
   VERSION = "3.1.7.3"
-  REVISION = %w$Revision: 39952 $[1] || ''
+  REVISION = %w$Revision: 39528 $[1] || ''
 
   Copyright = COPYRIGHT
   Version = VERSION
-
-  @@entity_expansion_text_limit = 10_240
-
-  # Set the entity expansion limit. By default the limit is set to 10240.
-  def self.entity_expansion_text_limit=( val )
-    @@entity_expansion_text_limit = val
-  end
-
-  # Get the entity expansion limit. By default the limit is set to 10240.
-  def self.entity_expansion_text_limit
-    return @@entity_expansion_text_limit
-  end
 end

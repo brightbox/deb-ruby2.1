@@ -361,7 +361,7 @@ class TestParse < Test::Unit::TestCase
     assert_equal("foo 1 bar", "foo #$1 bar")
   end
 
-  def test_dstr_disallowd_variable
+  def test_dstr_disallowed_variable
     bug8375 = '[ruby-core:54885] [Bug #8375]'
     %w[@ @1 @@. @@ @@1 @@. $ $%].each do |src|
       src = '#'+src+' '
@@ -752,13 +752,7 @@ x = __ENCODING__
       eval %q(1; next; 2)
     end
 
-    o = Object.new
-    assert_nothing_raised do
-      eval <<-END, nil, __FILE__, __LINE__+1
-        x = def o.foo; end
-      END
-    end
-    assert_equal(14, $stderr.string.lines.to_a.size)
+    assert_equal(13, $stderr.string.lines.to_a.size)
     $stderr = stderr
   end
 
@@ -832,7 +826,7 @@ x = __ENCODING__
   def test_all_symbols
     x = Symbol.all_symbols
     assert_kind_of(Array, x)
-    assert(x.all? {|s| s.is_a?(Symbol) })
+    assert_empty(x.reject {|s| s.is_a?(Symbol) })
   end
 
   def test_is_class_id

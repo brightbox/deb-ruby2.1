@@ -10,6 +10,12 @@ class TestMathn < Test::Unit::TestCase
     assert_in_out_err ['-r', 'mathn/complex', '-e', 'a=Complex(0,1)**5;!a'], "", [], [], '[ruby-core:44170]'
   end
 
+  def test_quo
+    assert_in_out_err ['-r', 'mathn'], <<-EOS, %w(OK), [], '[ruby-core:41575]'
+      1.quo(2); puts :OK
+    EOS
+  end
+
   def test_floor
     assert_separately(%w[-rmathn], <<-EOS)
       assert_equal( 2, ( 13/5).floor)

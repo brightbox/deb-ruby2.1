@@ -98,90 +98,92 @@ enum ruby_vminsn_type {
 
   BIN(send)                      = 41,
 
-  BIN(opt_send_simple)           = 42,
+  BIN(opt_str_freeze)            = 42,
 
-  BIN(invokesuper)               = 43,
+  BIN(opt_send_simple)           = 43,
 
-  BIN(invokeblock)               = 44,
+  BIN(invokesuper)               = 44,
 
-  BIN(leave)                     = 45,
+  BIN(invokeblock)               = 45,
 
-  BIN(throw)                     = 46,
+  BIN(leave)                     = 46,
 
-  BIN(jump)                      = 47,
+  BIN(throw)                     = 47,
 
-  BIN(branchif)                  = 48,
+  BIN(jump)                      = 48,
 
-  BIN(branchunless)              = 49,
+  BIN(branchif)                  = 49,
 
-  BIN(getinlinecache)            = 50,
+  BIN(branchunless)              = 50,
 
-  BIN(onceinlinecache)           = 51,
+  BIN(getinlinecache)            = 51,
 
   BIN(setinlinecache)            = 52,
 
-  BIN(opt_case_dispatch)         = 53,
+  BIN(once)                      = 53,
 
-  BIN(opt_plus)                  = 54,
+  BIN(opt_case_dispatch)         = 54,
 
-  BIN(opt_minus)                 = 55,
+  BIN(opt_plus)                  = 55,
 
-  BIN(opt_mult)                  = 56,
+  BIN(opt_minus)                 = 56,
 
-  BIN(opt_div)                   = 57,
+  BIN(opt_mult)                  = 57,
 
-  BIN(opt_mod)                   = 58,
+  BIN(opt_div)                   = 58,
 
-  BIN(opt_eq)                    = 59,
+  BIN(opt_mod)                   = 59,
 
-  BIN(opt_neq)                   = 60,
+  BIN(opt_eq)                    = 60,
 
-  BIN(opt_lt)                    = 61,
+  BIN(opt_neq)                   = 61,
 
-  BIN(opt_le)                    = 62,
+  BIN(opt_lt)                    = 62,
 
-  BIN(opt_gt)                    = 63,
+  BIN(opt_le)                    = 63,
 
-  BIN(opt_ge)                    = 64,
+  BIN(opt_gt)                    = 64,
 
-  BIN(opt_ltlt)                  = 65,
+  BIN(opt_ge)                    = 65,
 
-  BIN(opt_aref)                  = 66,
+  BIN(opt_ltlt)                  = 66,
 
-  BIN(opt_aset)                  = 67,
+  BIN(opt_aref)                  = 67,
 
-  BIN(opt_length)                = 68,
+  BIN(opt_aset)                  = 68,
 
-  BIN(opt_size)                  = 69,
+  BIN(opt_length)                = 69,
 
-  BIN(opt_empty_p)               = 70,
+  BIN(opt_size)                  = 70,
 
-  BIN(opt_succ)                  = 71,
+  BIN(opt_empty_p)               = 71,
 
-  BIN(opt_not)                   = 72,
+  BIN(opt_succ)                  = 72,
 
-  BIN(opt_regexpmatch1)          = 73,
+  BIN(opt_not)                   = 73,
 
-  BIN(opt_regexpmatch2)          = 74,
+  BIN(opt_regexpmatch1)          = 74,
 
-  BIN(opt_call_c_function)       = 75,
+  BIN(opt_regexpmatch2)          = 75,
 
-  BIN(bitblt)                    = 76,
+  BIN(opt_call_c_function)       = 76,
 
-  BIN(answer)                    = 77,
+  BIN(bitblt)                    = 77,
 
-  BIN(getlocal_OP__WC__0)        = 78,
+  BIN(answer)                    = 78,
 
-  BIN(getlocal_OP__WC__1)        = 79,
+  BIN(getlocal_OP__WC__0)        = 79,
 
-  BIN(setlocal_OP__WC__0)        = 80,
+  BIN(getlocal_OP__WC__1)        = 80,
 
-  BIN(setlocal_OP__WC__1)        = 81,
+  BIN(setlocal_OP__WC__0)        = 81,
 
-  BIN(putobject_OP_INT2FIX_O_0_C_) = 82,
+  BIN(setlocal_OP__WC__1)        = 82,
 
-  BIN(putobject_OP_INT2FIX_O_1_C_) = 83,
+  BIN(putobject_OP_INT2FIX_O_0_C_) = 83,
 
-  VM_INSTRUCTION_SIZE            = 84
+  BIN(putobject_OP_INT2FIX_O_1_C_) = 84,
+
+  VM_INSTRUCTION_SIZE            = 85
 };
 

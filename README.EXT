@@ -125,12 +125,15 @@ Other data types have corresponding C structures, e.g. struct RArray
 for T_ARRAY etc. The VALUE of the type which has the corresponding
 structure can be cast to retrieve the pointer to the struct.  The
 casting macro will be of the form RXXXX for each data type; for
-instance, RARRAY(obj).  See "ruby.h".
+instance, RARRAY(obj).  See "ruby.h".  However, we do not recommend
+to access RXXXX data directly because these data structure is complex.
+Use corresponding rb_xxx() functions to access internal struct.
+For example, to access an entry of array, use rb_ary_entry(ary, offset)
+and rb_ary_store(ary, offset, obj).
 
 There are some accessing macros for structure members, for example
 `RSTRING_LEN(str)' to get the size of the Ruby String object.  The
-allocated region can be accessed by `RSTRING_PTR(str)'.  For arrays,
-use `RARRAY_LEN(ary)' and `RARRAY_PTR(ary)' respectively.
+allocated region can be accessed by `RSTRING_PTR(str)'.
 
 Notice: Do not change the value of the structure directly, unless you
 are responsible for the result.  This ends up being the cause of
@@ -218,6 +221,7 @@ rb_str_vcatf(VALUE str, const char* format, va_list ap) ::
   rb_str_cat2(str, rb_vsprintf(format, ap)), respectively.
 
 rb_enc_str_new(const char *ptr, long len, rb_encoding *enc) ::
+rb_enc_str_new_cstr(const char *ptr, rb_encoding *enc) ::
 
   Creates a new Ruby string with the specified encoding.
 
@@ -250,15 +254,18 @@ rb_ary_new() ::
   Creates an array with no elements.
 
 rb_ary_new2(long len) ::
+rb_ary_new_capa(long len) ::
 
   Creates an array with no elements, allocating internal buffer
   for len elements.
 
 rb_ary_new3(long n, ...) ::
+rb_ary_new_from_args(long n, ...) ::
 
   Creates an n-element array from the arguments.
 
 rb_ary_new4(long n, VALUE *elts) ::
+rb_ary_new_from_values(long n, VALUE *elts) ::
 
   Creates an n-element array from a C array.
 
@@ -272,11 +279,15 @@ types are given.
 
 rb_ary_aref(argc, VALUE *argv, VALUE ary) ::
 
-  Equivaelent to Array#[].
+  Equivalent to Array#[].
 
 rb_ary_entry(VALUE ary, long offset) ::
 
   ary[offset]
+
+rb_ary_store(VALUE ary, long offset, VALUE obj) ::
+
+  ary[offset] = obj
 
 rb_ary_subseq(VALUE ary, long beg, long len) ::
 
@@ -760,7 +771,7 @@ various conditions.
   check_sizeof(type[, headers[, opts]]): check size of type
   check_signedness(type[, headers[, opts]]): check signedness of type
   convertible_int(type[, headers[, opts]]): find convertible integer type
-  find_executable(bin[, path]): find excutable file path
+  find_executable(bin[, path]): find executable file path
   create_header(header): generate configured header
   create_makefile(target[, target_prefix]): generate Makefile
 
@@ -853,7 +864,7 @@ lex.c    :: automatically generated from keywords
   eval_safe.c
   insns.def           : definition of VM instructions
   iseq.c              : implementation of VM::ISeq
-  thread.c            : thread management and context swiching
+  thread.c            : thread management and context switching
   thread_win32.c      : thread implementation
   thread_pthread.c    : ditto
   vm.c
@@ -882,7 +893,7 @@ lex.c    :: automatically generated from keywords
 
 == Utility Functions
 
-debug.c    :: debug symbols for C debuggger
+debug.c    :: debug symbols for C debugger
 dln.c      :: dynamic loading
 st.c       :: general purpose hash table
 strftime.c :: formatting times
@@ -1056,6 +1067,10 @@ NUM2SIZET(value), SIZET2NUM(size) ::
 NUM2SSIZET(value), SSIZET2NUM(ssize) ::
 
   Numeric <-> ssize_t
+
+rb_integer_pack(value, words, numwords, wordsize, nails, flags), rb_integer_unpack(words, numwords, wordsize, nails, flags) ::
+
+  Numeric <-> Arbitrary size integer buffer
 
 NUM2DBL(value) ::
 
@@ -1239,10 +1254,18 @@ rb_scan_args(int argc, VALUE *argv, const char *fmt, ...) ::
 VALUE rb_funcall(VALUE recv, ID mid, int narg, ...) ::
 
   Invokes a method.  To retrieve mid from a method name, use rb_intern().
+  Able to call even private/protected methods.
 
 VALUE rb_funcall2(VALUE recv, ID mid, int argc, VALUE *argv) ::
+VALUE rb_funcallv(VALUE recv, ID mid, int argc, VALUE *argv) ::
 
-  Invokes a method, passing arguments by an array of values.
+  Invokes a method, passing arguments as an array of values.
+  Able to call even private/protected methods.
+
+VALUE rb_funcallv_public(VALUE recv, ID mid, int argc, VALUE *argv) ::
+
+  Invokes a method, passing arguments as an array of values.
+  Able to call only public methods.
 
 VALUE rb_eval_string(const char *str) ::
 
@@ -1312,12 +1335,12 @@ VALUE rb_ensure(VALUE (*func1)(), VALUE arg1, VALUE (*func2)(), VALUE arg2) ::
 
   Calls the function func1 with arg1 as the argument, then calls func2
   with arg2 if execution terminated.  The return value from
-  rb_ensure() is that of func1 when no exception occured.
+  rb_ensure() is that of func1 when no exception occurred.
 
 VALUE rb_protect(VALUE (*func) (VALUE), VALUE arg, int *state) ::
 
   Calls the function func with arg as the argument.  If no exception
-  occured during func, it returns the result of func and *state is zero.
+  occurred during func, it returns the result of func and *state is zero.
   Otherwise, it returns Qnil and sets *state to nonzero.  If state is
   NULL, it is not set in both cases.
   You have to clear the error info with rb_set_errinfo(Qnil) when
@@ -1464,6 +1487,109 @@ RB_EVENT_HOOKS_HAVE_CALLBACK_DATA ::
 
   Means that rb_add_event_hook() takes the third argument `data', to be
   passed to the given event hook function.
+
+= Appendix C. Functions available for use in extconf.rb
+
+See documentation for {mkmf}[rdoc-ref:MakeMakefile].
+
+= Appendix D. Generational GC
+
+Ruby 2.1 introduced a generational garbage collector (called RGenGC).
+RGenGC (mostly) keeps compatibility.
+
+Generally, the use of the technique called write barriers is required in
+extension libraries for generational GC
+(http://en.wikipedia.org/wiki/Garbage_collection_%28computer_science%29).
+RGenGC works fine without write barriers in extension libraries.
+
+If your library adheres to the following tips, performance can
+be further improved. Especially, the "Don't touch pointers directly" section is
+important.
+
+== Incompatibility
+
+You can't write RBASIC(obj)->klass field directly because it is const
+value now.
+
+Basically you should not write this field because MRI expects it to be
+an immutable field, but if you want to do it in your extension you can
+use the following functions:
+
+VALUE rb_obj_hide(VALUE obj) ::
+
+  Clear RBasic::klass field. The object will be an internal object.
+  ObjectSpace::each_object can't find this object.
+
+VALUE rb_obj_reveal(VALUE obj, VALUE klass) ::
+
+  Reset RBasic::klass to be klass.
+  We expect the `klass' is hidden class by rb_obj_hide().
+
+== Write barriers
+
+RGenGC doesn't require write barriers to support generational GC.
+However, caring about write barrier can improve the performance of
+RGenGC. Please check the following tips.
+
+=== Don't touch pointers directly
+
+In MRI (include/ruby/ruby.h), some macros to acquire pointers to the
+internal data structures are supported such as RARRAY_PTR(),
+RSTRUCT_PTR() and so on.
+
+DO NOT USE THESE MACROS and instead use the corresponding C-APIs such as
+rb_ary_aref(), rb_ary_store() and so on.
+
+=== Consider whether to insert write barriers
+
+You don't need to care about write barriers if you only use built-in
+types.
+
+If you support T_DATA objects, you may consider using write barriers.
+
+Inserting write barriers into T_DATA objects only works with the
+following type objects: (a) long-lived objects, (b) when a huge number
+of objects are generated and (c) container-type objects that have
+references to other objects. If your extension provides such a type of
+T_DATA objects, consider inserting write barriers.
+
+(a): short-lived objects don't become old generation objects.
+(b): only a few oldgen objects don't have performance impact.
+(c): only a few references don't have performance impact.
+
+Inserting write barriers is a very difficult hack, it is easy to
+introduce critical bugs. And inserting write barriers has several areas
+of overhead. Basically we don't recommend you insert write barriers.
+Please carefully consider the risks.
+
+=== Combine with built-in types
+
+Please consider utilizing built-in types. Most built-in types support
+write barrier, so you can use them to avoid manually inserting write
+barriers.
+
+For example, if your T_DATA has references to other objects, then you
+can move these references to Array. A T_DATA object only has a reference
+to an array object. Or you can also use a Struct object to gather a
+T_DATA object (without any references) and an that Array contains
+references.
+
+With use of such techniques, you don't need to insert write barriers
+anymore.
+
+=== Insert write barriers
+
+[AGAIN] Inserting write barriers is a very difficult hack, and it is
+easy to introduce critical bugs. And inserting write barriers has
+several areas of overhead. Basically we don't recommend you insert write
+barriers. Please carefully consider the risks.
+
+Before inserting write barriers, you need to know about RGenGC algorithm
+(gc.c will help you). Macros and functions to insert write barriers are
+available in in include/ruby/ruby.h. An example is available in iseq.c.
+
+For a complete guide for RGenGC and write barriers, please refer to
+<https://bugs.ruby-lang.org/projects/ruby-trunk/wiki/RGenGC>.
 
 /*
  * Local variables:

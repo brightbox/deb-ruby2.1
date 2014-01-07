@@ -2,7 +2,7 @@
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
 # License:: You can redistribute it and/or modify it under the same term as Ruby.
-# Revision:: $Id: ftp.rb 39014 2013-02-02 03:31:56Z zzak $
+# Revision:: $Id: ftp.rb 40202 2013-04-09 00:29:54Z hsbt $
 #
 # See URI for general documentation
 #
@@ -165,7 +165,7 @@ module URI
     end
     private :check_typecode
 
-    # private setter for the typecode +v+
+    # Private setter for the typecode +v+
     #
     # see also URI::FTP.typecode=
     #
@@ -234,11 +234,13 @@ module URI
       return @path.sub(/^\//,'').sub(/^%2F/,'/')
     end
 
+    # Private setter for the path of the URI::FTP
     def set_path(v)
       super("/" + v.sub(/^\//, "%2F"))
     end
     protected :set_path
 
+    # Returns a String representation of the URI::FTP
     def to_s
       save_path = nil
       if @typecode

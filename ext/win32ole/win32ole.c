@@ -143,7 +143,7 @@ const IID IID_IMultiLanguage2 = {0xDCCFC164, 0x2B38, 0x11d2, {0xB7, 0xEC, 0x00, 
 
 #define WC2VSTR(x) ole_wc2vstr((x), TRUE)
 
-#define WIN32OLE_VERSION "1.5.4"
+#define WIN32OLE_VERSION "1.5.5"
 
 typedef HRESULT (STDAPICALLTYPE FNCOCREATEINSTANCEEX)
     (REFCLSID, IUnknown*, DWORD, COSERVERINFO*, DWORD, MULTI_QI*);
@@ -383,7 +383,7 @@ static VALUE fole_s_create_guid(VALUE self);
 static VALUE fole_s_ole_initialize(VALUE self);
 static VALUE fole_s_ole_uninitialize(VALUE self);
 static VALUE fole_initialize(int argc, VALUE *argv, VALUE self);
-static VALUE hash2named_arg(VALUE pair, struct oleparam* pOp);
+static VALUE hash2named_arg(RB_BLOCK_CALL_FUNC_ARGLIST(pair, op));
 static VALUE set_argv(VARIANTARG* realargs, unsigned int beg, unsigned int end);
 static VALUE ole_invoke(int argc, VALUE *argv, VALUE self, USHORT wFlags, BOOL is_bracket);
 static VALUE fole_invoke(int argc, VALUE *argv, VALUE self);
@@ -516,7 +516,7 @@ static VALUE folemethod_visible(VALUE self);
 static VALUE ole_method_event(ITypeInfo *pTypeInfo, UINT method_index, VALUE method_name);
 static VALUE folemethod_event(VALUE self);
 static VALUE folemethod_event_interface(VALUE self);
-static VALUE ole_method_docinfo_from_type(ITypeInfo *pTypeInfo, UINT method_index, BSTR *name, BSTR *helpstr, DWORD *helpcontext, BSTR *helpfile);
+static HRESULT ole_method_docinfo_from_type(ITypeInfo *pTypeInfo, UINT method_index, BSTR *name, BSTR *helpstr, DWORD *helpcontext, BSTR *helpfile);
 static VALUE ole_method_helpstring(ITypeInfo *pTypeInfo, UINT method_index);
 static VALUE folemethod_helpstring(VALUE self);
 static VALUE ole_method_helpfile(ITypeInfo *pTypeInfo, UINT method_index);
@@ -584,6 +584,7 @@ static VALUE evs_length(void);
 static void  olevariant_free(struct olevariantdata *pvar);
 static VALUE folevariant_s_allocate(VALUE klass);
 static VALUE folevariant_s_array(VALUE klass, VALUE dims, VALUE vvt);
+static void check_type_val2variant(VALUE val);
 static VALUE folevariant_initialize(VALUE self, VALUE args);
 static long *ary2safe_array_index(int ary_size, VALUE *ary, SAFEARRAY *psa);
 static void unlock_safe_array(SAFEARRAY *psa);
@@ -764,8 +765,10 @@ static HRESULT ( STDMETHODCALLTYPE GetIDsOfNames )(
     Win32OLEIDispatch* p = (Win32OLEIDispatch*)This;
     */
     char* psz = ole_wc2mb(*rgszNames); // support only one method
-    *rgDispId = rb_intern(psz);
+    ID nameid = rb_intern(psz);
     free(psz);
+    if ((ID)(DISPID)nameid != nameid) return E_NOINTERFACE;
+    *rgDispId = (DISPID)nameid;
     return S_OK;
 }
 
@@ -785,17 +788,18 @@ static /* [local] */ HRESULT ( STDMETHODCALLTYPE Invoke )(
     int args = pDispParams->cArgs;
     Win32OLEIDispatch* p = (Win32OLEIDispatch*)This;
     VALUE* parg = ALLOCA_N(VALUE, args);
+    ID mid = (ID)dispIdMember;
     for (i = 0; i < args; i++) {
         *(parg + i) = ole_variant2val(&pDispParams->rgvarg[args - i - 1]);
     }
     if (dispIdMember == DISPID_VALUE) {
         if (wFlags == DISPATCH_METHOD) {
-            dispIdMember = rb_intern("call");
+            mid = rb_intern("call");
         } else if (wFlags & DISPATCH_PROPERTYGET) {
-            dispIdMember = rb_intern("value");
+            mid = rb_intern("value");
         }
     }
-    v = rb_funcall2(p->obj, dispIdMember, args, parg);
+    v = rb_funcall2(p->obj, mid, args, parg);
     ole_val2variant(v, pVarResult);
     return S_OK;
 }
@@ -1064,7 +1068,7 @@ ole_cp2encoding(UINT cp)
 }
 
 static char *
-ole_wc2mb(LPWSTR pw)
+ole_wc2mb_alloc(LPWSTR pw, char *(alloc)(UINT size, void *arg), void *arg)
 {
     LPSTR pm;
     UINT size = 0;
@@ -1076,7 +1080,7 @@ ole_wc2mb(LPWSTR pw)
 	if (FAILED(hr)) {
             ole_raise(hr, eWIN32OLERuntimeError, "fail to convert Unicode to CP%d", cWIN32OLE_cp);
 	}
-	pm = ALLOC_N(char, size + 1);
+	pm = alloc(size, arg);
 	hr = pIMultiLanguage->lpVtbl->ConvertStringFromUnicode(pIMultiLanguage,
 		&dw, cWIN32OLE_cp, pw, NULL, pm, &size);
 	if (FAILED(hr)) {
@@ -1088,15 +1092,27 @@ ole_wc2mb(LPWSTR pw)
     }
     size = WideCharToMultiByte(cWIN32OLE_cp, 0, pw, -1, NULL, 0, NULL, NULL);
     if (size) {
-        pm = ALLOC_N(char, size + 1);
+        pm = alloc(size, arg);
         WideCharToMultiByte(cWIN32OLE_cp, 0, pw, -1, pm, size, NULL, NULL);
         pm[size] = '\0';
     }
     else {
-        pm = ALLOC_N(char, 1);
+        pm = alloc(0, arg);
         *pm = '\0';
     }
     return pm;
+}
+
+static char *
+ole_alloc_str(UINT size, void *arg)
+{
+    return ALLOC_N(char, size + 1);
+}
+
+static char *
+ole_wc2mb(LPWSTR pw)
+{
+    return ole_wc2mb_alloc(pw, ole_alloc_str, NULL);
 }
 
 static VALUE
@@ -1171,7 +1187,7 @@ ole_excepinfo2msg(EXCEPINFO *pExInfo)
     }
     error_msg = rb_str_new2(error_code);
     if(pSource != NULL) {
-        rb_str_cat(error_msg, pSource, strlen(pSource));
+        rb_str_cat2(error_msg, pSource);
     }
     else {
         rb_str_cat(error_msg, "<Unknown>", 9);
@@ -1311,7 +1327,7 @@ ole_vstr2wc(VALUE vstr)
     enc = rb_enc_get(vstr);
 
     if (st_lookup(enc2cp_table, (st_data_t)enc, &data)) {
-        cp = data;
+        cp = (int)data;
     } else {
         cp = ole_encoding2cp(enc);
         if (code_page_installed(cp) ||
@@ -1383,14 +1399,22 @@ ole_mb2wc(char *pm, int len)
     return pw;
 }
 
+static char *
+ole_alloc_vstr(UINT size, void *arg)
+{
+    VALUE str = rb_enc_str_new(NULL, size, cWIN32OLE_enc);
+    *(VALUE *)arg = str;
+    return RSTRING_PTR(str);
+}
+
 static VALUE
 ole_wc2vstr(LPWSTR pw, BOOL isfree)
 {
-    char *p = ole_wc2mb(pw);
-    VALUE vstr = rb_enc_str_new(p, strlen(p), cWIN32OLE_enc);
+    VALUE vstr;
+    ole_wc2mb_alloc(pw, ole_alloc_vstr, &vstr);
+    rb_str_set_len(vstr, (long)strlen(RSTRING_PTR(vstr)));
     if(isfree)
         SysFreeString(pw);
-    free(p);
     return vstr;
 }
 
@@ -2725,7 +2749,6 @@ fole_s_connect(int argc, VALUE *argv, VALUE self)
     void *p;
     IUnknown *pUnknown;
 
-    rb_secure(4);
     /* initialize to use OLE */
     ole_initialize();
 
@@ -2809,7 +2832,6 @@ fole_s_const_load(int argc, VALUE *argv, VALUE self)
     VALUE file;
     LCID    lcid = cWIN32OLE_lcid;
 
-    rb_secure(4);
     rb_scan_args(argc, argv, "11", &ole, &klass);
     if (TYPE(klass) != T_CLASS &&
         TYPE(klass) != T_MODULE &&
@@ -2872,7 +2894,6 @@ ole_types_from_typelib(ITypeLib *pTypeLib, VALUE classes)
     ITypeInfo *pTypeInfo;
     VALUE type;
 
-    rb_secure(4);
     count = pTypeLib->lpVtbl->GetTypeInfoCount(pTypeLib);
     for (i = 0; i < count; i++) {
         hr = pTypeLib->lpVtbl->GetDocumentation(pTypeLib, i,
@@ -3236,7 +3257,6 @@ fole_initialize(int argc, VALUE *argv, VALUE self)
     OLECHAR *pBuf;
     IDispatch *pDispatch;
     void *p;
-    rb_secure(4);
     rb_call_super(0, 0);
     rb_scan_args(argc, argv, "11*", &svr_name, &host, &others);
 
@@ -3282,8 +3302,9 @@ fole_initialize(int argc, VALUE *argv, VALUE self)
 }
 
 static VALUE
-hash2named_arg(VALUE pair, struct oleparam* pOp)
+hash2named_arg(RB_BLOCK_CALL_FUNC_ARGLIST(pair, op))
 {
+    struct oleparam* pOp = (struct oleparam *)op;
     unsigned int index, i;
     VALUE key, value;
     index = pOp->dp.cNamedArgs;
@@ -3964,7 +3985,6 @@ static VALUE
 fole_free(VALUE self)
 {
     struct oledata *pole;
-    rb_secure(4);
     OLEData_Get_Struct(self, pole);
     OLE_FREE(pole->pDispatch);
     pole->pDispatch = NULL;
@@ -4077,20 +4097,27 @@ fole_missing(int argc, VALUE *argv, VALUE self)
 {
     ID id;
     const char* mname;
-    int n;
+    size_t n;
+    rb_check_arity(argc, 1, UNLIMITED_ARGUMENTS);
     id = rb_to_id(argv[0]);
     mname = rb_id2name(id);
     if(!mname) {
         rb_raise(rb_eRuntimeError, "fail: unknown method or property");
     }
     n = strlen(mname);
+#if SIZEOF_SIZE_T > SIZEOF_LONG
+    if (n >= LONG_MAX) {
+	rb_raise(rb_eRuntimeError, "too long method or property name");
+    }
+#endif
     if(mname[n-1] == '=') {
-        argv[0] = rb_enc_str_new(mname, n-1, cWIN32OLE_enc);
+        rb_check_arity(argc, 2, 2);
+        argv[0] = rb_enc_str_new(mname, (long)(n-1), cWIN32OLE_enc);
 
         return ole_propertyput(self, argv[0], argv[1]);
     }
     else {
-        argv[0] = rb_enc_str_new(mname, n, cWIN32OLE_enc);
+        argv[0] = rb_enc_str_new(mname, (long)n, cWIN32OLE_enc);
         return ole_invoke(argc, argv, self, DISPATCH_METHOD|DISPATCH_PROPERTYGET, FALSE);
     }
 }
@@ -4525,7 +4552,6 @@ fole_respond_to(VALUE self, VALUE method)
     BSTR wcmdname;
     DISPID DispID;
     HRESULT hr;
-    rb_secure(4);
     if(TYPE(method) != T_STRING && TYPE(method) != T_SYMBOL) {
 	rb_raise(rb_eTypeError, "wrong argument type (expected String or Symbol)");
     }
@@ -5285,7 +5311,7 @@ foletypelib_name(VALUE self)
         ole_raise(hr, eWIN32OLERuntimeError, "failed to get name from ITypeLib");
     }
     name = WC2VSTR(bstr);
-    return rb_enc_str_new(StringValuePtr(name), strlen(StringValuePtr(name)), cWIN32OLE_enc);
+    return name;
 }
 
 /*
@@ -5440,7 +5466,7 @@ foletypelib_path(VALUE self)
 
     pTypeLib->lpVtbl->ReleaseTLibAttr(pTypeLib, pTLibAttr);
     path = WC2VSTR(bstr);
-    return rb_enc_str_new(StringValuePtr(path), strlen(StringValuePtr(path)), cWIN32OLE_enc);
+    return path;
 }
 
 /*
@@ -5750,7 +5776,7 @@ ole_type_visible(ITypeInfo *pTypeInfo)
 
 /*
  *  call-seq:
- *    WIN32OLE_TYPE#visible  #=> true or false
+ *    WIN32OLE_TYPE#visible?  #=> true or false
  *
  *  Returns true if the OLE class is public.
  *    tobj = WIN32OLE_TYPE.new('Microsoft Excel 9.0 Object Library', 'Application')
@@ -6922,7 +6948,7 @@ folemethod_event_interface(VALUE self)
     return Qnil;
 }
 
-static VALUE
+static HRESULT
 ole_method_docinfo_from_type(
     ITypeInfo *pTypeInfo,
     UINT method_index,
@@ -8297,7 +8323,6 @@ ev_advise(int argc, VALUE *argv, VALUE self)
     struct oleeventdata *poleev;
     void *p;
 
-    rb_secure(4);
     rb_scan_args(argc, argv, "11", &ole, &itf);
 
     if (!rb_obj_is_kind_of(ole, cWIN32OLE)) {
@@ -8505,7 +8530,6 @@ fev_off_event(int argc, VALUE *argv, VALUE self)
     VALUE event = Qnil;
     VALUE events;
 
-    rb_secure(4);
     rb_scan_args(argc, argv, "01", &event);
     if(!NIL_P(event)) {
 	if(TYPE(event) != T_STRING && TYPE(event) != T_SYMBOL) {
@@ -8722,6 +8746,38 @@ folevariant_s_array(VALUE klass, VALUE elems, VALUE vvt)
     return obj;
 }
 
+static void
+check_type_val2variant(VALUE val)
+{
+    VALUE elem;
+    int len = 0;
+    int i = 0;
+    if(!rb_obj_is_kind_of(val, cWIN32OLE) &&
+       !rb_obj_is_kind_of(val, cWIN32OLE_VARIANT) &&
+       !rb_obj_is_kind_of(val, rb_cTime)) {
+	switch (TYPE(val)) {
+	case T_ARRAY:
+            len = RARRAY_LEN(val);
+            for(i = 0; i < len; i++) {
+                elem = rb_ary_entry(val, i);
+                check_type_val2variant(elem);
+            }
+            break;
+	case T_STRING:
+	case T_FIXNUM:
+	case T_BIGNUM:
+	case T_FLOAT:
+	case T_TRUE:
+	case T_FALSE:
+	case T_NIL:
+	    break;
+	default:
+	    rb_raise(rb_eTypeError, "can not convert WIN32OLE_VARIANT from type %s",
+		     rb_obj_classname(val));
+	}
+    }
+}
+
 /*
  *  call-seq:
  *     WIN32OLE_VARIANT.new(val, vartype) #=> WIN32OLE_VARIANT object.
@@ -8757,24 +8813,7 @@ folevariant_initialize(VALUE self, VALUE args)
     VariantInit(&var);
     val = rb_ary_entry(args, 0);
 
-    if(!rb_obj_is_kind_of(val, cWIN32OLE) &&
-       !rb_obj_is_kind_of(val, cWIN32OLE_VARIANT) &&
-       !rb_obj_is_kind_of(val, rb_cTime)) {
-	switch (TYPE(val)) {
-	case T_ARRAY:
-	case T_STRING:
-	case T_FIXNUM:
-	case T_BIGNUM:
-	case T_FLOAT:
-	case T_TRUE:
-	case T_FALSE:
-	case T_NIL:
-	    break;
-	default:
-	    rb_raise(rb_eTypeError, "can not convert WIN32OLE_VARIANT from type %s",
-		     rb_obj_classname(val));
-	}
-    }
+    check_type_val2variant(val);
 
     Data_Get_Struct(self, struct olevariantdata, pvar);
     if (len == 1) {
