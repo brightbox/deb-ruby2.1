@@ -12,8 +12,8 @@ DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 configure_options += --enable-multiarch
 configure_options += --target=$(DEB_HOST_MULTIARCH)
-configure_options += --program-suffix=2.0
-configure_options += --with-soname=ruby-2.0
+configure_options += --program-suffix=2.1
+configure_options += --with-soname=ruby-2.1
 configure_options += --enable-shared
 configure_options += --disable-rpath
 configure_options += --with-baseruby=/usr/bin/ruby1.9.1
@@ -50,7 +50,7 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	$(MAKE) install-nodoc DESTDIR=$(CURDIR)/debian/tmp
-	dh_link -pruby2.0 usr/bin/ruby2.0 usr/bin/$(DEB_HOST_MULTIARCH)-ruby2.0
+	dh_link -pruby2.1 usr/bin/ruby2.1 usr/bin/$(DEB_HOST_MULTIARCH)-ruby2.1
 	debian/sanity_check
 
 override_dh_auto_build-indep:
@@ -61,9 +61,9 @@ override_dh_auto_test-indep:
 
 override_dh_auto_install-indep:
 	$(MAKE) install-doc DESTDIR=$(CURDIR)/debian/tmp
-	dh_install -pruby2.0-doc usr/share/ri
-	dh_install -pruby2.0-doc usr/share/doc/ruby-capi/html /usr/share/doc/ruby2.0-doc/
-	find debian/ruby2.0-doc/ -type d -empty
+	dh_install -pruby2.1-doc usr/share/ri
+	dh_install -pruby2.1-doc usr/share/doc/ruby-capi/html /usr/share/doc/ruby2.1-doc/
+	find debian/ruby2.1-doc/ -type d -empty
 
 override_dh_install-arch:
 	dh_install
