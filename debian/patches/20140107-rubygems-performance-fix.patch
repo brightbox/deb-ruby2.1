@@ -1,0 +1,80 @@
+From 204d1b9c91893ebd6efd48c416e352d39404d80e Mon Sep 17 00:00:00 2001
+From: Eric Hodel <drbrain@segment7.net>
+Date: Fri, 3 Jan 2014 16:25:51 -0800
+Subject: [PATCH] Reduce HTTP requests by using BestSet
+
+RubyGems 2.2.0 introduced use of the bundler API, but accidentally this
+was not complete.  `gem install` of a gem was left using the marshal API
+like 2.1.x and earlier which makes lots of requests.
+
+Now RubyGems uses BestSet inside InstallerSet for remote requests.  This
+should speed up install during the dependency fetching phase.
+
+This should also address #762
+
+diff --git a/lib/rubygems/resolver/installer_set.rb b/lib/rubygems/resolver/installer_set.rb
+index e35e0aa..27e6455 100644
+--- a/lib/rubygems/resolver/installer_set.rb
++++ b/lib/rubygems/resolver/installer_set.rb
+@@ -28,11 +28,10 @@ def initialize domain
+ 
+     @f = Gem::SpecFetcher.fetcher
+ 
+-    @all = Hash.new { |h,k| h[k] = [] }
+     @always_install      = []
+     @ignore_dependencies = false
+     @ignore_installed    = false
+-    @loaded_remote_specs = []
++    @remote_set          = Gem::Resolver::BestSet.new if consider_remote?
+     @specs               = {}
+   end
+ 
+@@ -79,16 +78,7 @@ def find_all req
+       end
+     end
+ 
+-    if consider_remote? then
+-      load_remote_specs dep
+-
+-      @all[name].each do |remote_source, n|
+-        if dep.match? n then
+-          res << Gem::Resolver::IndexSpecification.new(
+-            self, n.name, n.version, remote_source, n.platform)
+-        end
+-      end
+-    end
++    res.concat @remote_set.find_all req if consider_remote?
+ 
+     res
+   end
+@@ -102,27 +92,6 @@ def inspect # :nodoc:
+   end
+ 
+   ##
+-  # Loads remote prerelease specs if +dep+ is a prerelease dependency
+-
+-  def load_remote_specs dep # :nodoc:
+-    types = [:released]
+-    types << :prerelease if dep.prerelease?
+-
+-    types.each do |type|
+-      next if @loaded_remote_specs.include? type
+-      @loaded_remote_specs << type
+-
+-      list, = @f.available_specs type
+-
+-      list.each do |uri, specs|
+-        specs.each do |n|
+-          @all[n.name] << [uri, n]
+-        end
+-      end
+-    end
+-  end
+-
+-  ##
+   # Called from IndexSpecification to get a true Specification
+   # object.
+ 
+-- 
+1.8.5.1
+
