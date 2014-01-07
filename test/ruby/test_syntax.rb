@@ -125,6 +125,27 @@ class TestSyntax < Test::Unit::TestCase
     end
   end
 
+  def test_warn_balanced
+    warning = <<WARN
+test:1: warning: `%s' after local variable or literal is interpreted as binary operator
+test:1: warning: even though it seems like %s
+WARN
+    [
+     [:**, "argument prefix"],
+     [:*, "argument prefix"],
+     [:<<, "here document"],
+     [:&, "argument prefix"],
+     [:+, "unary operator"],
+     [:-, "unary operator"],
+     [:/, "regexp literal"],
+     [:%, "string literal"],
+    ].each do |op, syn|
+      assert_warning(warning % [op, syn]) do
+        assert_valid_syntax("puts 1 #{op}0", "test") {$VERBOSE = true}
+      end
+    end
+  end
+
   def test_cmd_symbol_after_keyword
     bug6347 = '[ruby-dev:45563]'
     assert_not_label(:foo, 'if true then not_label:foo end', bug6347)
@@ -340,6 +361,35 @@ eom
     assert_constant_reassignment_toplevel(nil,     "+",  [], uninitialized)
     assert_constant_reassignment_toplevel("false", "+",  [], /undefined method/)
     assert_constant_reassignment_toplevel("11",    "+",  %w[53], already)
+  end
+
+  def test_integer_suffix
+    ["1if true", "begin 1end"].each do |src|
+      assert_valid_syntax(src)
+      assert_equal(1, eval(src), src)
+    end
+  end
+
+  def test_value_of_def
+    assert_separately [], <<-EOS
+      assert_equal(:foo, (def foo; end))
+      assert_equal(:foo, (def (Object.new).foo; end))
+    EOS
+  end
+
+  def test_heredoc_cr
+    assert_syntax_error("puts <<""EOS\n""ng\n""EOS\r""NO\n", /can't find string "EOS" anywhere before EOF/)
+  end
+
+  def test__END___cr
+    assert_syntax_error("__END__\r<<<<<\n", /unexpected <</)
+  end
+
+  def test_warning_for_cr
+    feature8699 = '[ruby-core:56240] [Feature #8699]'
+    assert_warning(/encountered \\r/, feature8699) do
+      eval("\r""__id__\r")
+    end
   end
 
   private

@@ -2,6 +2,8 @@ require "rubygems/deprecate"
 
 ##
 # Available list of platforms for targeting Gem installations.
+#
+# See `gem help platform` for information on platform matching.
 
 class Gem::Platform
 
@@ -24,6 +26,14 @@ class Gem::Platform
       platform.nil? or
         local_platform == platform or
         (local_platform != Gem::Platform::RUBY and local_platform =~ platform)
+    end
+  end
+
+  def self.installable?(spec)
+    if spec.respond_to? :installable_platform?
+      spec.installable_platform?
+    else
+      match spec.platform
     end
   end
 
@@ -129,12 +139,16 @@ class Gem::Platform
   # Does +other+ match this platform?  Two platforms match if they have the
   # same CPU, or either has a CPU of 'universal', they have the same OS, and
   # they have the same version, or either has no version.
+  #
+  # Additionally, the platform will match if the local CPU is 'arm' and the
+  # other CPU starts with "arm" (for generic ARM family support).
 
   def ===(other)
     return nil unless Gem::Platform === other
 
     # cpu
-    (@cpu == 'universal' or other.cpu == 'universal' or @cpu == other.cpu) and
+    (@cpu == 'universal' or other.cpu == 'universal' or @cpu == other.cpu or
+     (@cpu == 'arm' and other.cpu =~ /\Aarm/)) and
 
     # os
     @os == other.os and
@@ -175,13 +189,13 @@ class Gem::Platform
   end
 
   ##
-  # A pure-ruby gem that may use Gem::Specification#extensions to build
+  # A pure-Ruby gem that may use Gem::Specification#extensions to build
   # binary files.
 
   RUBY = 'ruby'
 
   ##
-  # A platform-specific gem that is built for the packaging ruby's platform.
+  # A platform-specific gem that is built for the packaging Ruby's platform.
   # This will be replaced with Gem::Platform::local.
 
   CURRENT = 'current'

@@ -1,12 +1,10 @@
 # -*- coding: us-ascii -*-
 require "open3"
 require "timeout"
+require "test/unit"
 
 module EnvUtil
   def rubybin
-    unless ENV["RUBYOPT"]
-
-    end
     if ruby = ENV["RUBY"]
       return ruby
     end
@@ -59,7 +57,7 @@ module EnvUtil
     else
       th_stdout = Thread.new { out_p.read } if capture_stdout
       th_stderr = Thread.new { err_p.read } if capture_stderr && capture_stderr != :merge_to_stdout
-      in_p.write stdin_data.to_str
+      in_p.write stdin_data.to_str unless stdin_data.empty?
       in_p.close
       if (!th_stdout || th_stdout.join(timeout)) && (!th_stderr || th_stderr.join(timeout))
         stdout = th_stdout.value if capture_stdout
@@ -68,11 +66,19 @@ module EnvUtil
         signal = /mswin|mingw/ =~ RUBY_PLATFORM ? :KILL : :TERM
         begin
           Process.kill signal, pid
+          Timeout.timeout((reprieve unless signal == :KILL)) do
+            Process.wait(pid)
+          end
         rescue Errno::ESRCH
           break
+        rescue Timeout::Error
+          raise if signal == :KILL
+          signal = :KILL
         else
-        end until signal == :KILL or (sleep reprieve; signal = :KILL; false)
-        raise Timeout::Error
+          break
+        end while true
+        bt = caller_locations
+        raise Timeout::Error, "execution of #{bt.shift.label} expired", bt.map(&:to_s)
       end
       out_p.close if capture_stdout
       err_p.close if capture_stderr && capture_stderr != :merge_to_stdout
@@ -118,8 +124,8 @@ module EnvUtil
   end
   module_function :suppress_warning
 
-  def under_gc_stress
-    stress, GC.stress = GC.stress, true
+  def under_gc_stress(stress = true)
+    stress, GC.stress = GC.stress, stress
     yield
   ensure
     GC.stress = stress
@@ -149,6 +155,34 @@ module EnvUtil
     $VERBOSE = verbose
   end
   module_function :with_default_internal
+
+  if /darwin/ =~ RUBY_PLATFORM
+    DIAGNOSTIC_REPORTS_PATH = File.expand_path("~/Library/Logs/DiagnosticReports")
+    DIAGNOSTIC_REPORTS_TIMEFORMAT = '%Y-%m-%d-%H%M%S'
+    def self.diagnostic_reports(signame, cmd, pid, now)
+      return unless %w[ABRT QUIT SEGV ILL].include?(signame)
+      cmd = File.basename(cmd)
+      path = DIAGNOSTIC_REPORTS_PATH
+      timeformat = DIAGNOSTIC_REPORTS_TIMEFORMAT
+      pat = "#{path}/#{cmd}_#{now.strftime(timeformat)}[-_]*.crash"
+      first = true
+      30.times do
+        first ? (first = false) : sleep(0.1)
+        Dir.glob(pat) do |name|
+          log = File.read(name) rescue next
+          if /\AProcess:\s+#{cmd} \[#{pid}\]$/ =~ log
+            File.unlink(name)
+            File.unlink("#{path}/.#{File.basename(name)}.plist")
+            return log
+          end
+        end
+      end
+      nil
+    end
+  else
+    def self.diagnostic_reports(signame, cmd, pid, now)
+    end
+  end
 end
 
 module Test
@@ -160,7 +194,7 @@ module Test
         code.sub!(/\A(?:\xef\xbb\xbf)?(\s*\#.*$)*(\n)?/n) {
           "#$&#{"\n" if $1 && !$2}BEGIN{throw tag, :ok}\n"
         }
-        code.force_encoding("us-ascii")
+        code.force_encoding(Encoding::UTF_8)
         verbose, $VERBOSE = $VERBOSE, nil
         yield if defined?(yield)
         case
@@ -209,16 +243,18 @@ module Test
         else
           child_env = []
         end
-        out, _, status = EnvUtil.invoke_ruby(child_env + %W'-W0', testsrc, true, :merge_to_stdout, opt)
+        out, _, status = EnvUtil.invoke_ruby(child_env + %W'-W0', testsrc, true, :merge_to_stdout, **opt)
         assert !status.signaled?, FailDesc[status, message, out]
       end
 
       FailDesc = proc do |status, message = "", out = ""|
         pid = status.pid
+        now = Time.now
         faildesc = proc do
           signo = status.termsig
-          signame = Signal.list.invert[signo]
+          signame = Signal.signame(signo)
           sigdesc = "signal #{signo}"
+          log = EnvUtil.diagnostic_reports(signame, EnvUtil.rubybin, pid, now)
           if signame
             sigdesc = "SIG#{signame} (#{sigdesc})"
           end
@@ -234,13 +270,19 @@ module Test
             full_message << "\n#{out.gsub(/^/, '| ')}"
             full_message << "\n" if /\n\z/ !~ full_message
           end
+          if log
+            full_message << "\n#{log.gsub(/^/, '| ')}"
+          end
           full_message
         end
         faildesc
       end
 
       def assert_in_out_err(args, test_stdin = "", test_stdout = [], test_stderr = [], message = nil, **opt)
-        stdout, stderr, status = EnvUtil.invoke_ruby(args, test_stdin, true, true, opt)
+        stdout, stderr, status = EnvUtil.invoke_ruby(args, test_stdin, true, true, **opt)
+        if signo = status.termsig
+          EnvUtil.diagnostic_reports(Signal.signame(signo), EnvUtil.rubybin, status.pid, Time.now)
+        end
         if block_given?
           raise "test_stdout ignored, use block only or without block" if test_stdout != []
           raise "test_stderr ignored, use block only or without block" if test_stderr != []
@@ -265,9 +307,10 @@ module Test
       end
 
       def assert_ruby_status(args, test_stdin="", message=nil, **opt)
-        out, _, status = EnvUtil.invoke_ruby(args, test_stdin, true, :merge_to_stdout, opt)
+        out, _, status = EnvUtil.invoke_ruby(args, test_stdin, true, :merge_to_stdout, **opt)
+        assert(!status.signaled?, FailDesc[status, message, out])
         message ||= "ruby exit status is not success:"
-        assert(status.success?, FailDesc[status, message, out])
+        assert(status.success?, "#{message} (#{status.inspect})")
       end
 
       ABORT_SIGNALS = Signal.list.values_at(*%w"ILL ABRT BUS SEGV")
@@ -278,25 +321,37 @@ module Test
           file ||= loc.path
           line ||= loc.lineno
         end
+        line -= 2
         src = <<eom
-  require 'test/unit';include Test::Unit::Assertions;begin;#{src}
-  ensure
+# -*- coding: #{src.encoding}; -*-
+  require #{__dir__.dump}'/envutil';include Test::Unit::Assertions
+  END {
     puts [Marshal.dump($!)].pack('m'), "assertions=\#{self._assertions}"
+  }
+#{src}
+  class Test::Unit::Runner
+    @@stop_auto_run = true
   end
   class Test::Unit::Runner
     @@stop_auto_run = true
   end
 eom
         args = args.dup
-        $:.each{|l| args.unshift "-I#{l}" }
-        stdout, stderr, status = EnvUtil.invoke_ruby(args, src, true, true, opt)
+        args.insert((Hash === args.first ? 1 : 0), "--disable=gems", *$:.map {|l| "-I#{l}"})
+        stdout, stderr, status = EnvUtil.invoke_ruby(args, src, true, true, **opt)
         abort = status.coredump? || (status.signaled? && ABORT_SIGNALS.include?(status.termsig))
         assert(!abort, FailDesc[status, stderr])
         self._assertions += stdout[/^assertions=(\d+)/, 1].to_i
-        res = Marshal.load(stdout.unpack("m")[0])
+        begin
+          res = Marshal.load(stdout.unpack("m")[0])
+        rescue => marshal_error
+          ignore_stderr = nil
+        end
         if res
-          res.backtrace.each do |l|
-            l.sub!(/\A-:(\d+)/){"#{file}:#{line + $1.to_i}"}
+          if bt = res.backtrace
+            bt.each do |l|
+              l.sub!(/\A-:(\d+)/){"#{file}:#{line + $1.to_i}"}
+            end
           end
           raise res
         end
@@ -307,12 +362,12 @@ eom
           assert_equal("", stderr, "assert_separately failed with error message")
         end
         assert_equal(0, status, "assert_separately failed: '#{stderr}'")
+        raise marshal_error if marshal_error
       end
 
-      def assert_warning(pat, message = nil)
+      def assert_warning(pat, msg = nil)
         stderr = EnvUtil.verbose_warning { yield }
-        message = ' "' + message + '"' if message
-        msg = proc {"warning message #{stderr.inspect} is expected to match #{pat.inspect}#{message}"}
+        msg = message(msg) {diff stderr, pat}
         assert(pat === stderr, msg)
       end
 
@@ -320,23 +375,25 @@ eom
         assert_warning(*args) {$VERBOSE = false; yield}
       end
 
-      def assert_no_memory_leak(args, prepare, code, message=nil, limit: 1.5)
+      def assert_no_memory_leak(args, prepare, code, message=nil, limit: 1.5, **opt)
         token = "\e[7;1m#{$$.to_s}:#{Time.now.strftime('%s.%L')}:#{rand(0x10000).to_s(16)}:\e[m"
         token_dump = token.dump
         token_re = Regexp.quote(token)
+        envs = args.shift if Array === args and Hash === args.first
         args = [
           "--disable=gems",
           "-r", File.expand_path("../memory_status", __FILE__),
           *args,
           "-v", "-",
         ]
+        args.unshift(envs) if envs
         cmd = [
           'END {STDERR.puts '"#{token_dump}"'"FINAL=#{Memory::Status.new.size}"}',
           prepare,
           'STDERR.puts('"#{token_dump}"'"START=#{$initial_size = Memory::Status.new.size}")',
           code,
         ].join("\n")
-        _, err, status = EnvUtil.invoke_ruby(args, cmd, true, true)
+        _, err, status = EnvUtil.invoke_ruby(args, cmd, true, true, **opt)
         before = err.sub!(/^#{token_re}START=(\d+)\n/, '') && $1.to_i
         after = err.sub!(/^#{token_re}FINAL=(\d+)\n/, '') && $1.to_i
         assert_equal([true, ""], [status.success?, err], message)
@@ -351,7 +408,7 @@ eom
         AssertFile
       end
 
-      class << (AssertFile = Struct.new(:message).new)
+      class << (AssertFile = Struct.new(:failure_message).new)
         include Assertions
         def assert_file_predicate(predicate, *args)
           if /\Anot_/ =~ predicate
@@ -361,15 +418,15 @@ eom
           result = File.__send__(predicate, *args)
           result = !result if neg
           mesg = "Expected file " << args.shift.inspect
-          mesg << mu_pp(args) unless args.empty?
           mesg << "#{neg} to be #{predicate}"
-          mesg << " #{message}" if message
+          mesg << mu_pp(args).sub(/\A\[(.*)\]\z/m, '(\1)') unless args.empty?
+          mesg << " #{failure_message}" if failure_message
           assert(result, mesg)
         end
         alias method_missing assert_file_predicate
 
         def for(message)
-          clone.tap {|a| a.message = message}
+          clone.tap {|a| a.failure_message = message}
         end
       end
     end

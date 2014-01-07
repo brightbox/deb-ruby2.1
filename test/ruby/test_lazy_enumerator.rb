@@ -22,6 +22,12 @@ class TestLazyEnumerator < Test::Unit::TestCase
     assert_equal([1, 2, 3], [1, 2, 3].lazy.to_a)
     assert_equal([1, 2, 3], Enumerator::Lazy.new([1, 2, 3]){|y, v| y << v}.to_a)
     assert_raise(ArgumentError) { Enumerator::Lazy.new([1, 2, 3]) }
+
+    a = [1, 2, 3].lazy
+    a.freeze
+    assert_raise(RuntimeError) {
+      a.__send__ :initialize, [4, 5], &->(y, *v) { y << yield(*v) }
+    }
   end
 
   def test_each_args
@@ -334,11 +340,11 @@ class TestLazyEnumerator < Test::Unit::TestCase
 
   def test_drop_while
     a = Step.new(1..10)
-    assert_equal(5, a.drop_while {|i| i < 5}.first)
+    assert_equal(5, a.drop_while {|i| i % 5 > 0}.first)
     assert_equal(10, a.current)
-    assert_equal(5, a.lazy.drop_while {|i| i < 5}.first)
+    assert_equal(5, a.lazy.drop_while {|i| i % 5 > 0}.first)
     assert_equal(5, a.current)
-    assert_equal((5..10).to_a, a.lazy.drop_while {|i| i < 5}.to_a)
+    assert_equal((5..10).to_a, a.lazy.drop_while {|i| i % 5 > 0}.to_a)
   end
 
   def test_drop_and_take

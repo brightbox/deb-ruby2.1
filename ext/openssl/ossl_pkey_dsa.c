@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_pkey_dsa.c 36355 2012-07-10 13:57:11Z nobu $
+ * $Id: ossl_pkey_dsa.c 40316 2013-04-16 02:24:09Z zzak $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.
@@ -291,7 +291,9 @@ ossl_dsa_is_private(VALUE self)
 
 /*
  *  call-seq:
+ *    dsa.export([cipher, password]) -> aString
  *    dsa.to_pem([cipher, password]) -> aString
+ *    dsa.to_s([cipher, password]) -> aString
  *
  * Encodes this DSA to its PEM encoding.
  *

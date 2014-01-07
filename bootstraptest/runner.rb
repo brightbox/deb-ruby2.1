@@ -1,6 +1,6 @@
 "exec" "${RUBY-ruby}" "-x" "$0" "$@" || true # -*- mode: ruby; coding: utf-8 -*-
 #!./ruby
-# $Id: runner.rb 38821 2013-01-15 00:59:19Z nobu $
+# $Id: runner.rb 43305 2013-10-16 08:46:00Z ko1 $
 
 # NOTE:
 # Never use optparse in this file.
@@ -321,7 +321,7 @@ def assert_normal_exit(testsrc, *rest)
       $stderr.reopen(old_stderr)
       old_stderr.close
     end
-    if status.signaled?
+    if status && status.signaled?
       signo = status.termsig
       signame = Signal.list.invert[signo]
       unless ignore_signals and ignore_signals.include?(signame)
@@ -407,7 +407,7 @@ def get_result_string(src, opt = '')
     begin
       `#{@ruby} -W0 #{opt} #{filename}`
     ensure
-      raise Interrupt if $?.signaled? && $?.termsig == Signal.list["INT"]
+      raise Interrupt if $? and $?.signaled? && $?.termsig == Signal.list["INT"]
       raise CoreDumpError, "core dumped" if $? and $?.coredump?
     end
   else

@@ -44,6 +44,8 @@ ripper_init_eventids2_table(VALUE self)
     rb_hash_aset(h, ID2SYM(id), INT2NUM(1));
     id = rb_intern_const("ignored_nl");
     rb_hash_aset(h, ID2SYM(id), INT2NUM(1));
+    id = rb_intern_const("imaginary");
+    rb_hash_aset(h, ID2SYM(id), INT2NUM(1));
     id = rb_intern_const("int");
     rb_hash_aset(h, ID2SYM(id), INT2NUM(1));
     id = rb_intern_const("ivar");
@@ -67,6 +69,8 @@ ripper_init_eventids2_table(VALUE self)
     id = rb_intern_const("qsymbols_beg");
     rb_hash_aset(h, ID2SYM(id), INT2NUM(1));
     id = rb_intern_const("qwords_beg");
+    rb_hash_aset(h, ID2SYM(id), INT2NUM(1));
+    id = rb_intern_const("rational");
     rb_hash_aset(h, ID2SYM(id), INT2NUM(1));
     id = rb_intern_const("rbrace");
     rb_hash_aset(h, ID2SYM(id), INT2NUM(1));

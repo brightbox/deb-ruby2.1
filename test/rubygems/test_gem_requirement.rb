@@ -3,6 +3,14 @@ require "rubygems/requirement"
 
 class TestGemRequirement < Gem::TestCase
 
+  def test_concat
+    r = req '>= 1'
+
+    r.concat ['< 2']
+
+    assert_equal [['>=', v(1)], ['<', v(2)]], r.requirements
+  end
+
   def test_equals2
     r = req "= 1.2"
     assert_equal r, r.dup
@@ -34,6 +42,19 @@ class TestGemRequirement < Gem::TestCase
   def test_basic_non_none
     r = Gem::Requirement.new "= 1"
     assert_equal false, r.none?
+  end
+
+  def test_for_lockfile
+    assert_equal ' (~> 1.0)', req('~> 1.0').for_lockfile
+
+    assert_equal ' (~> 1.0, >= 1.0.1)', req('>= 1.0.1', '~> 1.0').for_lockfile
+
+    duped = req '= 1.0'
+    duped.requirements << ['=', v('1.0')]
+
+    assert_equal ' (= 1.0)', duped.for_lockfile
+
+    assert_nil Gem::Requirement.default.for_lockfile
   end
 
   def test_parse

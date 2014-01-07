@@ -31,7 +31,7 @@
  *
  * $OrigId: sha2.c,v 1.1 2001/11/08 00:01:51 adg Exp adg $
  * $RoughId: sha2.c,v 1.3 2002/02/26 22:03:36 knu Exp $
- * $Id: sha2.c 35505 2012-04-30 21:04:16Z nobu $
+ * $Id: sha2.c 40033 2013-04-01 09:39:19Z nobu $
  */
 
 #include "defs.h"
@@ -613,7 +613,8 @@ void SHA256_Final(sha2_byte digest[], SHA256_CTX* context) {
 			*context->buffer = 0x80;
 		}
 		/* Set the bit count: */
-		*(sha2_word64*)&context->buffer[SHA256_SHORT_BLOCK_LENGTH] = context->bitcount;
+		MEMCPY_BCOPY(&context->buffer[SHA256_SHORT_BLOCK_LENGTH], &context->bitcount,
+			     sizeof(sha2_word64));
 
 		/* Final transform: */
 		SHA256_Transform(context, (sha2_word32*)context->buffer);
@@ -930,8 +931,10 @@ void SHA512_Last(SHA512_CTX* context) {
 		*context->buffer = 0x80;
 	}
 	/* Store the length of input data (in bits): */
-	*(sha2_word64*)&context->buffer[SHA512_SHORT_BLOCK_LENGTH] = context->bitcount[1];
-	*(sha2_word64*)&context->buffer[SHA512_SHORT_BLOCK_LENGTH+8] = context->bitcount[0];
+	MEMCPY_BCOPY(&context->buffer[SHA512_SHORT_BLOCK_LENGTH], &context->bitcount[1],
+		     sizeof(sha2_word64));
+	MEMCPY_BCOPY(&context->buffer[SHA512_SHORT_BLOCK_LENGTH+8], &context->bitcount[0],
+		     sizeof(sha2_word64));
 
 	/* Final transform: */
 	SHA512_Transform(context, (sha2_word64*)context->buffer);

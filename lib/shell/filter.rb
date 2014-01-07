@@ -1,7 +1,7 @@
 #
 #   shell/filter.rb -
 #       $Release Version: 0.7 $
-#       $Revision: 38201 $
+#       $Revision: 44221 $
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --
@@ -10,7 +10,7 @@
 #
 
 class Shell #:nodoc:
-  # Any result of command exection is a Filter.
+  # Any result of command execution is a Filter.
   #
   # This class includes Enumerable, therefore a Filter object can use all
   # Enumerable

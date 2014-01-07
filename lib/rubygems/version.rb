@@ -145,15 +145,16 @@ class Gem::Version
 
   include Comparable
 
-  # FIX: These are only used once, in .correct?. Do they deserve to be
-  # constants?
-  VERSION_PATTERN = '[0-9]+(?>\.[0-9a-zA-Z]+)*' # :nodoc:
+  VERSION_PATTERN = '[0-9]+(?>\.[0-9a-zA-Z]+)*(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?' # :nodoc:
   ANCHORED_VERSION_PATTERN = /\A\s*(#{VERSION_PATTERN})?\s*\z/ # :nodoc:
 
   ##
   # A string representation of this Version.
 
-  attr_reader :version
+  def version
+    @version.dup
+  end
+
   alias to_s version
 
   ##
@@ -171,8 +172,6 @@ class Gem::Version
   #   ver2 = Version.create(ver1)       # -> (ver1)
   #   ver3 = Version.create(nil)        # -> nil
 
-  # REFACTOR: There's no real reason this should be separate from #initialize.
-
   def self.create input
     if self === input then # check yourself before you wreck yourself
       input
@@ -183,6 +182,12 @@ class Gem::Version
     end
   end
 
+  @@all = {}
+
+  def self.new version # :nodoc:
+    @@all[version] ||= super
+  end
+
   ##
   # Constructs a Version from the +version+ string.  A version string is a
   # series of digits or ASCII letters separated by dots.
@@ -191,7 +196,8 @@ class Gem::Version
     raise ArgumentError, "Malformed version number string #{version}" unless
       self.class.correct?(version)
 
-    @version = version.to_s.dup.strip
+    @version = version.to_s.strip.gsub("-",".pre.")
+    @segments = nil
   end
 
   ##
@@ -245,17 +251,17 @@ class Gem::Version
     initialize array[0]
   end
 
-  def yaml_initialize(tag, map)
+  def yaml_initialize(tag, map) # :nodoc:
     @version = map['version']
     @segments = nil
     @hash = nil
   end
 
-  def to_yaml_properties
+  def to_yaml_properties # :nodoc:
     ["@version"]
   end
 
-  def encode_with coder
+  def encode_with coder # :nodoc:
     coder.add 'version', @version
   end
 

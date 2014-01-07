@@ -2,15 +2,15 @@
 #
 #--
 # $Release Version: 1.1.2 $
-# $Revision: 33638 $
-# $Id: scanf.rb 33638 2011-11-05 07:37:47Z ktsj $
-# $Author: ktsj $
+# $Revision: 44196 $
+# $Id: scanf.rb 44196 2013-12-14 02:55:33Z nobu $
+# $Author: nobu $
 #++
 #
 # == Description
 #
 # scanf is an implementation of the C function scanf(3), modified as necessary
-# for ruby compatibility.
+# for Ruby compatibility.
 #
 # the methods provided are String#scanf, IO#scanf, and
 # Kernel#scanf. Kernel#scanf is a wrapper around STDIN.scanf.  IO#scanf
@@ -657,7 +657,12 @@ class IO
       break if fstr.last_spec
       fstr.prune
     end
-    seek(start_position + matched_so_far, IO::SEEK_SET) rescue Errno::ESPIPE
+
+    begin
+      seek(start_position + matched_so_far, IO::SEEK_SET)
+    rescue Errno::ESPIPE
+    end
+
     soak_up_spaces if fstr.last_spec && fstr.space
 
     return final_result

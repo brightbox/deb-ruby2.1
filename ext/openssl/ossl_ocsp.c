@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_ocsp.c 31166 2011-03-24 07:29:21Z naruse $
+ * $Id: ossl_ocsp.c 40316 2013-04-16 02:24:09Z zzak $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2003  Michal Rokos <m.rokos@sh.cvut.cz>
  * Copyright (C) 2003  GOTOU Yuuzou <gotoyuzo@notwork.org>
@@ -149,7 +149,7 @@ ossl_ocspreq_add_nonce(int argc, VALUE *argv, VALUE self)
  *  2: nonces both absent.
  *  3: nonce present in response only.
  *  0: nonces both present and not equal.
- * -1: nonce in request only.
+ *  -1: nonce in request only.
  *
  *  For most responders clients can check return > 0.
  *  If responder doesn't handle nonces return != 0 may be

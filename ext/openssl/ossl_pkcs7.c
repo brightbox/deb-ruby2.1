@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_pkcs7.c 35167 2012-03-29 01:27:17Z emboss $
+ * $Id: ossl_pkcs7.c 43910 2013-11-29 07:59:14Z nobu $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.
@@ -624,7 +624,7 @@ pkcs7_get_crls(VALUE self)
 }
 
 static VALUE
-ossl_pkcs7_set_certs_i(VALUE i, VALUE arg)
+ossl_pkcs7_set_certs_i(RB_BLOCK_CALL_FUNC_ARGLIST(i, arg))
 {
     return ossl_pkcs7_add_certificate(arg, i);
 }
@@ -664,7 +664,7 @@ ossl_pkcs7_add_crl(VALUE self, VALUE crl)
 }
 
 static VALUE
-ossl_pkcs7_set_crls_i(VALUE i, VALUE arg)
+ossl_pkcs7_set_crls_i(RB_BLOCK_CALL_FUNC_ARGLIST(i, arg))
 {
     return ossl_pkcs7_add_crl(arg, i);
 }

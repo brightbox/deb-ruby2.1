@@ -64,11 +64,10 @@ class TestSymbol < Test::Unit::TestCase
 
   def test_inspect_dollar
     # 4) :$- always treats next character literally:
-    sym = "$-".intern
-    assert_nothing_raised(SyntaxError) {assert_equal(sym, eval(':$-'))}
-    assert_nothing_raised(SyntaxError) {assert_equal(sym, eval(":$-\n"))}
-    assert_nothing_raised(SyntaxError) {assert_equal(sym, eval(":$- "))}
-    assert_nothing_raised(SyntaxError) {assert_equal(sym, eval(":$-#"))}
+    assert_raise(SyntaxError) {eval ':$-'}
+    assert_raise(SyntaxError) {eval ":$-\n"}
+    assert_raise(SyntaxError) {eval ":$- "}
+    assert_raise(SyntaxError) {eval ":$-#"}
     assert_raise(SyntaxError) {eval ':$-('}
   end
 
@@ -198,5 +197,13 @@ class TestSymbol < Test::Unit::TestCase
 
   def test_singleton_method
     assert_raise(TypeError) { a = :foo; def a.foo; end }
+  end
+
+  def test_frozen_symbol
+    assert_equal(true, :foo.frozen?)
+    assert_equal(true, :each.frozen?)
+    assert_equal(true, :+.frozen?)
+    assert_equal(true, "foo#{Time.now.to_i}".to_sym.frozen?)
+    assert_equal(true, :foo.to_sym.frozen?)
   end
 end

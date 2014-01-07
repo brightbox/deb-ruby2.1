@@ -2,7 +2,7 @@
 
   range.c -
 
-  $Author: nagachika $
+  $Author: nobu $
   created at: Thu Aug 19 17:46:47 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -25,9 +25,19 @@ static ID id_cmp, id_succ, id_beg, id_end, id_excl, id_integer_p, id_div;
 #define RANGE_BEG(r) (RSTRUCT(r)->as.ary[0])
 #define RANGE_END(r) (RSTRUCT(r)->as.ary[1])
 #define RANGE_EXCL(r) (RSTRUCT(r)->as.ary[2])
+#define RANGE_SET_BEG(r, v) (RSTRUCT_SET(r, 0, v))
+#define RANGE_SET_END(r, v) (RSTRUCT_SET(r, 1, v))
+#define RANGE_SET_EXCL(r, v) (RSTRUCT_SET(r, 2, v))
+#define RBOOL(v) ((v) ? Qtrue : Qfalse)
 
 #define EXCL(r) RTEST(RANGE_EXCL(r))
-#define SET_EXCL(r,v) (RSTRUCT(r)->as.ary[2] = (v) ? Qtrue : Qfalse)
+static inline VALUE
+SET_EXCL(VALUE r, VALUE v)
+{
+    v = RBOOL(RTEST(v));
+    RANGE_SET_EXCL(r, v);
+    return v;
+}
 
 static VALUE
 range_failed(void)
@@ -43,7 +53,7 @@ range_check(VALUE *args)
 }
 
 static void
-range_init(VALUE range, VALUE beg, VALUE end, int exclude_end)
+range_init(VALUE range, VALUE beg, VALUE end, VALUE exclude_end)
 {
     VALUE args[2];
 
@@ -58,9 +68,9 @@ range_init(VALUE range, VALUE beg, VALUE end, int exclude_end)
 	    range_failed();
     }
 
-    SET_EXCL(range, exclude_end);
-    RSTRUCT(range)->as.ary[0] = beg;
-    RSTRUCT(range)->as.ary[1] = end;
+    RANGE_SET_EXCL(range, exclude_end);
+    RANGE_SET_BEG(range, beg);
+    RANGE_SET_END(range, end);
 }
 
 VALUE
@@ -68,8 +78,17 @@ rb_range_new(VALUE beg, VALUE end, int exclude_end)
 {
     VALUE range = rb_obj_alloc(rb_cRange);
 
-    range_init(range, beg, end, exclude_end);
+    range_init(range, beg, end, RBOOL(exclude_end));
     return range;
+}
+
+static void
+range_modify(VALUE range)
+{
+    /* Ranges are immutable, so that they should be initialized only once. */
+    if (RANGE_EXCL(range) != Qnil) {
+	rb_name_error(idInitialize, "`initialize' called twice");
+    }
 }
 
 /*
@@ -87,15 +106,19 @@ range_initialize(int argc, VALUE *argv, VALUE range)
     VALUE beg, end, flags;
 
     rb_scan_args(argc, argv, "21", &beg, &end, &flags);
-    /* Ranges are immutable, so that they should be initialized only once. */
-    if (RANGE_EXCL(range) != Qnil) {
-	rb_name_error(idInitialize, "`initialize' called twice");
-    }
-    range_init(range, beg, end, RTEST(flags));
+    range_modify(range);
+    range_init(range, beg, end, RBOOL(RTEST(flags)));
     return Qnil;
 }
 
-#define range_initialize_copy rb_struct_init_copy /* :nodoc: */
+/* :nodoc: */
+static VALUE
+range_initialize_copy(VALUE range, VALUE orig)
+{
+    range_modify(range);
+    rb_struct_init_copy(range, orig);
+    return range;
+}
 
 /*
  *  call-seq:
@@ -220,25 +243,6 @@ range_eql(VALUE range, VALUE obj)
     return rb_exec_recursive_paired(recursive_eql, range, obj, obj);
 }
 
-static VALUE
-recursive_hash(VALUE range, VALUE dummy, int recur)
-{
-    st_index_t hash = EXCL(range);
-    VALUE v;
-
-    hash = rb_hash_start(hash);
-    if (!recur) {
-	v = rb_hash(RANGE_BEG(range));
-	hash = rb_hash_uint(hash, NUM2LONG(v));
-	v = rb_hash(RANGE_END(range));
-	hash = rb_hash_uint(hash, NUM2LONG(v));
-    }
-    hash = rb_hash_uint(hash, EXCL(range) << 24);
-    hash = rb_hash_end(hash);
-
-    return LONG2FIX(hash);
-}
-
 /*
  * call-seq:
  *   rng.hash    -> fixnum
@@ -251,11 +255,22 @@ recursive_hash(VALUE range, VALUE dummy, int recur)
 static VALUE
 range_hash(VALUE range)
 {
-    return rb_exec_recursive_outer(recursive_hash, range, 0);
+    st_index_t hash = EXCL(range);
+    VALUE v;
+
+    hash = rb_hash_start(hash);
+    v = rb_hash(RANGE_BEG(range));
+    hash = rb_hash_uint(hash, NUM2LONG(v));
+    v = rb_hash(RANGE_END(range));
+    hash = rb_hash_uint(hash, NUM2LONG(v));
+    hash = rb_hash_uint(hash, EXCL(range) << 24);
+    hash = rb_hash_end(hash);
+
+    return LONG2FIX(hash);
 }
 
 static void
-range_each_func(VALUE range, VALUE (*func) (VALUE, void *), void *arg)
+range_each_func(VALUE range, rb_block_call_func *func, VALUE arg)
 {
     int c;
     VALUE b = RANGE_BEG(range);
@@ -264,13 +279,13 @@ range_each_func(VALUE range, VALUE (*func) (VALUE, void *), void *arg)
 
     if (EXCL(range)) {
 	while (r_lt(v, e)) {
-	    (*func) (v, arg);
+	    (*func) (v, arg, 0, 0, 0);
 	    v = rb_funcall(v, id_succ, 0, 0);
 	}
     }
     else {
 	while ((c = r_le(v, e)) != Qfalse) {
-	    (*func) (v, arg);
+	    (*func) (v, arg, 0, 0, 0);
 	    if (c == (int)INT2FIX(0))
 		break;
 	    v = rb_funcall(v, id_succ, 0, 0);
@@ -279,9 +294,9 @@ range_each_func(VALUE range, VALUE (*func) (VALUE, void *), void *arg)
 }
 
 static VALUE
-sym_step_i(VALUE i, void *arg)
+sym_step_i(RB_BLOCK_CALL_FUNC_ARGLIST(i, arg))
 {
-    VALUE *iter = arg;
+    VALUE *iter = (VALUE *)arg;
 
     if (FIXNUM_P(iter[0])) {
 	iter[0] -= INT2FIX(1) & ~FIXNUM_FLAG;
@@ -297,9 +312,9 @@ sym_step_i(VALUE i, void *arg)
 }
 
 static VALUE
-step_i(VALUE i, void *arg)
+step_i(RB_BLOCK_CALL_FUNC_ARGLIST(i, arg))
 {
-    VALUE *iter = arg;
+    VALUE *iter = (VALUE *)arg;
 
     if (FIXNUM_P(iter[0])) {
 	iter[0] -= INT2FIX(1) & ~FIXNUM_FLAG;
@@ -322,12 +337,12 @@ discrete_object_p(VALUE obj)
 }
 
 static VALUE
-range_step_size(VALUE range, VALUE args)
+range_step_size(VALUE range, VALUE args, VALUE eobj)
 {
     VALUE b = RANGE_BEG(range), e = RANGE_END(range);
     VALUE step = INT2FIX(1);
     if (args) {
-	step = RARRAY_PTR(args)[0];
+	step = RARRAY_AREF(args, 0);
 	if (!rb_obj_is_kind_of(step, rb_cNumeric)) {
 	    step = rb_to_int(step);
 	}
@@ -340,7 +355,7 @@ range_step_size(VALUE range, VALUE args)
     }
 
     if (rb_obj_is_kind_of(b, rb_cNumeric) && rb_obj_is_kind_of(e, rb_cNumeric)) {
-	return num_interval_step_size(b, e, step, EXCL(range));
+	return ruby_num_interval_step_size(b, e, step, EXCL(range));
     }
     return Qnil;
 }
@@ -465,7 +480,7 @@ range_step(int argc, VALUE *argv, VALUE range)
 	    }
 	    args[0] = INT2FIX(1);
 	    args[1] = step;
-	    range_each_func(range, step_i, args);
+	    range_each_func(range, step_i, (VALUE)args);
 	}
     }
     return range;
@@ -679,14 +694,14 @@ range_bsearch(VALUE range)
 }
 
 static VALUE
-each_i(VALUE v, void *arg)
+each_i(RB_BLOCK_CALL_FUNC_ARGLIST(v, arg))
 {
     rb_yield(v);
     return Qnil;
 }
 
 static VALUE
-sym_each_i(VALUE v, void *arg)
+sym_each_i(RB_BLOCK_CALL_FUNC_ARGLIST(v, arg))
 {
     rb_yield(rb_str_intern(v));
     return Qnil;
@@ -706,9 +721,15 @@ range_size(VALUE range)
 {
     VALUE b = RANGE_BEG(range), e = RANGE_END(range);
     if (rb_obj_is_kind_of(b, rb_cNumeric) && rb_obj_is_kind_of(e, rb_cNumeric)) {
-	return num_interval_step_size(b, e, INT2FIX(1), EXCL(range));
+	return ruby_num_interval_step_size(b, e, INT2FIX(1), EXCL(range));
     }
     return Qnil;
+}
+
+static VALUE
+range_enum_size(VALUE range, VALUE args, VALUE eobj)
+{
+    return range_size(range);
 }
 
 /*
@@ -737,7 +758,7 @@ range_each(VALUE range)
 {
     VALUE beg, end;
 
-    RETURN_SIZED_ENUMERATOR(range, 0, 0, range_size);
+    RETURN_SIZED_ENUMERATOR(range, 0, 0, range_enum_size);
 
     beg = RANGE_BEG(range);
     end = RANGE_END(range);
@@ -767,14 +788,14 @@ range_each(VALUE range)
 
 	    args[0] = end;
 	    args[1] = EXCL(range) ? Qtrue : Qfalse;
-	    rb_block_call(tmp, rb_intern("upto"), 2, args, rb_yield, 0);
+	    rb_block_call(tmp, rb_intern("upto"), 2, args, each_i, 0);
 	}
 	else {
 	    if (!discrete_object_p(beg)) {
 		rb_raise(rb_eTypeError, "can't iterate from %s",
 			 rb_obj_classname(beg));
 	    }
-	    range_each_func(range, each_i, NULL);
+	    range_each_func(range, each_i, 0);
 	}
     }
     return range;
@@ -815,8 +836,9 @@ range_end(VALUE range)
 
 
 static VALUE
-first_i(VALUE i, VALUE *ary)
+first_i(RB_BLOCK_CALL_FUNC_ARGLIST(i, cbarg))
 {
+    VALUE *ary = (VALUE *)cbarg;
     long n = NUM2LONG(ary[0]);
 
     if (n <= 0) {
@@ -1211,7 +1233,7 @@ static VALUE
 range_dumper(VALUE range)
 {
     VALUE v;
-    NEWOBJ_OF(m, struct RObject, rb_cObject, T_OBJECT);
+    NEWOBJ_OF(m, struct RObject, rb_cObject, T_OBJECT | (RGENGC_WB_PROTECTED_OBJECT ? FL_WB_PROTECTED : 1));
 
     v = (VALUE)m;
 
@@ -1228,9 +1250,10 @@ range_loader(VALUE range, VALUE obj)
         rb_raise(rb_eTypeError, "not a dumped range object");
     }
 
-    RSTRUCT(range)->as.ary[0] = rb_ivar_get(obj, id_beg);
-    RSTRUCT(range)->as.ary[1] = rb_ivar_get(obj, id_end);
-    RSTRUCT(range)->as.ary[2] = rb_ivar_get(obj, id_excl);
+    range_modify(range);
+    RANGE_SET_BEG(range, rb_ivar_get(obj, id_beg));
+    RANGE_SET_END(range, rb_ivar_get(obj, id_end));
+    RANGE_SET_EXCL(range, rb_ivar_get(obj, id_excl));
     return range;
 }
 
@@ -1238,7 +1261,7 @@ static VALUE
 range_alloc(VALUE klass)
 {
   /* rb_struct_alloc_noinit itself should not be used because
-   * rb_marshal_define_compat uses equality of allocaiton function */
+   * rb_marshal_define_compat uses equality of allocation function */
     return rb_struct_alloc_noinit(klass);
 }
 
