@@ -2,7 +2,7 @@
 
   parse.y -
 
-  $Author: nagachika $
+  $Author: tmm1 $
   created at: Fri May 28 18:02:42 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -30,8 +30,6 @@
 #include <errno.h>
 #include <ctype.h>
 #include "probes.h"
-
-#define numberof(array) (int)(sizeof(array) / sizeof((array)[0]))
 
 #define YYMALLOC(size)		rb_parser_malloc(parser, (size))
 #define YYREALLOC(ptr, size)	rb_parser_realloc(parser, (ptr), (size))
@@ -267,9 +265,12 @@ struct parser_params {
     int has_shebang;
     char *parser_ruby_sourcefile; /* current source file */
     int parser_ruby_sourceline;	/* current line no. */
+    VALUE parser_ruby_sourcefile_string;
     rb_encoding *enc;
 
     int parser_yydebug;
+
+    int last_cr_line;
 
 #ifndef RIPPER
     /* Ruby core only */
@@ -283,7 +284,6 @@ struct parser_params {
     token_info *parser_token_info;
 #else
     /* Ripper only */
-    VALUE parser_ruby_sourcefile_string;
     const char *tokp;
     VALUE delayed;
     int delayed_line;
@@ -338,6 +338,7 @@ static int parser_yyerror(struct parser_params*, const char*);
 #define ruby__end__seen		(parser->parser_ruby__end__seen)
 #define ruby_sourceline		(parser->parser_ruby_sourceline)
 #define ruby_sourcefile		(parser->parser_ruby_sourcefile)
+#define ruby_sourcefile_string	(parser->parser_ruby_sourcefile_string)
 #define current_enc		(parser->enc)
 #define yydebug			(parser->parser_yydebug)
 #ifdef RIPPER
@@ -371,6 +372,7 @@ static void fixpos(NODE*,NODE*);
 static int value_expr_gen(struct parser_params*,NODE*);
 static void void_expr_gen(struct parser_params*,NODE*);
 static NODE *remove_begin(NODE*);
+static NODE *remove_begin_all(NODE*);
 #define value_expr(node) value_expr_gen(parser, (node) = remove_begin(node))
 #define void_expr0(node) void_expr_gen(parser, (node))
 #define void_expr(node) void_expr0((node) = remove_begin(node))
@@ -439,6 +441,8 @@ static NODE *new_attr_op_assign_gen(struct parser_params *parser, NODE *lhs, ID 
 #define new_attr_op_assign(lhs, type, attr, op, rhs) new_attr_op_assign_gen(parser, (lhs), (attr), (op), (rhs))
 static NODE *new_const_op_assign_gen(struct parser_params *parser, NODE *lhs, ID op, NODE *rhs);
 #define new_const_op_assign(lhs, op, rhs) new_const_op_assign_gen(parser, (lhs), (op), (rhs))
+
+#define new_defined(expr) NEW_DEFINED(remove_begin_all(expr))
 
 static NODE *match_op_gen(struct parser_params*,NODE*,NODE*);
 #define match_op(node1,node2) match_op_gen(parser, (node1), (node2))
@@ -618,6 +622,8 @@ new_args_tail_gen(struct parser_params *parser, VALUE k, VALUE kr, VALUE b)
 }
 #define new_args_tail(k,kr,b) new_args_tail_gen(parser, (k),(kr),(b))
 
+#define new_defined(expr) dispatch1(defined, (expr))
+
 #define FIXME 0
 
 #endif /* RIPPER */
@@ -750,14 +756,14 @@ static void token_info_pop(struct parser_params*, const char *token);
 	keyword__ENCODING__
 
 %token <val>   tIDENTIFIER tFID tGVAR tIVAR tCONSTANT tCVAR tLABEL
-%token <val> tINTEGER tFLOAT tSTRING_CONTENT tCHAR
+%token <val> tINTEGER tFLOAT tRATIONAL tIMAGINARY tSTRING_CONTENT tCHAR
 %token <val> tNTH_REF tBACK_REF
 %token <val>  tREGEXP_END
 
 %type <val> singleton strings string string1 xstring regexp
 %type <val> string_contents xstring_contents regexp_contents string_content
 %type <val> words symbols symbol_list qwords qsymbols word_list qword_list qsym_list word
-%type <val> literal numeric dsym cpath
+%type <val> literal numeric simple_numeric dsym cpath
 %type <val> top_compstmt top_stmts top_stmt
 %type <val> bodystmt compstmt stmts stmt_or_begin stmt expr arg primary command command_call method_call
 %type <val> expr_value arg_value primary_value fcall
@@ -765,7 +771,7 @@ static void token_info_pop(struct parser_params*, const char *token);
 %type <val> args call_args opt_call_args
 %type <val> paren_args opt_paren_args args_tail opt_args_tail block_args_tail opt_block_args_tail
 %type <val> command_args aref_args opt_block_arg block_arg var_ref var_lhs
-%type <val> command_asgn mrhs superclass block_call block_command
+%type <val> command_asgn mrhs mrhs_arg superclass block_call block_command
 %type <val> f_block_optarg f_block_opt
 %type <val> f_arglist f_args f_arg f_arg_item f_optarg f_marg f_marg_list f_margs
 %type <val> assoc_list assocs assoc undef_list backref string_dvar for_var
@@ -777,7 +783,7 @@ static void token_info_pop(struct parser_params*, const char *token);
 %type <val> mlhs mlhs_head mlhs_basic mlhs_item mlhs_node mlhs_post mlhs_inner
 %type <val>   fsym keyword_variable user_variable sym symbol operation operation2 operation3
 %type <val>   cname fname op f_rest_arg f_block_arg opt_f_block_arg f_norm_arg f_bad_arg
-%type <val>   f_kwrest
+%type <val>   f_kwrest f_label
 /*
 */
 %type <val> program reswords then do dot_or_colon
@@ -1236,16 +1242,7 @@ stmt		: keyword_alias fitem {lex_state = EXPR_FNAME;} fitem
 			$$ = dispatch2(assign, $1, $3);
 
 		    }
-		| mlhs '=' arg_value
-		    {
-#if 0
-			$1->nd_value = $3;
-			$$ = $1;
-#endif
-			$$ = dispatch2(massign, $1, $3);
-
-		    }
-		| mlhs '=' mrhs
+		| mlhs '=' mrhs_arg
 		    {
 #if 0
 			$1->nd_value = $3;
@@ -2115,16 +2112,7 @@ arg		: lhs '=' arg
 			$$ = dispatch3(binary, $1, ripper_intern("**"), $3);
 
 		    }
-		| tUMINUS_NUM tINTEGER tPOW arg
-		    {
-#if 0
-			$$ = NEW_CALL(call_bin_op($2, tPOW, $4), tUMINUS, 0);
-#endif
-			$$ = dispatch3(binary, $2, ripper_intern("**"), $4);
-			$$ = dispatch2(unary, ripper_intern("-@"), $$);
-
-		    }
-		| tUMINUS_NUM tFLOAT tPOW arg
+		| tUMINUS_NUM simple_numeric tPOW arg
 		    {
 #if 0
 			$$ = NEW_CALL(call_bin_op($2, tPOW, $4), tUMINUS, 0);
@@ -2308,7 +2296,7 @@ arg		: lhs '=' arg
 		    {
 #if 0
 			in_defined = 0;
-			$$ = NEW_DEFINED($4);
+			$$ = new_defined($4);
 #endif
 			in_defined = 0;
 			$$ = dispatch1(defined, $4);
@@ -2526,6 +2514,10 @@ args		: arg_value
 		    }
 		;
 
+mrhs_arg	: mrhs
+		| arg_value
+		;
+
 mrhs		: args ',' arg_value
 		    {
 #if 0
@@ -2708,7 +2700,7 @@ primary		: literal
 		    {
 #if 0
 			in_defined = 0;
-			$$ = NEW_DEFINED($5);
+			$$ = new_defined($5);
 #endif
 			in_defined = 0;
 			$$ = dispatch1(defined, $5);
@@ -3488,11 +3480,7 @@ f_larglist	: '(' f_args opt_bv_decl ')'
 		    }
 		| f_args
 		    {
-#if 0
 			$$ = $1;
-#endif
-			$$ = $1;
-
 		    }
 		;
 
@@ -4297,24 +4285,21 @@ dsym		: tSYMBEG xstring_contents tSTRING_END
 		    }
 		;
 
-numeric 	: tINTEGER
+numeric 	: simple_numeric
+		| tUMINUS_NUM simple_numeric   %prec tLOWEST
+		    {
+#if 0
+			$$ = negate_lit($2);
+#endif
+			$$ = dispatch2(unary, ripper_intern("-@"), $2);
+
+		    }
+		;
+
+simple_numeric	: tINTEGER
 		| tFLOAT
-		| tUMINUS_NUM tINTEGER	       %prec tLOWEST
-		    {
-#if 0
-			$$ = negate_lit($2);
-#endif
-			$$ = dispatch2(unary, ripper_intern("-@"), $2);
-
-		    }
-		| tUMINUS_NUM tFLOAT	       %prec tLOWEST
-		    {
-#if 0
-			$$ = negate_lit($2);
-#endif
-			$$ = dispatch2(unary, ripper_intern("-@"), $2);
-
-		    }
+		| tRATIONAL
+		| tIMAGINARY
 		;
 
 user_variable	: tIDENTIFIER
@@ -4610,9 +4595,16 @@ f_arg		: f_arg_item
 		    }
 		;
 
-f_kw		: tLABEL arg_value
+
+f_label 	: tLABEL
 		    {
 			arg_var(formal_argument(get_id($1)));
+			$$ = $1;
+		    }
+		;
+
+f_kw		: f_label arg_value
+		    {
 			$$ = assignable($1, $2);
 #if 0
 			$$ = NEW_KW_ARG(0, $$);
@@ -4620,16 +4612,33 @@ f_kw		: tLABEL arg_value
 			$$ = rb_assoc_new($$, $2);
 
 		    }
+		| f_label
+		    {
+			$$ = assignable($1, (NODE *)-1);
+#if 0
+			$$ = NEW_KW_ARG(0, $$);
+#endif
+			$$ = rb_assoc_new($$, 0);
+
+		    }
 		;
 
-f_block_kw	: tLABEL primary_value
+f_block_kw	: f_label primary_value
 		    {
-			arg_var(formal_argument(get_id($1)));
 			$$ = assignable($1, $2);
 #if 0
 			$$ = NEW_KW_ARG(0, $$);
 #endif
 			$$ = rb_assoc_new($$, $2);
+
+		    }
+		| f_label
+		    {
+			$$ = assignable($1, (NODE *)-1);
+#if 0
+			$$ = NEW_KW_ARG(0, $$);
+#endif
+			$$ = rb_assoc_new($$, 0);
 
 		    }
 		;
@@ -4698,9 +4707,9 @@ f_kwrest	: kwrest_mark tIDENTIFIER
 		    }
 		;
 
-f_opt		: tIDENTIFIER '=' arg_value
+f_opt		: f_norm_arg '=' arg_value
 		    {
-			arg_var(formal_argument(get_id($1)));
+			arg_var(get_id($1));
 			$$ = assignable($1, $3);
 #if 0
 			$$ = NEW_OPT_ARG(0, $$);
@@ -4710,9 +4719,9 @@ f_opt		: tIDENTIFIER '=' arg_value
 		    }
 		;
 
-f_block_opt	: tIDENTIFIER '=' primary_value
+f_block_opt	: f_norm_arg '=' primary_value
 		    {
-			arg_var(formal_argument(get_id($1)));
+			arg_var(get_id($1));
 			$$ = assignable($1, $3);
 #if 0
 			$$ = NEW_OPT_ARG(0, $$);
@@ -4903,6 +4912,10 @@ assocs		: assoc
 assoc		: arg_value tASSOC arg_value
 		    {
 #if 0
+			if (nd_type($1) == NODE_STR) {
+			    nd_set_type($1, NODE_LIT);
+			    $1->nd_lit = rb_fstring($1->nd_lit);
+			}
 			$$ = list_append(NEW_LIST($1), $3);
 #endif
 			$$ = dispatch2(assoc_new, $1, $3);
@@ -5005,22 +5018,25 @@ static int parser_parse_string(struct parser_params*,NODE*);
 static int parser_here_document(struct parser_params*,NODE*);
 
 
-# define nextc()                   parser_nextc(parser)
-# define pushback(c)               parser_pushback(parser, (c))
-# define newtok()                  parser_newtok(parser)
-# define tokspace(n)               parser_tokspace(parser, (n))
-# define tokadd(c)                 parser_tokadd(parser, (c))
-# define tok_hex(numlen)           parser_tok_hex(parser, (numlen))
-# define read_escape(flags,e)      parser_read_escape(parser, (flags), (e))
-# define tokadd_escape(e)          parser_tokadd_escape(parser, (e))
-# define regx_options()            parser_regx_options(parser)
-# define tokadd_string(f,t,p,n,e)  parser_tokadd_string(parser,(f),(t),(p),(n),(e))
-# define parse_string(n)           parser_parse_string(parser,(n))
-# define tokaddmbc(c, enc)         parser_tokaddmbc(parser, (c), (enc))
-# define here_document(n)          parser_here_document(parser,(n))
-# define heredoc_identifier()      parser_heredoc_identifier(parser)
-# define heredoc_restore(n)        parser_heredoc_restore(parser,(n))
-# define whole_match_p(e,l,i)      parser_whole_match_p(parser,(e),(l),(i))
+# define nextc()                      parser_nextc(parser)
+# define pushback(c)                  parser_pushback(parser, (c))
+# define newtok()                     parser_newtok(parser)
+# define tokspace(n)                  parser_tokspace(parser, (n))
+# define tokadd(c)                    parser_tokadd(parser, (c))
+# define tok_hex(numlen)              parser_tok_hex(parser, (numlen))
+# define read_escape(flags,e)         parser_read_escape(parser, (flags), (e))
+# define tokadd_escape(e)             parser_tokadd_escape(parser, (e))
+# define regx_options()               parser_regx_options(parser)
+# define tokadd_string(f,t,p,n,e)     parser_tokadd_string(parser,(f),(t),(p),(n),(e))
+# define parse_string(n)              parser_parse_string(parser,(n))
+# define tokaddmbc(c, enc)            parser_tokaddmbc(parser, (c), (enc))
+# define here_document(n)             parser_here_document(parser,(n))
+# define heredoc_identifier()         parser_heredoc_identifier(parser)
+# define heredoc_restore(n)           parser_heredoc_restore(parser,(n))
+# define whole_match_p(e,l,i)         parser_whole_match_p(parser,(e),(l),(i))
+# define number_literal_suffix(f)     parser_number_literal_suffix(parser, (f))
+# define set_number_literal(v, t, f)  parser_set_number_literal(parser, (v), (t), (f))
+# define set_integer_literal(v, f)    parser_set_integer_literal(parser, (v), (f))
 
 #ifndef RIPPER
 # define set_yylval_str(x) (yylval.node = NEW_STR(x))
@@ -5116,7 +5132,7 @@ ripper_dispatch_delayed_token(struct parser_params *parser, int t)
 #define parser_encoding_name()  (current_enc->name)
 #define parser_mbclen()  mbclen((lex_p-1),lex_pend,current_enc)
 #define parser_precise_mbclen()  rb_enc_precise_mbclen((lex_p-1),lex_pend,current_enc)
-#define is_identchar(p,e,enc) (rb_enc_isalnum(*(p),(enc)) || (*(p)) == '_' || !ISASCII(*(p)))
+#define is_identchar(p,e,enc) (rb_enc_isalnum((unsigned char)(*(p)),(enc)) || (*(p)) == '_' || !ISASCII(*(p)))
 #define parser_is_identchar() (!parser->eofp && is_identchar((lex_p-1),lex_pend,current_enc))
 
 #define parser_isascii() ISASCII(*(lex_p-1))
@@ -5261,14 +5277,13 @@ static void parser_prepare(struct parser_params *parser);
 
 #ifndef RIPPER
 static VALUE
-debug_lines(const char *f)
+debug_lines(VALUE fname)
 {
     ID script_lines;
     CONST_ID(script_lines, "SCRIPT_LINES__");
     if (rb_const_defined_at(rb_cObject, script_lines)) {
 	VALUE hash = rb_const_get_at(rb_cObject, script_lines);
 	if (RB_TYPE_P(hash, T_HASH)) {
-	    VALUE fname = rb_external_str_new_with_enc(f, strlen(f), rb_filesystem_encoding());
 	    VALUE lines = rb_ary_new();
 	    rb_hash_aset(hash, fname, lines);
 	    return lines;
@@ -5278,15 +5293,14 @@ debug_lines(const char *f)
 }
 
 static VALUE
-coverage(const char *f, int n)
+coverage(VALUE fname, int n)
 {
     VALUE coverages = rb_get_coverages();
     if (RTEST(coverages) && RBASIC(coverages)->klass == 0) {
-	VALUE fname = rb_external_str_new_with_enc(f, strlen(f), rb_filesystem_encoding());
 	VALUE lines = rb_ary_new2(n);
 	int i;
-	RBASIC(lines)->klass = 0;
-	for (i = 0; i < n; i++) RARRAY_PTR(lines)[i] = Qnil;
+	RBASIC_CLEAR_CLASS(lines);
+	for (i = 0; i < n; i++) RARRAY_ASET(lines, i, Qnil);
 	RARRAY(lines)->as.heap.len = n;
 	rb_hash_aset(coverages, fname, lines);
 	return lines;
@@ -5308,7 +5322,7 @@ yycompile0(VALUE arg)
     struct parser_params *parser = (struct parser_params *)arg;
 
     if (!compile_for_eval && rb_safe_level() == 0) {
-	ruby_debug_lines = debug_lines(ruby_sourcefile);
+	ruby_debug_lines = debug_lines(ruby_sourcefile_string);
 	if (ruby_debug_lines && ruby_sourceline > 0) {
 	    VALUE str = STR_NEW0();
 	    n = ruby_sourceline;
@@ -5318,9 +5332,10 @@ yycompile0(VALUE arg)
 	}
 
 	if (!e_option_supplied(parser)) {
-	    ruby_coverage = coverage(ruby_sourcefile, ruby_sourceline);
+	    ruby_coverage = coverage(ruby_sourcefile_string, ruby_sourceline);
 	}
     }
+    parser->last_cr_line = ruby_sourceline - 1;
 
     parser_prepare(parser);
     deferred_nodes = 0;
@@ -5361,9 +5376,10 @@ yycompile0(VALUE arg)
 }
 
 static NODE*
-yycompile(struct parser_params *parser, const char *f, int line)
+yycompile(struct parser_params *parser, VALUE fname, int line)
 {
-    ruby_sourcefile = ruby_strdup(f);
+    ruby_sourcefile_string = rb_str_new_frozen(fname);
+    ruby_sourcefile = RSTRING_PTR(fname);
     ruby_sourceline = line - 1;
     return (NODE *)rb_suppress_tracing(yycompile0, (VALUE)parser);
 }
@@ -5423,7 +5439,7 @@ static rb_data_type_t parser_data_type;
 static const rb_data_type_t parser_data_type;
 
 static NODE*
-parser_compile_string(volatile VALUE vparser, const char *f, VALUE s, int line)
+parser_compile_string(volatile VALUE vparser, VALUE fname, VALUE s, int line)
 {
     struct parser_params *parser;
     NODE *node;
@@ -5435,7 +5451,7 @@ parser_compile_string(volatile VALUE vparser, const char *f, VALUE s, int line)
     lex_pbeg = lex_p = lex_pend = 0;
     compile_for_eval = rb_parse_in_eval();
 
-    node = yycompile(parser, f, line);
+    node = yycompile(parser, fname, line);
     RB_GC_GUARD(vparser); /* prohibit tail call optimization */
 
     return node;
@@ -5445,11 +5461,17 @@ NODE*
 rb_compile_string(const char *f, VALUE s, int line)
 {
     must_be_ascii_compatible(s);
-    return parser_compile_string(rb_parser_new(), f, s, line);
+    return parser_compile_string(rb_parser_new(), rb_filesystem_str_new_cstr(f), s, line);
 }
 
 NODE*
 rb_parser_compile_string(volatile VALUE vparser, const char *f, VALUE s, int line)
+{
+    return rb_parser_compile_string_path(vparser, rb_filesystem_str_new_cstr(f), s, line);
+}
+
+NODE*
+rb_parser_compile_string_path(volatile VALUE vparser, VALUE f, VALUE s, int line)
 {
     must_be_ascii_compatible(s);
     return parser_compile_string(vparser, f, s, line);
@@ -5459,14 +5481,14 @@ NODE*
 rb_compile_cstr(const char *f, const char *s, int len, int line)
 {
     VALUE str = rb_str_new(s, len);
-    return parser_compile_string(rb_parser_new(), f, str, line);
+    return parser_compile_string(rb_parser_new(), rb_filesystem_str_new_cstr(f), str, line);
 }
 
 NODE*
 rb_parser_compile_cstr(volatile VALUE vparser, const char *f, const char *s, int len, int line)
 {
     VALUE str = rb_str_new(s, len);
-    return parser_compile_string(vparser, f, str, line);
+    return parser_compile_string(vparser, rb_filesystem_str_new_cstr(f), str, line);
 }
 
 static VALUE
@@ -5486,6 +5508,12 @@ rb_compile_file(const char *f, VALUE file, int start)
 NODE*
 rb_parser_compile_file(volatile VALUE vparser, const char *f, VALUE file, int start)
 {
+    return rb_parser_compile_file_path(vparser, rb_filesystem_str_new_cstr(f), file, start);
+}
+
+NODE*
+rb_parser_compile_file_path(volatile VALUE vparser, VALUE fname, VALUE file, int start)
+{
     struct parser_params *parser;
     NODE *node;
 
@@ -5495,7 +5523,7 @@ rb_parser_compile_file(volatile VALUE vparser, const char *f, VALUE file, int st
     lex_pbeg = lex_p = lex_pend = 0;
     compile_for_eval = rb_parse_in_eval();
 
-    node = yycompile(parser, f, start);
+    node = yycompile(parser, fname, start);
     RB_GC_GUARD(vparser); /* prohibit tail call optimization */
 
     return node;
@@ -5590,9 +5618,15 @@ parser_nextc(struct parser_params *parser)
 	}
     }
     c = (unsigned char)*lex_p++;
-    if (c == '\r' && peek('\n')) {
-	lex_p++;
-	c = '\n';
+    if (c == '\r') {
+	if (peek('\n')) {
+	    lex_p++;
+	    c = '\n';
+	}
+	else if (ruby_sourceline > parser->last_cr_line) {
+	    parser->last_cr_line = ruby_sourceline;
+	    rb_compile_warn(ruby_sourcefile, ruby_sourceline, "encountered \\r in middle of line, treated as a mere space");
+	}
     }
 
     return c;
@@ -6166,7 +6200,7 @@ const unsigned int ruby_global_name_punct_bits[] = {
 #endif
 
 static inline int
-is_global_name_punct(const char c)
+is_global_name_punct(const int c)
 {
     if (c <= 0x20 || 0x7e < c) return 0;
     return (ruby_global_name_punct_bits[(c - 0x20) / 32] >> (c % 32)) & 1;
@@ -6334,6 +6368,7 @@ parser_heredoc_restore(struct parser_params *parser, NODE *here)
 {
     VALUE line;
 
+    lex_strterm = 0;
     line = here->nd_orig;
     lex_lastline = line;
     lex_pbeg = RSTRING_PTR(line);
@@ -6357,8 +6392,67 @@ parser_whole_match_p(struct parser_params *parser,
 	while (*p && ISSPACE(*p)) p++;
     }
     n = lex_pend - (p + len);
-    if (n < 0 || (n > 0 && p[len] != '\n' && p[len] != '\r')) return FALSE;
+    if (n < 0) return FALSE;
+    if (n > 0 && p[len] != '\n') {
+	if (p[len] != '\r') return FALSE;
+	if (n <= 1 || p[len+1] != '\n') return FALSE;
+    }
     return strncmp(eos, p, len) == 0;
+}
+
+#define NUM_SUFFIX_R   (1<<0)
+#define NUM_SUFFIX_I   (1<<1)
+#define NUM_SUFFIX_ALL 3
+
+static int
+parser_number_literal_suffix(struct parser_params *parser, int mask)
+{
+    int c, result = 0;
+    const char *lastp = lex_p;
+
+    while ((c = nextc()) != -1) {
+	if ((mask & NUM_SUFFIX_I) && c == 'i') {
+	    result |= (mask & NUM_SUFFIX_I);
+	    mask &= ~NUM_SUFFIX_I;
+	    /* r after i, rational of complex is disallowed */
+	    mask &= ~NUM_SUFFIX_R;
+	    continue;
+	}
+	if ((mask & NUM_SUFFIX_R) && c == 'r') {
+	    result |= (mask & NUM_SUFFIX_R);
+	    mask &= ~NUM_SUFFIX_R;
+	    continue;
+	}
+	if (!ISASCII(c) || ISALPHA(c) || c == '_') {
+	    lex_p = lastp;
+	    return 0;
+	}
+	pushback(c);
+	break;
+    }
+    return result;
+}
+
+static int
+parser_set_number_literal(struct parser_params *parser, VALUE v, int type, int suffix)
+{
+    if (suffix & NUM_SUFFIX_I) {
+	v = rb_complex_raw(INT2FIX(0), v);
+	type = tIMAGINARY;
+    }
+    set_yylval_literal(v);
+    return type;
+}
+
+static int
+parser_set_integer_literal(struct parser_params *parser, VALUE v, int suffix)
+{
+    int type = tINTEGER;
+    if (suffix & NUM_SUFFIX_R) {
+	v = rb_rational_raw1(v);
+	type = tRATIONAL;
+    }
+    return set_number_literal(v, type, suffix);
 }
 
 #ifdef RIPPER
@@ -6408,7 +6502,6 @@ parser_here_document(struct parser_params *parser, NODE *here)
 #endif
       restore:
 	heredoc_restore(lex_strterm);
-	lex_strterm = 0;
 	return 0;
     }
     if (was_bol() && whole_match_p(eos, len, indent)) {
@@ -6551,10 +6644,10 @@ parser_set_encode(struct parser_params *parser, const char *name)
     parser->enc = enc;
 #ifndef RIPPER
     if (ruby_debug_lines) {
-	long i, n = RARRAY_LEN(ruby_debug_lines);
-	const VALUE *p = RARRAY_PTR(ruby_debug_lines);
+	VALUE lines = ruby_debug_lines;
+	long i, n = RARRAY_LEN(lines);
 	for (i = 0; i < n; ++i) {
-	    rb_enc_associate_index(*p, idx);
+	    rb_enc_associate_index(RARRAY_AREF(lines, i), idx);
 	}
     }
 #endif
@@ -6825,7 +6918,7 @@ parser_prepare(struct parser_params *parser)
 
 #ifndef RIPPER
 #define ambiguous_operator(op, syn) ( \
-    rb_warning0("`"op"' after local variable is interpreted as binary operator"), \
+    rb_warning0("`"op"' after local variable or literal is interpreted as binary operator"), \
     rb_warning0("even though it seems like "syn""))
 #else
 #define ambiguous_operator(op, syn) dispatch2(operator_ambiguous, ripper_intern(op), rb_str_new_cstr(syn))
@@ -7358,6 +7451,7 @@ parser_yylex(struct parser_params *parser)
       case '5': case '6': case '7': case '8': case '9':
 	{
 	    int is_float, seen_point, seen_e, nondigit;
+	    int suffix;
 
 	    is_float = seen_point = seen_e = nondigit = 0;
 	    lex_state = EXPR_END;
@@ -7391,8 +7485,8 @@ parser_yylex(struct parser_params *parser)
 			no_digits();
 		    }
 		    else if (nondigit) goto trailing_uc;
-		    set_yylval_literal(rb_cstr_to_inum(tok(), 16, FALSE));
-		    return tINTEGER;
+		    suffix = number_literal_suffix(NUM_SUFFIX_ALL);
+		    return set_integer_literal(rb_cstr_to_inum(tok(), 16, FALSE), suffix);
 		}
 		if (c == 'b' || c == 'B') {
 		    /* binary */
@@ -7415,8 +7509,8 @@ parser_yylex(struct parser_params *parser)
 			no_digits();
 		    }
 		    else if (nondigit) goto trailing_uc;
-		    set_yylval_literal(rb_cstr_to_inum(tok(), 2, FALSE));
-		    return tINTEGER;
+		    suffix = number_literal_suffix(NUM_SUFFIX_ALL);
+		    return set_integer_literal(rb_cstr_to_inum(tok(), 2, FALSE), suffix);
 		}
 		if (c == 'd' || c == 'D') {
 		    /* decimal */
@@ -7439,8 +7533,8 @@ parser_yylex(struct parser_params *parser)
 			no_digits();
 		    }
 		    else if (nondigit) goto trailing_uc;
-		    set_yylval_literal(rb_cstr_to_inum(tok(), 10, FALSE));
-		    return tINTEGER;
+		    suffix = number_literal_suffix(NUM_SUFFIX_ALL);
+		    return set_integer_literal(rb_cstr_to_inum(tok(), 10, FALSE), suffix);
 		}
 		if (c == '_') {
 		    /* 0_0 */
@@ -7471,8 +7565,8 @@ parser_yylex(struct parser_params *parser)
 			pushback(c);
 			tokfix();
 			if (nondigit) goto trailing_uc;
-			set_yylval_literal(rb_cstr_to_inum(tok(), 8, FALSE));
-			return tINTEGER;
+			suffix = number_literal_suffix(NUM_SUFFIX_ALL);
+			return set_integer_literal(rb_cstr_to_inum(tok(), 8, FALSE), suffix);
 		    }
 		    if (nondigit) {
 			pushback(c);
@@ -7488,8 +7582,8 @@ parser_yylex(struct parser_params *parser)
 		}
 		else {
 		    pushback(c);
-                    set_yylval_literal(INT2FIX(0));
-		    return tINTEGER;
+		    suffix = number_literal_suffix(NUM_SUFFIX_ALL);
+		    return set_integer_literal(INT2FIX(0), suffix);
 		}
 	    }
 
@@ -7514,10 +7608,10 @@ parser_yylex(struct parser_params *parser)
 			}
 			c = c0;
 		    }
+		    seen_point = toklen();
 		    tokadd('.');
 		    tokadd(c);
 		    is_float++;
-		    seen_point++;
 		    nondigit = 0;
 		    break;
 
@@ -7531,14 +7625,18 @@ parser_yylex(struct parser_params *parser)
 		    if (seen_e) {
 			goto decode_num;
 		    }
-		    tokadd(c);
-		    seen_e++;
-		    is_float++;
 		    nondigit = c;
 		    c = nextc();
-		    if (c != '-' && c != '+') continue;
+		    if (c != '-' && c != '+' && !ISDIGIT(c)) {
+			pushback(c);
+			nondigit = 0;
+			goto decode_num;
+		    }
+		    tokadd(nondigit);
+		    seen_e++;
+		    is_float++;
 		    tokadd(c);
-		    nondigit = c;
+		    nondigit = (c == '-' || c == '+') ? c : 0;
 		    break;
 
 		  case '_':	/* `_' in number just ignored */
@@ -7562,16 +7660,30 @@ parser_yylex(struct parser_params *parser)
 	    }
 	    tokfix();
 	    if (is_float) {
-		double d = strtod(tok(), 0);
-		if (errno == ERANGE) {
-		    rb_warningS("Float %s out of range", tok());
-		    errno = 0;
+		int type = tFLOAT;
+		VALUE v;
+
+		suffix = number_literal_suffix(seen_e ? NUM_SUFFIX_I : NUM_SUFFIX_ALL);
+		if (suffix & NUM_SUFFIX_R) {
+		    char *point = &tok()[seen_point];
+		    size_t fraclen = toklen()-seen_point-1;
+		    type = tRATIONAL;
+		    memmove(point, point+1, fraclen+1);
+		    v = rb_cstr_to_inum(tok(), 10, FALSE);
+		    v = rb_rational_new(v, rb_int_positive_pow(10, fraclen));
 		}
-                set_yylval_literal(DBL2NUM(d));
-		return tFLOAT;
+		else {
+		    double d = strtod(tok(), 0);
+		    if (errno == ERANGE) {
+			rb_warningS("Float %s out of range", tok());
+			errno = 0;
+		    }
+		    v = DBL2NUM(d);
+		}
+		return set_number_literal(v, type, suffix);
 	    }
-	    set_yylval_literal(rb_cstr_to_inum(tok(), 10, FALSE));
-	    return tINTEGER;
+	    suffix = number_literal_suffix(NUM_SUFFIX_ALL);
+	    return set_integer_literal(rb_cstr_to_inum(tok(), 10, FALSE), suffix);
 	}
 
       case ')':
@@ -7868,9 +7980,7 @@ parser_yylex(struct parser_params *parser)
 	  case '\"':		/* $": already loaded files */
 	    tokadd('$');
 	    tokadd(c);
-	    tokfix();
-	    set_yylval_name(rb_intern(tok()));
-	    return tGVAR;
+	    goto gvar;
 
 	  case '-':
 	    tokadd('$');
@@ -7881,10 +7991,11 @@ parser_yylex(struct parser_params *parser)
 	    }
 	    else {
 		pushback(c);
+		pushback('-');
+		return '$';
 	    }
 	  gvar:
-	    tokfix();
-	    set_yylval_name(rb_intern(tok()));
+	    set_yylval_name(rb_intern3(tok(), tokidx, current_enc));
 	    return tGVAR;
 
 	  case '&':		/* $&: last match */
@@ -8046,11 +8157,11 @@ parser_yylex(struct parser_params *parser)
 		if (kw) {
 		    enum lex_state_e state = lex_state;
 		    lex_state = kw->state;
-		    if (state == EXPR_FNAME) {
+		    if (IS_lex_state_for(state, EXPR_FNAME)) {
 			set_yylval_name(rb_intern(kw->name));
 			return kw->id[0];
 		    }
-		    if (lex_state == EXPR_BEG) {
+		    if (IS_lex_state(EXPR_BEG)) {
 			command_start = TRUE;
 		    }
 		    if (kw->id[0] == keyword_do) {
@@ -8060,13 +8171,13 @@ parser_yylex(struct parser_params *parser)
 			    return keyword_do_LAMBDA;
 			}
 			if (COND_P()) return keyword_do_cond;
-			if (CMDARG_P() && state != EXPR_CMDARG)
+			if (CMDARG_P() && !IS_lex_state_for(state, EXPR_CMDARG))
 			    return keyword_do_block;
-			if (state & (EXPR_BEG | EXPR_ENDARG))
+			if (IS_lex_state_for(state, (EXPR_BEG | EXPR_ENDARG)))
 			    return keyword_do_block;
 			return keyword_do;
 		    }
-		    if (state & (EXPR_BEG | EXPR_VALUE))
+		    if (IS_lex_state_for(state, (EXPR_BEG | EXPR_VALUE)))
 			return kw->id[0];
 		    else {
 			if (kw->id[0] != kw->id[1])
@@ -8466,8 +8577,7 @@ gettable_gen(struct parser_params *parser, ID id)
       case keyword_false:
 	return NEW_FALSE();
       case keyword__FILE__:
-	return NEW_STR(rb_external_str_new_with_enc(ruby_sourcefile, strlen(ruby_sourcefile),
-						    rb_filesystem_encoding()));
+	return NEW_STR(rb_str_dup(ruby_sourcefile_string));
       case keyword__LINE__:
 	return NEW_LIT(INT2FIX(tokline));
       case keyword__ENCODING__:
@@ -8677,9 +8787,41 @@ block_dup_check_gen(struct parser_params *parser, NODE *node1, NODE *node2)
     }
 }
 
+static const char id_type_names[][9] = {
+    "LOCAL",
+    "INSTANCE",
+    "",				/* INSTANCE2 */
+    "GLOBAL",
+    "ATTRSET",
+    "CONST",
+    "CLASS",
+    "JUNK",
+};
+
 ID
 rb_id_attrset(ID id)
 {
+    if (!is_notop_id(id)) {
+	switch (id) {
+	  case tAREF: case tASET:
+	    return tASET;	/* only exception */
+	}
+	rb_name_error(id, "cannot make operator ID :%s attrset", rb_id2name(id));
+    }
+    else {
+	int scope = (int)(id & ID_SCOPE_MASK);
+	switch (scope) {
+	  case ID_LOCAL: case ID_INSTANCE: case ID_GLOBAL:
+	  case ID_CONST: case ID_CLASS: case ID_JUNK:
+	    break;
+	  case ID_ATTRSET:
+	    return id;
+	  default:
+	    rb_name_error(id, "cannot make %s ID %+"PRIsVALUE" attrset",
+			  id_type_names[scope], ID2SYM(id));
+
+	}
+    }
     id &= ~ID_SCOPE_MASK;
     id |= ID_ATTRSET;
     return id;
@@ -8798,11 +8940,6 @@ value_expr_gen(struct parser_params *parser, NODE *node)
     }
     while (node) {
 	switch (nd_type(node)) {
-	  case NODE_DEFN:
-	  case NODE_DEFS:
-	    parser_warning(node, "void value expression");
-	    return FALSE;
-
 	  case NODE_RETURN:
 	  case NODE_BREAK:
 	  case NODE_NEXT:
@@ -8958,6 +9095,16 @@ remove_begin(NODE *node)
 {
     NODE **n = &node, *n1 = node;
     while (n1 && nd_type(n1) == NODE_BEGIN && n1->nd_body) {
+	*n = n1 = n1->nd_body;
+    }
+    return node;
+}
+
+static NODE *
+remove_begin_all(NODE *node)
+{
+    NODE **n = &node, *n1 = node;
+    while (n1 && nd_type(n1) == NODE_BEGIN) {
 	*n = n1 = n1->nd_body;
     }
     return node;
@@ -9275,6 +9422,8 @@ negate_lit(NODE *node)
 	node->nd_lit = LONG2FIX(-FIX2LONG(node->nd_lit));
 	break;
       case T_BIGNUM:
+      case T_RATIONAL:
+      case T_COMPLEX:
 	node->nd_lit = rb_funcall(node->nd_lit,tUMINUS,0,0);
 	break;
       case T_FLOAT:
@@ -9290,6 +9439,7 @@ negate_lit(NODE *node)
 #endif
 	break;
       default:
+	rb_bug("unknown literal type passed to negate_lit");
 	break;
     }
     return node;
@@ -9720,8 +9870,7 @@ reg_fragment_check_gen(struct parser_params* parser, VALUE str, int options)
     err = rb_reg_check_preprocess(str);
     if (err != Qnil) {
         err = rb_obj_as_string(err);
-        compile_error(PARSER_ARG "%s", RSTRING_PTR(err));
-	RB_GC_GUARD(err);
+        compile_error(PARSER_ARG "%"PRIsVALUE, err);
 	return 0;
     }
     return 1;
@@ -9824,7 +9973,7 @@ reg_compile_gen(struct parser_params* parser, VALUE str, int options)
 	    rb_str_append(rb_str_cat(rb_attr_get(err, mesg), "\n", 1), m);
 	}
 	else {
-	    compile_error(PARSER_ARG "%s", RSTRING_PTR(m));
+	    compile_error(PARSER_ARG "%"PRIsVALUE, m);
 	}
 	return Qnil;
     }
@@ -9949,6 +10098,7 @@ static struct symbols {
     st_table *id_ivar2;
 #endif
     VALUE op_sym[tLAST_OP_ID];
+    int minor_marked;
 } global_symbols = {tLAST_TOKEN};
 
 static const struct st_hash_type symhash = {
@@ -10003,11 +10153,15 @@ Init_sym(void)
 }
 
 void
-rb_gc_mark_symbols(void)
+rb_gc_mark_symbols(int full_mark)
 {
-    rb_mark_tbl(global_symbols.id_str);
-    rb_gc_mark_locations(global_symbols.op_sym,
-			 global_symbols.op_sym + numberof(global_symbols.op_sym));
+    if (full_mark || global_symbols.minor_marked == 0) {
+	rb_mark_tbl(global_symbols.id_str);
+	rb_gc_mark_locations(global_symbols.op_sym,
+			     global_symbols.op_sym + numberof(global_symbols.op_sym));
+
+	if (!full_mark) global_symbols.minor_marked = 1;
+    }
 }
 #endif /* !RIPPER */
 
@@ -10030,8 +10184,8 @@ is_special_global_name(const char *m, const char *e, rb_encoding *enc)
 	++m;
     }
     else if (*m == '-') {
-	++m;
-	if (m < e && is_identchar(m, e, enc)) {
+	if (++m >= e) return 0;
+	if (is_identchar(m, e, enc)) {
 	    if (!ISASCII(*m)) mb = 1;
 	    m += rb_enc_mbclen(m, e, enc);
 	}
@@ -10058,8 +10212,11 @@ rb_enc_symname_p(const char *name, rb_encoding *enc)
     return rb_enc_symname2_p(name, strlen(name), enc);
 }
 
+#define IDSET_ATTRSET_FOR_SYNTAX ((1U<<ID_LOCAL)|(1U<<ID_CONST))
+#define IDSET_ATTRSET_FOR_INTERN (~(~0U<<ID_SCOPE_MASK) & ~(1U<<ID_ATTRSET))
+
 static int
-rb_enc_symname_type(const char *name, long len, rb_encoding *enc)
+rb_enc_symname_type(const char *name, long len, rb_encoding *enc, unsigned int allowed_attrset)
 {
     const char *m = name;
     const char *e = m + len;
@@ -10136,6 +10293,7 @@ rb_enc_symname_type(const char *name, long len, rb_encoding *enc)
 	if (m >= e || (*m != '_' && !rb_enc_isalpha(*m, enc) && ISASCII(*m)))
 	    return -1;
 	while (m < e && is_identchar(m, e, enc)) m += rb_enc_mbclen(m, e, enc);
+	if (m >= e) break;
 	switch (*m) {
 	  case '!': case '?':
 	    if (type == ID_GLOBAL || type == ID_CLASS || type == ID_INSTANCE) return -1;
@@ -10143,7 +10301,7 @@ rb_enc_symname_type(const char *name, long len, rb_encoding *enc)
 	    ++m;
 	    break;
 	  case '=':
-	    if (type != ID_CONST && type != ID_LOCAL) return -1;
+	    if (!(allowed_attrset & (1U << type))) return -1;
 	    type = ID_ATTRSET;
 	    ++m;
 	    break;
@@ -10156,15 +10314,15 @@ rb_enc_symname_type(const char *name, long len, rb_encoding *enc)
 int
 rb_enc_symname2_p(const char *name, long len, rb_encoding *enc)
 {
-    return rb_enc_symname_type(name, len, enc) != -1;
+    return rb_enc_symname_type(name, len, enc, IDSET_ATTRSET_FOR_SYNTAX) != -1;
 }
 
 static int
-rb_str_symname_type(VALUE name)
+rb_str_symname_type(VALUE name, unsigned int allowed_attrset)
 {
     const char *ptr = StringValuePtr(name);
     long len = RSTRING_LEN(name);
-    int type = rb_enc_symname_type(ptr, len, rb_enc_get(name));
+    int type = rb_enc_symname_type(ptr, len, rb_enc_get(name), allowed_attrset);
     RB_GC_GUARD(name);
     return type;
 }
@@ -10180,8 +10338,15 @@ static ID
 register_symid_str(ID id, VALUE str)
 {
     OBJ_FREEZE(str);
+    str = rb_fstring(str);
+
+    if (RUBY_DTRACE_SYMBOL_CREATE_ENABLED()) {
+	RUBY_DTRACE_SYMBOL_CREATE(RSTRING_PTR(str), rb_sourcefile(), rb_sourceline());
+    }
+
     st_add_direct(global_symbols.sym_id, (st_data_t)str, id);
     st_add_direct(global_symbols.id_str, id, (st_data_t)str);
+    global_symbols.minor_marked = 0;
     return id;
 }
 
@@ -10205,18 +10370,23 @@ sym_check_asciionly(VALUE str)
  */
 static ID intern_str(VALUE str);
 
+static VALUE
+setup_fake_str(struct RString *fake_str, const char *name, long len)
+{
+    fake_str->basic.flags = T_STRING|RSTRING_NOEMBED;
+    RBASIC_SET_CLASS((VALUE)fake_str, rb_cString);
+    fake_str->as.heap.len = len;
+    fake_str->as.heap.ptr = (char *)name;
+    fake_str->as.heap.aux.capa = len;
+    return (VALUE)fake_str;
+}
+
 ID
 rb_intern3(const char *name, long len, rb_encoding *enc)
 {
-    VALUE str;
     st_data_t data;
     struct RString fake_str;
-    fake_str.basic.flags = T_STRING|RSTRING_NOEMBED;
-    fake_str.basic.klass = rb_cString;
-    fake_str.as.heap.len = len;
-    fake_str.as.heap.ptr = (char *)name;
-    fake_str.as.heap.aux.capa = len;
-    str = (VALUE)&fake_str;
+    VALUE str = setup_fake_str(&fake_str, name, len);
     rb_enc_associate(str, enc);
     OBJ_FREEZE(str);
 
@@ -10243,7 +10413,8 @@ intern_str(VALUE str)
     enc = rb_enc_get(str);
     symenc = enc;
 
-    if (rb_cString && !rb_enc_asciicompat(enc)) {
+    if (!len || (rb_cString && !rb_enc_asciicompat(enc))) {
+      junk:
 	id = ID_JUNK;
 	goto new_id;
     }
@@ -10251,6 +10422,7 @@ intern_str(VALUE str)
     id = 0;
     switch (*m) {
       case '$':
+	if (len < 2) goto junk;
 	id |= ID_GLOBAL;
 	if ((mb = is_special_global_name(++m, e, enc)) != 0) {
 	    if (!--mb) symenc = rb_usascii_encoding();
@@ -10259,10 +10431,12 @@ intern_str(VALUE str)
 	break;
       case '@':
 	if (m[1] == '@') {
+	    if (len < 3) goto junk;
 	    m++;
 	    id |= ID_CLASS;
 	}
 	else {
+	    if (len < 2) goto junk;
 	    id |= ID_INSTANCE;
 	}
 	m++;
@@ -10285,24 +10459,27 @@ intern_str(VALUE str)
 		}
 	    }
 	}
-
-	if (m[last] == '=') {
-	    /* attribute assignment */
-	    id = rb_intern3(name, last, enc);
-	    if (id > tLAST_OP_ID && !is_attrset_id(id)) {
-		enc = rb_enc_get(rb_id2str(id));
-		id = rb_id_attrset(id);
-		goto id_register;
-	    }
-	    id = ID_ATTRSET;
+	break;
+    }
+    if (name[last] == '=') {
+	/* attribute assignment */
+	if (last > 1 && name[last-1] == '=')
+	    goto junk;
+	id = rb_intern3(name, last, enc);
+	if (id > tLAST_OP_ID && !is_attrset_id(id)) {
+	    enc = rb_enc_get(rb_id2str(id));
+	    id = rb_id_attrset(id);
+	    goto id_register;
 	}
-	else if (rb_enc_isupper(m[0], enc)) {
+	id = ID_ATTRSET;
+    }
+    else if (id == 0) {
+	if (rb_enc_isupper(m[0], enc)) {
 	    id = ID_CONST;
-        }
+	}
 	else {
 	    id = ID_LOCAL;
 	}
-	break;
     }
     if (!rb_enc_isdigit(*m, enc)) {
 	while (m <= name + last && is_identchar(m, e, enc)) {
@@ -10314,7 +10491,7 @@ intern_str(VALUE str)
 	    }
 	}
     }
-    if (m - name < len) id = ID_JUNK;
+    if (id != ID_ATTRSET && m - name < len) id = ID_JUNK;
     if (sym_check_asciionly(str)) symenc = rb_usascii_encoding();
   new_id:
     if (symenc != enc) rb_enc_associate(str, symenc);
@@ -10372,7 +10549,9 @@ rb_id2str(ID id)
 		name[1] = 0;
 		str = rb_usascii_str_new(name, 1);
 		OBJ_FREEZE(str);
+		str = rb_fstring(str);
 		global_symbols.op_sym[i] = str;
+		global_symbols.minor_marked = 0;
 	    }
 	    return str;
 	}
@@ -10382,7 +10561,9 @@ rb_id2str(ID id)
 		if (!str) {
 		    str = rb_usascii_str_new2(op_tbl[i].name);
 		    OBJ_FREEZE(str);
+		    str = rb_fstring(str);
 		    global_symbols.op_sym[i] = str;
+		    global_symbols.minor_marked = 0;
 		}
 		return str;
 	    }
@@ -10392,25 +10573,30 @@ rb_id2str(ID id)
     if (st_lookup(global_symbols.id_str, id, &data)) {
         VALUE str = (VALUE)data;
         if (RBASIC(str)->klass == 0)
-            RBASIC(str)->klass = rb_cString;
+            RBASIC_SET_CLASS_RAW(str, rb_cString);
 	return str;
     }
 
     if (is_attrset_id(id)) {
-	ID id2 = (id & ~ID_SCOPE_MASK) | ID_LOCAL;
+	ID id_stem = (id & ~ID_SCOPE_MASK);
 	VALUE str;
 
-	while (!(str = rb_id2str(id2))) {
-	    if (!is_local_id(id2)) return 0;
-	    id2 = (id & ~ID_SCOPE_MASK) | ID_CONST;
-	}
+	do {
+	    if (!!(str = rb_id2str(id_stem | ID_LOCAL))) break;
+	    if (!!(str = rb_id2str(id_stem | ID_CONST))) break;
+	    if (!!(str = rb_id2str(id_stem | ID_INSTANCE))) break;
+	    if (!!(str = rb_id2str(id_stem | ID_GLOBAL))) break;
+	    if (!!(str = rb_id2str(id_stem | ID_CLASS))) break;
+	    if (!!(str = rb_id2str(id_stem | ID_JUNK))) break;
+	    return 0;
+	} while (0);
 	str = rb_str_dup(str);
 	rb_str_cat(str, "=", 1);
-	rb_intern_str(str);
+	register_symid_str(id, str);
 	if (st_lookup(global_symbols.id_str, id, &data)) {
             VALUE str = (VALUE)data;
             if (RBASIC(str)->klass == 0)
-                RBASIC(str)->klass = rb_cString;
+                RBASIC_SET_CLASS_RAW(str, rb_cString);
             return str;
         }
     }
@@ -10539,13 +10725,8 @@ rb_check_id(volatile VALUE *namep)
 
     if (rb_is_attrset_name(name)) {
 	struct RString fake_str;
-	const VALUE localname = (VALUE)&fake_str;
 	/* make local name by chopping '=' */
-	fake_str.basic.flags = T_STRING|RSTRING_NOEMBED;
-	fake_str.basic.klass = rb_cString;
-	fake_str.as.heap.len = RSTRING_LEN(name) - 1;
-	fake_str.as.heap.ptr = RSTRING_PTR(name);
-	fake_str.as.heap.aux.capa = fake_str.as.heap.len;
+	const VALUE localname = setup_fake_str(&fake_str, RSTRING_PTR(name), RSTRING_LEN(name) - 1);
 	rb_enc_copy(localname, name);
 	OBJ_FREEZE(localname);
 
@@ -10563,12 +10744,7 @@ rb_check_id_cstr(const char *ptr, long len, rb_encoding *enc)
 {
     st_data_t id;
     struct RString fake_str;
-    const VALUE name = (VALUE)&fake_str;
-    fake_str.basic.flags = T_STRING|RSTRING_NOEMBED;
-    fake_str.basic.klass = rb_cString;
-    fake_str.as.heap.len = len;
-    fake_str.as.heap.ptr = (char *)ptr;
-    fake_str.as.heap.aux.capa = len;
+    const VALUE name = setup_fake_str(&fake_str, ptr, len);
     rb_enc_associate(name, enc);
 
     sym_check_asciionly(name);
@@ -10589,43 +10765,43 @@ rb_check_id_cstr(const char *ptr, long len, rb_encoding *enc)
 int
 rb_is_const_name(VALUE name)
 {
-    return rb_str_symname_type(name) == ID_CONST;
+    return rb_str_symname_type(name, 0) == ID_CONST;
 }
 
 int
 rb_is_class_name(VALUE name)
 {
-    return rb_str_symname_type(name) == ID_CLASS;
+    return rb_str_symname_type(name, 0) == ID_CLASS;
 }
 
 int
 rb_is_global_name(VALUE name)
 {
-    return rb_str_symname_type(name) == ID_GLOBAL;
+    return rb_str_symname_type(name, 0) == ID_GLOBAL;
 }
 
 int
 rb_is_instance_name(VALUE name)
 {
-    return rb_str_symname_type(name) == ID_INSTANCE;
+    return rb_str_symname_type(name, 0) == ID_INSTANCE;
 }
 
 int
 rb_is_attrset_name(VALUE name)
 {
-    return rb_str_symname_type(name) == ID_ATTRSET;
+    return rb_str_symname_type(name, IDSET_ATTRSET_FOR_INTERN) == ID_ATTRSET;
 }
 
 int
 rb_is_local_name(VALUE name)
 {
-    return rb_str_symname_type(name) == ID_LOCAL;
+    return rb_str_symname_type(name, 0) == ID_LOCAL;
 }
 
 int
 rb_is_method_name(VALUE name)
 {
-    switch (rb_str_symname_type(name)) {
+    switch (rb_str_symname_type(name, 0)) {
       case ID_LOCAL: case ID_ATTRSET: case ID_JUNK:
 	return TRUE;
     }
@@ -10635,7 +10811,7 @@ rb_is_method_name(VALUE name)
 int
 rb_is_junk_name(VALUE name)
 {
-    return rb_str_symname_type(name) == -1;
+    return rb_str_symname_type(name, IDSET_ATTRSET_FOR_SYNTAX) == -1;
 }
 
 #endif /* !RIPPER */
@@ -10669,13 +10845,13 @@ parser_initialize(struct parser_params *parser)
     parser->parser_lvtbl = 0;
     parser->parser_ruby__end__seen = 0;
     parser->parser_ruby_sourcefile = 0;
+    parser->parser_ruby_sourcefile_string = Qnil;
 #ifndef RIPPER
     parser->is_ripper = 0;
     parser->parser_eval_tree_begin = 0;
     parser->parser_eval_tree = 0;
 #else
     parser->is_ripper = 1;
-    parser->parser_ruby_sourcefile_string = Qnil;
     parser->delayed = Qnil;
 
     parser->result = Qnil;
@@ -10703,12 +10879,12 @@ parser_mark(void *ptr)
     rb_gc_mark(p->parser_lex_input);
     rb_gc_mark(p->parser_lex_lastline);
     rb_gc_mark(p->parser_lex_nextline);
+    rb_gc_mark(p->parser_ruby_sourcefile_string);
 #ifndef RIPPER
     rb_gc_mark((VALUE)p->parser_eval_tree_begin) ;
     rb_gc_mark((VALUE)p->parser_eval_tree) ;
     rb_gc_mark(p->debug_lines);
 #else
-    rb_gc_mark(p->parser_ruby_sourcefile_string);
     rb_gc_mark(p->delayed);
     rb_gc_mark(p->value);
     rb_gc_mark(p->result);
@@ -10733,9 +10909,6 @@ parser_free(void *ptr)
 	prev = local->prev;
 	xfree(local);
     }
-#ifndef RIPPER
-    xfree(p->parser_ruby_sourcefile);
-#endif
     xfree(p);
 }
 
@@ -10752,11 +10925,6 @@ parser_memsize(const void *ptr)
 	size += sizeof(*local);
 	if (local->vars) size += local->vars->capa * sizeof(ID);
     }
-#ifndef RIPPER
-    if (p->parser_ruby_sourcefile) {
-	size += strlen(p->parser_ruby_sourcefile) + 1;
-    }
-#endif
     return size;
 }
 
@@ -10771,6 +10939,7 @@ rb_data_type_t parser_data_type = {
 	parser_free,
 	parser_memsize,
     },
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 #ifndef RIPPER
@@ -10943,12 +11112,14 @@ ripper_validate_object(VALUE self, VALUE x)
     if (SYMBOL_P(x)) return x;
     if (!rb_is_pointer_to_heap(x))
         rb_raise(rb_eArgError, "invalid pointer: %p", x);
-    switch (TYPE(x)) {
+    switch (BUILTIN_TYPE(x)) {
       case T_STRING:
       case T_OBJECT:
       case T_ARRAY:
       case T_BIGNUM:
       case T_FLOAT:
+      case T_COMPLEX:
+      case T_RATIONAL:
         return x;
       case T_NODE:
 	if (nd_type(x) != NODE_LASGN) {
@@ -11378,7 +11549,7 @@ ripper_assert_Qundef(VALUE self, VALUE obj, VALUE msg)
 {
     StringValue(msg);
     if (obj == Qundef) {
-        rb_raise(rb_eArgError, "%s", RSTRING_PTR(msg));
+        rb_raise(rb_eArgError, "%"PRIsVALUE, msg);
     }
     return Qnil;
 }
@@ -11412,6 +11583,7 @@ InitVM_ripper(void)
     VALUE Ripper;
 
     Ripper = rb_define_class("Ripper", rb_cObject);
+    /* version of Ripper */
     rb_define_const(Ripper, "Version", rb_usascii_str_new2(RIPPER_VERSION));
     rb_define_alloc_func(Ripper, ripper_s_allocate);
     rb_define_method(Ripper, "initialize", ripper_initialize, -1);

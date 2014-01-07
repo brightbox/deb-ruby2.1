@@ -17,8 +17,18 @@ Init_id(void)
 #define rb_intern(str) rb_intern_const(str)
     rb_encoding *enc = rb_usascii_encoding();
 
+    REGISTER_SYMID(idFreeze, "freeze");
+    REGISTER_SYMID(idInspect, "inspect");
     REGISTER_SYMID(idIntern, "intern");
+    REGISTER_SYMID(idObject_id, "object_id");
+    REGISTER_SYMID(idConst_missing, "const_missing");
     REGISTER_SYMID(idMethodMissing, "method_missing");
+    REGISTER_SYMID(idMethod_added, "method_added");
+    REGISTER_SYMID(idSingleton_method_added, "singleton_method_added");
+    REGISTER_SYMID(idMethod_removed, "method_removed");
+    REGISTER_SYMID(idSingleton_method_removed, "singleton_method_removed");
+    REGISTER_SYMID(idMethod_undefined, "method_undefined");
+    REGISTER_SYMID(idSingleton_method_undefined, "singleton_method_undefined");
     REGISTER_SYMID(idLength, "length");
     REGISTER_SYMID(idSize, "size");
     REGISTER_SYMID(idGets, "gets");
@@ -28,6 +38,7 @@ Init_id(void)
     REGISTER_SYMID(idLambda, "lambda");
     REGISTER_SYMID(idSend, "send");
     REGISTER_SYMID(id__send__, "__send__");
+    REGISTER_SYMID(id__attached__, "__attached__");
     REGISTER_SYMID(idInitialize, "initialize");
     REGISTER_SYMID(idInitialize_copy, "initialize_copy");
     REGISTER_SYMID(idInitialize_clone, "initialize_clone");
@@ -35,6 +46,7 @@ Init_id(void)
     REGISTER_SYMID(idUScore, "_");
     REGISTER_SYMID(idNULL, ""/*NULL*/"");
     REGISTER_SYMID(idEmptyP, "empty?");
+    REGISTER_SYMID(idEqlP, "eql?");
     REGISTER_SYMID(idRespond_to, "respond_to?");
     REGISTER_SYMID(idRespond_to_missing, "respond_to_missing?");
     REGISTER_SYMID(idIFUNC, "<IFUNC>");

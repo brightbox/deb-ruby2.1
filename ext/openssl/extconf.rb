@@ -12,7 +12,7 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: extconf.rb 38492 2012-12-20 07:42:56Z emboss $
+  $Id: extconf.rb 43451 2013-10-28 06:32:24Z nobu $
 =end
 
 require "mkmf"
@@ -144,6 +144,7 @@ if checking_for('OpenSSL version is 0.9.7 or later') {
   }
   have_header("openssl/ocsp.h")
 end
+have_struct_member("CRYPTO_THREADID", "ptr", "openssl/crypto.h")
 have_struct_member("EVP_CIPHER_CTX", "flags", "openssl/evp.h")
 have_struct_member("EVP_CIPHER_CTX", "engine", "openssl/evp.h")
 have_struct_member("X509_ATTRIBUTE", "single", "openssl/x509.h")
@@ -153,5 +154,7 @@ have_macro("EVP_CTRL_GCM_GET_TAG", ['openssl/evp.h']) && $defs.push("-DHAVE_AUTH
 Logging::message "=== Checking done. ===\n"
 
 create_header
-create_makefile("openssl")
+create_makefile("openssl") {|conf|
+  conf << "THREAD_MODEL = #{CONFIG["THREAD_MODEL"]}\n"
+}
 Logging::message "Done.\n"

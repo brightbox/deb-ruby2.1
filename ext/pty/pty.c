@@ -22,6 +22,10 @@
 #ifdef HAVE_PTY_H
 #include	<pty.h>
 #endif
+#if defined(HAVE_SYS_PARAM_H)
+  /* for __FreeBSD_version */
+# include <sys/param.h>
+#endif
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #else
@@ -140,7 +144,7 @@ chfunc(void *data, char *errbuf, size_t errbuf_len)
     dup2(slave,2);
     close(slave);
 #if defined(HAVE_SETEUID) || defined(HAVE_SETREUID) || defined(HAVE_SETRESUID)
-    seteuid(getuid());
+    if (seteuid(getuid())) ERROR_EXIT("seteuid()");
 #endif
 
     return rb_exec_async_signal_safe(carg->eargp, errbuf, sizeof(errbuf_len));
@@ -228,9 +232,9 @@ get_device_once(int *master, int *slave, char SlaveName[DEVICELEN], int nomesg, 
     dfl.sa_flags = 0;
     sigemptyset(&dfl.sa_mask);
 
-#if defined(__sun) || defined(__FreeBSD__)
+#if defined(__sun) || (defined(__FreeBSD__) && __FreeBSD_version < 902000)
     /* workaround for Solaris 10: grantpt() doesn't work if FD_CLOEXEC is set.  [ruby-dev:44688] */
-    /* FreeBSD 8 supported O_CLOEXEC for posix_openpt, but FreeBSD 9 removed it.
+    /* FreeBSD 9.2 or later supports O_CLOEXEC
      * http://www.freebsd.org/cgi/query-pr.cgi?pr=162374 */
     if ((masterfd = posix_openpt(O_RDWR|O_NOCTTY)) == -1) goto error;
     if (sigaction(SIGCHLD, &dfl, &old) == -1) goto error;
@@ -604,9 +608,9 @@ pty_getpty(int argc, VALUE *argv, VALUE self)
     return res;
 }
 
-NORETURN(static void raise_from_check(pid_t pid, int status));
+NORETURN(static void raise_from_check(rb_pid_t pid, int status));
 static void
-raise_from_check(pid_t pid, int status)
+raise_from_check(rb_pid_t pid, int status)
 {
     const char *state;
     char buf[1024];
@@ -654,7 +658,7 @@ static VALUE
 pty_check(int argc, VALUE *argv, VALUE self)
 {
     VALUE pid, exc;
-    pid_t cpid;
+    rb_pid_t cpid;
     int status;
 
     rb_scan_args(argc, argv, "11", &pid, &exc);

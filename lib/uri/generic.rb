@@ -2,7 +2,7 @@
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
 # License:: You can redistribute it and/or modify it under the same term as Ruby.
-# Revision:: $Id: generic.rb 43062 2013-09-26 16:08:11Z nagachika $
+# Revision:: $Id: generic.rb 43918 2013-11-29 14:43:01Z a_matsuda $
 #
 # See URI for general documentation
 #
@@ -552,7 +552,7 @@ module URI
     protected :set_password
 
     # returns the userinfo +ui+ as user, password
-    # if properly formated as 'user:password'
+    # if properly formatted as 'user:password'
     def split_userinfo(ui)
       return nil, nil unless ui
       user, password = ui.split(/:/, 2)
@@ -672,7 +672,7 @@ module URI
     # u.hostname = "::1"
     # p u.to_s                  #=> "http://[::1]/bar"
     #
-    # If the arugument seems IPv6 address,
+    # If the argument seems IPv6 address,
     # it is wrapped by brackets.
     #
     def hostname=(v)

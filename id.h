@@ -13,16 +13,29 @@
 #ifndef RUBY_ID_H
 #define RUBY_ID_H
 
-#define ID_SCOPE_SHIFT 3
-#define ID_SCOPE_MASK 0x07
-#define ID_LOCAL      0x00
-#define ID_INSTANCE   0x01
-#define ID_GLOBAL     0x03
-#define ID_ATTRSET    0x04
-#define ID_CONST      0x05
-#define ID_CLASS      0x06
-#define ID_JUNK       0x07
-#define ID_INTERNAL   ID_JUNK
+enum ruby_id_types {
+    RUBY_ID_LOCAL       = 0x00,
+    RUBY_ID_INSTANCE    = 0x01,
+    RUBY_ID_GLOBAL      = 0x03,
+    RUBY_ID_ATTRSET     = 0x04,
+    RUBY_ID_CONST       = 0x05,
+    RUBY_ID_CLASS       = 0x06,
+    RUBY_ID_JUNK        = 0x07,
+    RUBY_ID_INTERNAL    = RUBY_ID_JUNK,
+    RUBY_ID_SCOPE_SHIFT = 3,
+    RUBY_ID_SCOPE_MASK  = ~(~0U<<RUBY_ID_SCOPE_SHIFT)
+};
+
+#define ID_SCOPE_SHIFT RUBY_ID_SCOPE_SHIFT
+#define ID_SCOPE_MASK  RUBY_ID_SCOPE_MASK
+#define ID_LOCAL       RUBY_ID_LOCAL
+#define ID_INSTANCE    RUBY_ID_INSTANCE
+#define ID_GLOBAL      RUBY_ID_GLOBAL
+#define ID_ATTRSET     RUBY_ID_ATTRSET
+#define ID_CONST       RUBY_ID_CONST
+#define ID_CLASS       RUBY_ID_CLASS
+#define ID_JUNK        RUBY_ID_JUNK
+#define ID_INTERNAL    RUBY_ID_INTERNAL
 
 #define ID2ATTRSET(id) (((id)&~ID_SCOPE_MASK)|ID_ATTRSET)
 
@@ -80,6 +93,7 @@ enum ruby_method_ids {
     tPRESERVED_ID_BEGIN = 147,
     idNULL,
     idEmptyP,
+    idEqlP,
     idRespond_to,
     idRespond_to_missing,
     idIFUNC,
@@ -95,8 +109,18 @@ enum ruby_method_ids {
     id_core_hash_merge_ptr,
     id_core_hash_merge_kwd,
     tPRESERVED_ID_END,
+    tFreeze,
+    tInspect,
     tIntern,
+    tObject_id,
+    tConst_missing,
     tMethodMissing,
+    tMethod_added,
+    tSingleton_method_added,
+    tMethod_removed,
+    tSingleton_method_removed,
+    tMethod_undefined,
+    tSingleton_method_undefined,
     tLength,
     tSize,
     tGets,
@@ -106,14 +130,25 @@ enum ruby_method_ids {
     tLambda,
     tSend,
     t__send__,
+    t__attached__,
     tInitialize,
     tInitialize_copy,
     tInitialize_clone,
     tInitialize_dup,
     tUScore,
 #define TOKEN2LOCALID(n) id##n = ((t##n<<ID_SCOPE_SHIFT)|ID_LOCAL)
+    TOKEN2LOCALID(Freeze),
+    TOKEN2LOCALID(Inspect),
     TOKEN2LOCALID(Intern),
+    TOKEN2LOCALID(Object_id),
+    TOKEN2LOCALID(Const_missing),
     TOKEN2LOCALID(MethodMissing),
+    TOKEN2LOCALID(Method_added),
+    TOKEN2LOCALID(Singleton_method_added),
+    TOKEN2LOCALID(Method_removed),
+    TOKEN2LOCALID(Singleton_method_removed),
+    TOKEN2LOCALID(Method_undefined),
+    TOKEN2LOCALID(Singleton_method_undefined),
     TOKEN2LOCALID(Length),
     TOKEN2LOCALID(Size),
     TOKEN2LOCALID(Gets),
@@ -123,6 +158,7 @@ enum ruby_method_ids {
     TOKEN2LOCALID(Lambda),
     TOKEN2LOCALID(Send),
     TOKEN2LOCALID(__send__),
+    TOKEN2LOCALID(__attached__),
     TOKEN2LOCALID(Initialize),
     TOKEN2LOCALID(Initialize_copy),
     TOKEN2LOCALID(Initialize_clone),

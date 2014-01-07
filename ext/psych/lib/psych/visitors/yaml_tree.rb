@@ -1,7 +1,11 @@
+require 'psych/tree_builder'
+require 'psych/scalar_scanner'
+require 'psych/class_loader'
+
 module Psych
   module Visitors
     ###
-    # YAMLTree builds a YAML ast given a ruby object.  For example:
+    # YAMLTree builds a YAML ast given a Ruby object.  For example:
     #
     #   builder = Psych::Visitors::YAMLTree.new
     #   builder << { :foo => 'bar' }
@@ -36,7 +40,23 @@ module Psych
       alias :finished? :finished
       alias :started? :started
 
-      def initialize options = {}, emitter = TreeBuilder.new, ss = ScalarScanner.new
+      def self.create options = {}, emitter = nil
+        emitter      ||= TreeBuilder.new
+        class_loader = ClassLoader.new
+        ss           = ScalarScanner.new class_loader
+        new(emitter, ss, options)
+      end
+
+      def self.new emitter = nil, ss = nil, options = nil
+        return super if emitter && ss && options
+
+        if $VERBOSE
+          warn "This API is deprecated, please pass an emitter, scalar scanner, and options or call #{self}.create() (#{caller.first})"
+        end
+        create emitter, ss
+      end
+
+      def initialize emitter, ss, options
         super()
         @started  = false
         @finished = false
@@ -189,14 +209,18 @@ module Psych
       end
 
       def visit_DateTime o
-        formatted = format_time o.to_time
+        formatted = if o.offset.zero?
+                      o.strftime("%Y-%m-%d %H:%M:%S.%9N Z".freeze)
+                    else
+                      o.strftime("%Y-%m-%d %H:%M:%S.%9N %:z".freeze)
+                    end
         tag = '!ruby/object:DateTime'
         register o, @emitter.scalar(formatted, nil, tag, false, false, Nodes::Scalar::ANY)
       end
 
       def visit_Time o
         formatted = format_time o
-        @emitter.scalar formatted, nil, nil, true, false, Nodes::Scalar::ANY
+        register o, @emitter.scalar(formatted, nil, nil, true, false, Nodes::Scalar::ANY)
       end
 
       def visit_Rational o
@@ -244,14 +268,6 @@ module Psych
         @emitter.scalar o._dump, nil, '!ruby/object:BigDecimal', false, false, Nodes::Scalar::ANY
       end
 
-      def binary? string
-        (string.encoding == Encoding::ASCII_8BIT && !string.ascii_only?) ||
-          string.index("\x00") ||
-          string.count("\x00-\x7F", "^ -~\t\r\n").fdiv(string.length) > 0.3 ||
-          string.class != String
-      end
-      private :binary?
-
       def visit_String o
         plain = true
         quote = true
@@ -268,6 +284,8 @@ module Psych
           quote = false
         elsif o =~ /\n/
           style = Nodes::Scalar::LITERAL
+        elsif o =~ /^\W/
+          style = Nodes::Scalar::DOUBLE_QUOTED
         else
           unless String === @ss.tokenize(o)
             style = Nodes::Scalar::SINGLE_QUOTED
@@ -279,6 +297,8 @@ module Psych
         if ivars.empty?
           unless o.class == ::String
             tag = "!ruby/string:#{o.class}"
+            plain = false
+            quote = false
           end
           @emitter.scalar str, nil, tag, plain, quote, style
         else
@@ -357,6 +377,17 @@ module Psych
       end
 
       private
+      # FIXME: Remove the index and count checks in Psych 3.0
+      NULL         = "\x00"
+      BINARY_RANGE = "\x00-\x7F"
+      WS_RANGE     = "^ -~\t\r\n"
+
+      def binary? string
+        (string.encoding == Encoding::ASCII_8BIT && !string.ascii_only?) ||
+          string.index(NULL) ||
+          string.count(BINARY_RANGE, WS_RANGE).fdiv(string.length) > 0.3
+      end
+
       def visit_array_subclass o
         tag = "!ruby/array:#{o.class}"
         if o.instance_variables.empty?
@@ -463,7 +494,7 @@ module Psych
         when :map
           @emitter.start_mapping nil, c.tag, c.implicit, c.style
           c.map.each do |k,v|
-            @emitter.scalar k, nil, nil, true, false, Nodes::Scalar::ANY
+            accept k
             accept v
           end
           @emitter.end_mapping
