@@ -1,3 +1,12 @@
+ruby2.0 (2.0.0.484-1) UNRELEASED; urgency=medium
+
+  * New upstream snapshot.
+  * assume as default Ruby
+  * Add patch by Yamashita Yuu to fix build against newer OpenSSL
+    (Closes: #733372)
+
+ -- Antonio Terceiro <terceiro@debian.org>  Wed, 15 Jan 2014 18:08:57 +0100
+
 ruby2.0 (2.0.0.353-1) unstable; urgency=low
 
   * New upstream release
