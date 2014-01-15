@@ -1,3 +1,250 @@
+Sun Jan 12 22:46:49 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	patch inspired from r44260 on trunk. [ruby-core:58652] [Bug #9168]
+
+	* gc.c (run_finalizer): clear th->errinfo before invoke finalizer and
+	  restore afterward.
+
+	* test/ruby/test_gc.rb (test_exception_in_finalizer): add test for
+	  above.
+
+	* vm_trace.c (rb_threadptr_exec_event_hooks_orig): clear th->errinfo
+	  before invoke hook.
+
+Sun Jan 12 16:07:52 2014  vo.x (Vit Ondruch)  <vondruch@redhat.com>
+
+	* tool/rbinstall.rb (Gem::Specification#collect): make stable
+	  Gem::Specification.files in default .gemspecs the different order of
+	  "files" in .gemspec files makes them different therefore possibly
+	  conflicting in multilib scenario.  patch by vo.x (Vit Ondruch) at
+	  [ruby-core:57544] [Bug #8623].
+
+Sun Jan 12 16:01:54 2014  Tanaka Akira  <akr@fsij.org>
+
+	* test/openssl/test_cipher.rb (test_aes_gcm_wrong_tag): Don't use
+	  String#succ because it can make modified (wrong) auth_tag longer
+	  than 16 bytes.  The longer auth_tag makes that
+	  EVP_CIPHER_CTX_ctrl (and internally aes_gcm_ctrl) fail.
+	  [ruby-core:55143] [Bug #8439] reported by Vit Ondruch.
+
+Sun Jan 12 15:33:11 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* util.c (ruby_qsort): fix potential stack overflow on a large
+	  machine.  based on the patch by Conrad Irwin <conrad.irwin AT
+	  gmail.com> at [ruby-core:51816].  [Bug #7772]
+
+Sun Jan 12 15:17:00 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/tk/tkutil/tkutil.c: use rb_sprintf(), rb_id2str(), and
+	  rb_intern_str() instead of rb_intern() and RSTRING_PTR() with
+	  RB_GC_GUARD(), to prevent temporary objects from GC.
+	  [ruby-core:39000] [Bug #5199]
+
+Tue Jan  7 01:16:34 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* proc.c (mnew_from_me): keep iclass as-is, to make inheritance
+	  chain consistent.  [ruby-core:59358] [Bug #9315]
+
+	* proc.c (method_owner): return the original defined_class from
+	  prepended iclass, instead.
+
+Tue Jan  7 01:16:34 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_insnhelper.c (vm_search_super_method): direct superclass of a
+	  module is found when super called in a Method object generated a
+	  method defined in a module, call method_missing in that case.
+	  [ruby-core:59358] [Bug #9315]
+
+Fri Jan  3 22:25:23 2014  Aman Gupta <ruby@tmm1.net>
+
+	* test/net/imap/cacert.pem: generate new CA cert, since the last one
+	  expired. [Bug #9341] [ruby-core:59459]
+	* test/net/imap/server.crt: new server cert signed with updated CA.
+	* test/net/imap/Makefile: add `make regen_certs` to automate this
+	  process.
+
+Wed Dec 25 00:46:44 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/net/smtp.rb (Net::SMTP#critical):  Always return a
+	  Net::SMTP::Response.  Patch by Pawel Veselov.
+	  [ruby-trunk - Bug #9125]
+	* test/net/smtp/test_smtp.rb:  Test for the above.
+
+Wed Dec 25 00:18:19 2013  Tanaka Akira  <akr@fsij.org>
+
+	* ext/socket/lib/socket.rb: Don't test $! in "ensure" clause because
+	  it may be set before the body.
+	  Reported by ko1 and mrkn.  [ruby-core:59088] [Bug #9247]
+
+	* lib/cgi/core.rb: Ditto.
+
+	* lib/drb/ssl.rb: Ditto.
+
+Tue Dec 24 00:18:14 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/mkmf.rb (configuration): strip destdir part from prefix to get
+	  rid of duplication.  a patch by arton at [ruby-core:58859].
+	  [ruby-core:58856] [Bug #9213]
+
+Mon Dec 23 22:37:01 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* proc.c (mnew_from_me): method by respond_to_missing? should be
+	  owned by the original class.
+
+Sun Dec 22 22:56:06 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* proc.c (mnew_from_me): achieve the original defined_class from
+	  prepended iclass, to fix inherited owner.
+
+	* proc.c (method_owner): return the defined class, but not the
+	  class which the method object is created from.
+
+Sun Dec 22 22:56:06 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* proc.c (method_owner): return the class where alias is defined, not
+	  the class original method is defined.
+
+	* vm_method.c (rb_method_entry_make, rb_alias): store the originally
+	  defined class in me.  [Bug #7993] [Bug #7842] [Bug #9236]
+
+	* vm_method.c (rb_method_entry_get_without_cache): cache included
+	  module but not iclass.
+
+Sun Dec 22 00:07:09 2013  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* insns.def: Fix optimization bug of Float#/ [Bug #9238]
+
+Sat Dec 21 23:13:55 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* eval_jump.c (rb_exec_end_proc): unlink and free procs data before
+	  calling for each procs.  [Bug #9110]
+
+Sat Dec 21 23:13:55 2013  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* eval_jump.c (rb_exec_end_proc): fix double free or corruption error
+	  when reentering by callcc. [ruby-core:58329] [Bug #9110]
+
+	* test/ruby/test_beginendblock.rb: test for above.
+
+Sat Dec 21 22:55:03 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/resolv.rb (Resolv::Hosts#lazy_initialize): should not
+	  consider encodings in hosts file.  [ruby-core:59239] [Bug #9273]
+
+	* lib/resolv.rb (Resolv::Config.parse_resolv_conf): ditto.
+
+Sat Dec 21 22:51:51 2013  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* win32/Makefile.sub (fake.rb): fixed wrong RUBY_PLATFORM, to correctly
+	  install win32.h.
+	  [ruby-core:58801][Bug #9199] reported by arton.
+
+Sat Dec 21 16:16:56 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* gc.c (finalize_deferred): flush all deferred finalizers while other
+	  finalizers can get ready to run newly by lazy sweep.
+	  [ruby-core:58833] [Bug #9205]
+
+Sat Dec 21 16:07:00 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ruby_atomic.h (ATOMIC_PTR_EXCHANGE): atomic exchange function for
+	  a generic pointer.
+
+Sat Dec 21 15:50:13 2013  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* ruby_atomic.h: remove duplicate definisions between ATOMIC_XXX
+	  and ATOMIC_SIZE_XXX.
+
+Sat Dec 21 15:50:13 2013  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* ruby_atomic.h: define ATOMIC_SIZE_CAS() with
+	  __atomic_compare_exchange_n() and refactoring.
+
+Sat Dec 21 15:50:13 2013  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* ruby_atomic.h: use __atomic builtin functions supported by GCC.
+	  __sync family are legacy functions now and it is recommended
+	  that new code use the __atomic functions.
+	  http://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
+
+	* configure.in: check existence of __atomic functions.
+
+Sat Dec 21 15:37:11 2013  Naohisa Goto  <ngotogenome@gmail.com>
+
+	* ruby_atomic.h (ATOMIC_SIZE_CAS): fix compile error on Solaris
+	  since r43460.
+
+Sat Dec 21 15:37:11 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ruby_atomic.h (ATOMIC_SIZE_CAS): new macro, compare and swap size_t.
+
+Sat Dec 21 15:37:11 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ruby_atomic.h (rb_w32_atomic_cas): call InterlockedCompareExchange
+	  directly.
+
+	* ruby_atomic.h (ATOMIC_CAS): fix missing function call.
+
+Sat Dec 21 15:37:11 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ruby_atomic.h (ATOMIC_CAS): suppress C4022 and C4047 warnings in
+	  VC6.  only InterlockedCompareExchange is declared using PVOID.
+
+Sat Dec 21 14:54:37 2013  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* ext/bigdecimal/lib/bigdecimal/util.rb: [DOC] remove example of
+	  Rational#to_d without argument. [Bug #8958]
+
+Sat Dec 21 14:54:37 2013  Zachary Scott  <e@zzak.io>
+
+	* ext/bigdecimal/lib/bigdecimal/util.rb: [DOC] +precision+ is required
+
+Sat Dec 21 14:54:37 2013  Zachary Scott  <e@zzak.io>
+
+	* ext/bigdecimal/lib/bigdecimal/util.rb: [DOC] Document the required
+	  +precision+ argument for Rational#to_d [Bug #8958]
+
+Sat Dec 21 03:46:14 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/date/date_strptime.c (date__strptime_internal): unset
+	  case-insensitive flag for [:alpha:], which already implies both
+	  cases, to get rid of backtrack explosion.  [ruby-core:58984]
+	  [Bug #9221]
+
+Sat Dec 21 03:46:14 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/date/date_parse.c (parse_time): unset case-insensitive flag
+	  for [:alpha:], which already implies both cases, to get rid of
+	  backtrack explosion.  [ruby-core:58876] [Bug #9221]
+
+Fri Dec 13 00:23:01 2013  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* enumerator.c (enumerator_with_index): try to convert given offset to
+	  integer. fix bug introduced in r39594.
+
+Mon Dec  2 23:31:00 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* enumerator.c (enumerator_with_index): should not store local variable
+	  address to memoise the arguments.  it is invalidated after the return.
+	  [ruby-core:58692] [Bug #9178]
+
+Mon Dec  2 23:16:50 2013  Eric Hodel  <drbrain@segment7.net>
+
+	* enumerator.c (enumerator_with_index):  Restore handling of a nil memo
+	  from r39594.
+
+Mon Dec  2 22:53:05 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* file.c (rb_readlink): fix buffer overflow on a long symlink. since
+	  rb_str_modify_expand() expands from its length but not its capacity,
+	  need to set the length properly for each expansion.
+	  [ruby-core:58592] [Bug #9157]
+
+Fri Nov 29 00:31:46 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* common.mk (Doxyfile): tool/file2lastrev.rb needs running with
+	  BASERUBY since r43617.  [ruby-dev:47823] [Bug #9169]
+
 Fri Nov 22 13:18:28 2013  Nobuyoshi Nakada  <nobu@ruby-lang.org>
 
 	* util.c (ruby_strtod): BigMath requires more precision.
