@@ -1,0 +1,20 @@
+Porting Notes
+=============
+
+Ruby 1.9 and newer need a working Ruby interpreter to configure/build
+(see debian/rules calling ./configure with --with-baseruby).
+Ruby 1.8 does NOT need Ruby to build, just gcc.
+
+In previous versions of the Ruby packaging, Ruby 1.9.1 did use ruby1.8
+to configure/build. Now that ruby1.8 is gone, we think bootstrapping
+Ruby for a new port would look like this:
+
+  * Build ruby1.8 from the old packages, re-add Provides: ruby-interpreter
+  * Symlink /usr/bin/ruby1.8 to /usr/bin/ruby
+  * "Just" build this package
+
+Note that this wasn't tested at all.
+
+Good luck!
+
+  -- Christian Hofstaedtler <zeha@debian.org>  Tue, 14 Jan 2014 20:03:27 +0100
