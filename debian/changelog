@@ -1,11 +1,21 @@
 ruby2.0 (2.0.0.484-1) UNRELEASED; urgency=medium
 
+  [ Antonio Terceiro ]
   * New upstream snapshot.
-  * assume as default Ruby
   * Add patch by Yamashita Yuu to fix build against newer OpenSSL
     (Closes: #733372)
 
- -- Antonio Terceiro <terceiro@debian.org>  Wed, 15 Jan 2014 18:08:57 +0100
+  [ Christian Hofstaedtler ]
+  * Use any valid Ruby interpreter to bootstrap
+  * Bump Standards-Version to 3.9.5 (no changes)
+  * Add myself to Uploaders:
+  * Add Dependencies to facilitate upgrades from 1.8
+    * libruby2.0 now depends on ruby2.0
+    * ruby2.0 now depends on ruby
+  * Stop installing alternatives/symlinks for binaries:
+    * /usr/bin/{ruby,erb,testrb,irb,rdoc,ri}
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Fri, 17 Jan 2014 16:35:57 +0100
 
 ruby2.0 (2.0.0.353-1) unstable; urgency=low
 
