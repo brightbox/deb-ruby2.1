@@ -35,7 +35,7 @@ should_not_exist  ${libdir}/libruby-2.1.so.2.1
 should_exist      ${archlibdir}/libruby-2.1.so.2.1
 should_not_exist  ${libdir}/pkgconfig/ruby-2.1.pc
 should_exist      ${archlibdir}/pkgconfig/ruby-2.1.pc
-
+should_exist      ${libdir}/ruby/gems/2.1.0/specifications/default/json-1.8.1.gemspec
 
 
 echo
