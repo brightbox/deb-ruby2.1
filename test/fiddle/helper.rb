@@ -37,6 +37,9 @@ when /kfreebsd/
 when /gnu/	#GNU/Hurd
   libc_so = "/lib/libc.so.0.3"
   libm_so = "/lib/libm.so.6"
+when /mirbsd/
+  libc_so = "/usr/lib/libc.so.41.10"
+  libm_so = "/usr/lib/libm.so.7.0"
 when /bsd|dragonfly/
   libc_so = "/usr/lib/libc.so"
   libm_so = "/usr/lib/libm.so"
@@ -108,6 +111,12 @@ module Fiddle
     def setup
       @libc = Fiddle.dlopen(LIBC_SO)
       @libm = Fiddle.dlopen(LIBM_SO)
+    end
+
+    def teardown
+      if /linux/ =~ RUBY_PLATFORM
+        GC.start
+      end
     end
   end
 end

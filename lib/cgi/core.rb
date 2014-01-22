@@ -238,7 +238,7 @@ class CGI
         arr.each {|c| buf << "Set-Cookie: #{c}#{EOL}" }
       when Hash
         hash = cookie
-        hash.each {|name, c| buf << "Set-Cookie: #{c}#{EOL}" }
+        hash.each_value {|c| buf << "Set-Cookie: #{c}#{EOL}" }
       end
     end
     if @output_cookies
@@ -588,14 +588,14 @@ class CGI
     def create_body(is_large)  #:nodoc:
       if is_large
         require 'tempfile'
-        body = Tempfile.new('CGI', encoding: "ascii-8bit")
+        body = Tempfile.new('CGI', encoding: Encoding::ASCII_8BIT)
       else
         begin
           require 'stringio'
-          body = StringIO.new("".force_encoding("ascii-8bit"))
+          body = StringIO.new("".force_encoding(Encoding::ASCII_8BIT))
         rescue LoadError
           require 'tempfile'
-          body = Tempfile.new('CGI', encoding: "ascii-8bit")
+          body = Tempfile.new('CGI', encoding: Encoding::ASCII_8BIT)
         end
       end
       body.binmode if defined? body.binmode
@@ -702,9 +702,9 @@ class CGI
         if value
           return value
         elsif defined? StringIO
-          StringIO.new("".force_encoding("ascii-8bit"))
+          StringIO.new("".force_encoding(Encoding::ASCII_8BIT))
         else
-          Tempfile.new("CGI",encoding:"ascii-8bit")
+          Tempfile.new("CGI",encoding: Encoding::ASCII_8BIT)
         end
       else
         str = if value then value.dup else "" end
@@ -833,29 +833,23 @@ class CGI
     when "html3"
       require 'cgi/html'
       extend Html3
-      element_init()
       extend HtmlExtension
     when "html4"
       require 'cgi/html'
       extend Html4
-      element_init()
       extend HtmlExtension
     when "html4Tr"
       require 'cgi/html'
       extend Html4Tr
-      element_init()
       extend HtmlExtension
     when "html4Fr"
       require 'cgi/html'
       extend Html4Tr
-      element_init()
       extend Html4Fr
-      element_init()
       extend HtmlExtension
     when "html5"
       require 'cgi/html'
       extend Html5
-      element_init()
       extend HtmlExtension
     end
   end

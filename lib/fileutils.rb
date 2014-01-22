@@ -154,6 +154,11 @@ module FileUtils
   end
   module_function :uptodate?
 
+  def remove_tailing_slash(dir)
+    dir == '/' ? dir : dir.chomp(?/)
+  end
+  private_module_function :remove_tailing_slash
+
   #
   # Options: mode noop verbose
   #
@@ -200,7 +205,7 @@ module FileUtils
     fu_output_message "mkdir -p #{options[:mode] ? ('-m %03o ' % options[:mode]) : ''}#{list.join ' '}" if options[:verbose]
     return *list if options[:noop]
 
-    list.map {|path| path.chomp(?/) }.each do |path|
+    list.map {|path| remove_tailing_slash(path)}.each do |path|
       # optimize for the most common case
       begin
         fu_mkdir path, options[:mode]
@@ -237,7 +242,7 @@ module FileUtils
   OPT_TABLE['makedirs'] = [:mode, :noop, :verbose]
 
   def fu_mkdir(path, mode)   #:nodoc:
-    path = path.chomp(?/)
+    path = remove_tailing_slash(path)
     if mode
       Dir.mkdir path, mode
       File.chmod mode, path
@@ -265,9 +270,10 @@ module FileUtils
     return if options[:noop]
     list.each do |dir|
       begin
-        Dir.rmdir(dir = dir.chomp(?/))
+        Dir.rmdir(dir = remove_tailing_slash(dir))
         if parents
           until (parent = File.dirname(dir)) == '.' or parent == dir
+            dir = parent
             Dir.rmdir(dir)
           end
         end
@@ -411,7 +417,7 @@ module FileUtils
   #
   # +src+ can be a list of files.
   #
-  #   # Installing ruby library "mylib" under the site_ruby
+  #   # Installing Ruby library "mylib" under the site_ruby
   #   FileUtils.rm_r site_ruby + '/mylib', :force
   #   FileUtils.cp_r 'lib/', site_ruby + '/mylib'
   #
@@ -862,62 +868,78 @@ module FileUtils
   OPT_TABLE['install'] = [:mode, :preserve, :noop, :verbose]
 
   def user_mask(target)  #:nodoc:
-    mask = 0
-    target.each_byte do |byte_chr|
-      case byte_chr.chr
-        when "u"
-          mask |= 04700
-        when "g"
-          mask |= 02070
-        when "o"
-          mask |= 01007
-        when "a"
-          mask |= 07777
+    target.each_char.inject(0) do |mask, chr|
+      case chr
+      when "u"
+        mask | 04700
+      when "g"
+        mask | 02070
+      when "o"
+        mask | 01007
+      when "a"
+        mask | 07777
+      else
+        raise ArgumentError, "invalid `who' symbol in file mode: #{chr}"
       end
     end
-    mask
   end
   private_module_function :user_mask
 
-  def mode_mask(mode, path)  #:nodoc:
-    mask = 0
-    mode.each_byte do |byte_chr|
-      case byte_chr.chr
-        when "r"
-          mask |= 0444
-        when "w"
-          mask |= 0222
-        when "x"
-          mask |= 0111
-        when "X"
-          mask |= 0111 if FileTest::directory? path
-        when "s"
-          mask |= 06000
-        when "t"
-          mask |= 01000
-      end
+  def apply_mask(mode, user_mask, op, mode_mask)
+    case op
+    when '='
+      (mode & ~user_mask) | (user_mask & mode_mask)
+    when '+'
+      mode | (user_mask & mode_mask)
+    when '-'
+      mode & ~(user_mask & mode_mask)
     end
-    mask
   end
-  private_module_function :mode_mask
+  private_module_function :apply_mask
 
-  def symbolic_modes_to_i(modes, path)  #:nodoc:
-    current_mode = (File.stat(path).mode & 07777)
-    modes.split(/,/).inject(0) do |mode, mode_sym|
-      mode_sym = "a#{mode_sym}" if mode_sym =~ %r!^[=+-]!
-      target, mode = mode_sym.split %r![=+-]!
+  def symbolic_modes_to_i(mode_sym, path)  #:nodoc:
+    mode_sym.split(/,/).inject(File.stat(path).mode & 07777) do |current_mode, clause|
+      target, *actions = clause.split(/([=+-])/)
+      raise ArgumentError, "invalid file mode: #{mode_sym}" if actions.empty?
+      target = 'a' if target.empty?
       user_mask = user_mask(target)
-      mode_mask = mode_mask(mode ? mode : "", path)
+      actions.each_slice(2) do |op, perm|
+        need_apply = op == '='
+        mode_mask = (perm || '').each_char.inject(0) do |mask, chr|
+          case chr
+          when "r"
+            mask | 0444
+          when "w"
+            mask | 0222
+          when "x"
+            mask | 0111
+          when "X"
+            if FileTest.directory? path
+              mask | 0111
+            else
+              mask
+            end
+          when "s"
+            mask | 06000
+          when "t"
+            mask | 01000
+          when "u", "g", "o"
+            if mask.nonzero?
+              current_mode = apply_mask(current_mode, user_mask, op, mask)
+            end
+            need_apply = false
+            copy_mask = user_mask(chr)
+            (current_mode & copy_mask) / (copy_mask & 0111) * (user_mask & 0111)
+          else
+            raise ArgumentError, "invalid `perm' symbol in file mode: #{chr}"
+          end
+        end
 
-      case mode_sym
-        when /=/
-          current_mode &= ~(user_mask)
-          current_mode |= user_mask & mode_mask
-        when /\+/
-          current_mode |= user_mask & mode_mask
-        when /-/
-          current_mode &= ~(user_mask & mode_mask)
+        if mode_mask.nonzero? || need_apply
+          current_mode = apply_mask(current_mode, user_mask, op, mode_mask)
+        end
       end
+      current_mode
     end
   end
   private_module_function :symbolic_modes_to_i
@@ -1059,7 +1081,6 @@ module FileUtils
     return if options[:noop]
     uid = fu_get_uid(user)
     gid = fu_get_gid(group)
-    return unless uid or gid
     list.each do |root|
       Entry_.new(root).traverse do |ent|
         begin
@@ -1129,7 +1150,7 @@ module FileUtils
   def touch(list, options = {})
     fu_check_options options, OPT_TABLE['touch']
     list = fu_list(list)
-    created = nocreate = options[:nocreate]
+    nocreate = options[:nocreate]
     t = options[:mtime]
     if options[:verbose]
       fu_output_message "touch #{nocreate ? '-c ' : ''}#{t ? t.strftime('-t %Y%m%d%H%M.%S ') : ''}#{list.join ' '}"
@@ -1628,7 +1649,7 @@ module FileUtils
   #
   #   p FileUtils.have_option?(:cp, :noop)     #=> true
   #   p FileUtils.have_option?(:rm, :force)    #=> true
-  #   p FileUtils.have_option?(:rm, :perserve) #=> false
+  #   p FileUtils.have_option?(:rm, :preserve) #=> false
   #
   def FileUtils.have_option?(mid, opt)
     li = OPT_TABLE[mid.to_s] or raise ArgumentError, "no such method: #{mid}"

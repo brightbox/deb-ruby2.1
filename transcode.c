@@ -377,7 +377,7 @@ load_transcoder_entry(transcoder_entry_t *entry)
         memcpy(path, transcoder_lib_prefix, sizeof(transcoder_lib_prefix) - 1);
         memcpy(path + sizeof(transcoder_lib_prefix) - 1, lib, len);
         rb_str_set_len(fn, total_len);
-        FL_UNSET(fn, FL_TAINT|FL_UNTRUSTED);
+        FL_UNSET(fn, FL_TAINT);
         OBJ_FREEZE(fn);
         if (!rb_require_safe(fn, safe > 3 ? 3 : safe))
             return NULL;
@@ -1810,9 +1810,9 @@ rb_econv_asciicompat_encoding(const char *ascii_incompat_name)
 }
 
 VALUE
-rb_econv_substr_append(rb_econv_t *ec, VALUE src, long off, long len, VALUE dst, int flags)
+rb_econv_append(rb_econv_t *ec, const char *ss, long len, VALUE dst, int flags)
 {
-    unsigned const char *ss, *sp, *se;
+    unsigned const char *sp, *se;
     unsigned char *ds, *dp, *de;
     rb_econv_result_t res;
     int max_output;
@@ -1828,8 +1828,7 @@ rb_econv_substr_append(rb_econv_t *ec, VALUE src, long off, long len, VALUE dst,
     else
         max_output = 1;
 
-    res = econv_destination_buffer_full;
-    while (res == econv_destination_buffer_full) {
+    do {
         long dlen = RSTRING_LEN(dst);
         if (rb_str_capacity(dst) - dlen < (size_t)len + max_output) {
             unsigned long new_capa = (unsigned long)dlen + len + max_output;
@@ -1838,18 +1837,27 @@ rb_econv_substr_append(rb_econv_t *ec, VALUE src, long off, long len, VALUE dst,
             rb_str_resize(dst, new_capa);
             rb_str_set_len(dst, dlen);
         }
-        ss = sp = (const unsigned char *)RSTRING_PTR(src) + off;
-        se = ss + len;
+        sp = (const unsigned char *)ss;
+        se = sp + len;
         ds = (unsigned char *)RSTRING_PTR(dst);
         de = ds + rb_str_capacity(dst);
         dp = ds += dlen;
         res = rb_econv_convert(ec, &sp, se, &dp, de, flags);
-        off += sp - ss;
-        len -= sp - ss;
+        len -= (const char *)sp - ss;
+        ss  = (const char *)sp;
         rb_str_set_len(dst, dlen + (dp - ds));
         rb_econv_check_error(ec);
-    }
+    } while (res == econv_destination_buffer_full);
 
+    return dst;
+}
+
+VALUE
+rb_econv_substr_append(rb_econv_t *ec, VALUE src, long off, long len, VALUE dst, int flags)
+{
+    src = rb_str_new_frozen(src);
+    dst = rb_econv_append(ec, RSTRING_PTR(src) + off, len, dst, flags);
+    RB_GC_GUARD(src);
     return dst;
 }
 
@@ -2664,6 +2672,7 @@ str_transcode0(int argc, VALUE *argv, VALUE *self, int ecflags, VALUE ecopts)
     rb_encoding *senc, *denc;
     const char *sname, *dname;
     int dencidx;
+    int explicitly_invalid_replace = TRUE;
 
     rb_check_arity(argc, 0, 2);
 
@@ -2672,6 +2681,9 @@ str_transcode0(int argc, VALUE *argv, VALUE *self, int ecflags, VALUE ecopts)
 	if (NIL_P(arg1)) {
 	    if (!ecflags) return -1;
 	    arg1 = rb_obj_encoding(str);
+	}
+	if (!(ecflags & ECONV_INVALID_MASK)) {
+	    explicitly_invalid_replace = FALSE;
 	}
 	ecflags |= ECONV_INVALID_REPLACE | ECONV_UNDEF_REPLACE;
     }
@@ -2686,6 +2698,16 @@ str_transcode0(int argc, VALUE *argv, VALUE *self, int ecflags, VALUE ecopts)
                     ECONV_XML_ATTR_CONTENT_DECORATOR|
                     ECONV_XML_ATTR_QUOTE_DECORATOR)) == 0) {
         if (senc && senc == denc) {
+	    if ((ecflags & ECONV_INVALID_MASK) && explicitly_invalid_replace) {
+		VALUE rep = Qnil;
+		if (!NIL_P(ecopts)) {
+		    rep = rb_hash_aref(ecopts, sym_replace);
+		}
+		dest = rb_str_scrub(str, rep);
+		if (NIL_P(dest)) dest = str;
+		*self = dest;
+		return dencidx;
+	    }
             return NIL_P(arg2) ? -1 : dencidx;
         }
         if (senc && denc && rb_enc_asciicompat(senc) && rb_enc_asciicompat(denc)) {
@@ -2815,10 +2837,6 @@ static VALUE encoded_dup(VALUE newstr, VALUE str, int encidx);
  *  in the source encoding. The last form by default does not raise
  *  exceptions but uses replacement strings.
  *
- *  Please note that conversion from an encoding +enc+ to the
- *  same encoding +enc+ is a no-op, i.e. the receiver is returned without
- *  any changes, and no exceptions are raised, even if there are invalid bytes.
- *
  *  The +options+ Hash gives details for conversion and can have the following
  *  keys:
  *
@@ -2883,7 +2901,7 @@ encoded_dup(VALUE newstr, VALUE str, int encidx)
 	return newstr;
     }
     else {
-	RBASIC(newstr)->klass = rb_obj_class(str);
+	RBASIC_SET_CLASS(newstr, rb_obj_class(str));
     }
     return str_encode_associate(newstr, encidx);
 }
@@ -2904,6 +2922,7 @@ econv_memsize(const void *ptr)
 static const rb_data_type_t econv_data_type = {
     "econv",
     {NULL, econv_free, econv_memsize,},
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 static VALUE
@@ -3048,10 +3067,10 @@ decorate_convpath(VALUE convpath, int ecflags)
 
     len = n = RARRAY_LENINT(convpath);
     if (n != 0) {
-        VALUE pair = RARRAY_PTR(convpath)[n-1];
+        VALUE pair = RARRAY_AREF(convpath, n-1);
 	if (RB_TYPE_P(pair, T_ARRAY)) {
-	    const char *sname = rb_enc_name(rb_to_encoding(RARRAY_PTR(pair)[0]));
-	    const char *dname = rb_enc_name(rb_to_encoding(RARRAY_PTR(pair)[1]));
+	    const char *sname = rb_enc_name(rb_to_encoding(RARRAY_AREF(pair, 0)));
+	    const char *dname = rb_enc_name(rb_to_encoding(RARRAY_AREF(pair, 1)));
 	    transcoder_entry_t *entry = get_transcoder_entry(sname, dname);
 	    const rb_transcoder *tr = load_transcoder_entry(entry);
 	    if (!tr)
@@ -3864,7 +3883,7 @@ econv_finish(VALUE self)
     av[1] = dst;
     av[2] = Qnil;
     av[3] = Qnil;
-    av[4] = INT2NUM(0);
+    av[4] = INT2FIX(0);
     ac = 5;
 
     ret = econv_primitive_convert(ac, av, self);

@@ -105,6 +105,42 @@ EOT
     }
   end
 
+  def test_open_r_ascii8bit
+    with_tmpdir {
+      generate_file('tmp', "")
+      EnvUtil.with_default_external(Encoding::ASCII_8BIT) do
+        EnvUtil.with_default_internal(Encoding::UTF_8) do
+          open("tmp", "r") {|f|
+            assert_equal(Encoding::ASCII_8BIT, f.external_encoding)
+            assert_equal(nil, f.internal_encoding)
+          }
+          open("tmp", "r:ascii-8bit") {|f|
+            assert_equal(Encoding::ASCII_8BIT, f.external_encoding)
+            assert_equal(nil, f.internal_encoding)
+          }
+          open("tmp", "r:ascii-8bit:utf-16") {|f|
+            assert_equal(Encoding::ASCII_8BIT, f.external_encoding)
+            assert_equal(nil, f.internal_encoding)
+          }
+        end
+        EnvUtil.with_default_internal(nil) do
+          open("tmp", "r") {|f|
+            assert_equal(Encoding::ASCII_8BIT, f.external_encoding)
+            assert_equal(nil, f.internal_encoding)
+          }
+          open("tmp", "r:ascii-8bit") {|f|
+            assert_equal(Encoding::ASCII_8BIT, f.external_encoding)
+            assert_equal(nil, f.internal_encoding)
+          }
+          open("tmp", "r:ascii-8bit:utf-16") {|f|
+            assert_equal(Encoding::ASCII_8BIT, f.external_encoding)
+            assert_equal(nil, f.internal_encoding)
+          }
+        end
+      end
+    }
+  end
+
   def test_open_r_enc_in_opt
     with_tmpdir {
       generate_file('tmp', "")
@@ -727,10 +763,12 @@ EOT
            assert_equal(eucjp, r.read)
          end)
 
-    e = assert_raise(ArgumentError) {with_pipe("UTF-8", "UTF-8".encode("UTF-32BE")) {}}
-    assert_match(/invalid name encoding/, e.message)
-    e = assert_raise(ArgumentError) {with_pipe("UTF-8".encode("UTF-32BE")) {}}
-    assert_match(/invalid name encoding/, e.message)
+    assert_raise_with_message(ArgumentError, /invalid name encoding/) do
+      with_pipe("UTF-8", "UTF-8".encode("UTF-32BE")) {}
+    end
+    assert_raise_with_message(ArgumentError, /invalid name encoding/) do
+      with_pipe("UTF-8".encode("UTF-32BE")) {}
+    end
 
     ENCS.each {|enc|
       pipe(enc,
@@ -1404,9 +1442,12 @@ EOT
   end
 
   def test_both_textmode_binmode
-    assert_raise(ArgumentError) { open("not-exist", "r", :textmode=>true, :binmode=>true) }
-    assert_raise(ArgumentError) { open("not-exist", "rt", :binmode=>true) }
-    assert_raise(ArgumentError) { open("not-exist", "rb", :textmode=>true) }
+    bug5918 = '[ruby-core:42199]'
+    assert_raise(ArgumentError, bug5918) { open("not-exist", "r", :textmode=>true, :binmode=>true) }
+    assert_raise(ArgumentError, bug5918) { open("not-exist", "rt", :binmode=>true) }
+    assert_raise(ArgumentError, bug5918) { open("not-exist", "rt", :binmode=>false) }
+    assert_raise(ArgumentError, bug5918) { open("not-exist", "rb", :textmode=>true) }
+    assert_raise(ArgumentError, bug5918) { open("not-exist", "rb", :textmode=>false) }
   end
 
   def test_textmode_decode_universal_newline_read
@@ -2058,7 +2099,7 @@ EOT
       open("ff", "w") {|f| }
       open("ff", "rt") {|f|
         f.ungetc "a"
-        assert(!f.eof?, "[ruby-dev:40506] (3)")
+        assert_not_predicate(f, :eof?, "[ruby-dev:40506] (3)")
       }
     }
   end

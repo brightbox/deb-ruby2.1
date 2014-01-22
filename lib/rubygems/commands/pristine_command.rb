@@ -12,6 +12,7 @@ class Gem::Commands::PristineCommand < Gem::Command
           'Restores installed gems to pristine condition from files located in the gem cache',
           :version => Gem::Requirement.default,
           :extensions => true,
+          :extensions_set => false,
           :all => false
 
     add_option('--all',
@@ -23,12 +24,19 @@ class Gem::Commands::PristineCommand < Gem::Command
     add_option('--[no-]extensions',
                'Restore gems with extensions',
                'in addition to regular gems') do |value, options|
-      options[:extensions] = value
+      options[:extensions_set] = true
+      options[:extensions]     = value
     end
 
     add_option('--only-executables',
                'Only restore executables') do |value, options|
       options[:only_executables] = value
+    end
+
+    add_option('-E', '--[no-]env-shebang',
+               'Rewrite executables with a shebang',
+               'of /usr/bin/env') do |value, options|
+      options[:env_shebang] = value
     end
 
     add_version_option('restore to', 'pristine condition')
@@ -56,6 +64,9 @@ If the cached gem cannot be found it will be downloaded.
 
 If --no-extensions is provided pristine will not attempt to restore a gem
 with an extension.
+
+If --extensions is given (but not --all or gem names) only gems with
+extensions will be restored.
     EOF
   end
 
@@ -66,6 +77,14 @@ with an extension.
   def execute
     specs = if options[:all] then
               Gem::Specification.map
+
+            # `--extensions` must be explicitly given to pristine only gems
+            # with extensions.
+            elsif options[:extensions_set] and
+                  options[:extensions] and options[:args].empty? then
+              Gem::Specification.select do |spec|
+                spec.extensions and not spec.extensions.empty?
+              end
             else
               get_all_gem_names.map do |gem_name|
                 Gem::Specification.find_all_by_name gem_name, options[:version]
@@ -105,16 +124,21 @@ with an extension.
         Gem::RemoteFetcher.fetcher.download_to_cache dep
       end
 
-      # TODO use installer options
-      install_defaults = Gem::ConfigFile::PLATFORM_DEFAULTS['install']
-      installer_env_shebang = install_defaults.to_s['--env-shebang']
+      env_shebang =
+        if options.include? :env_shebang then
+          options[:env_shebang]
+        else
+          install_defaults = Gem::ConfigFile::PLATFORM_DEFAULTS['install']
+          install_defaults.to_s['--env-shebang']
+        end
 
       installer = Gem::Installer.new(gem,
                                      :wrappers => true,
                                      :force => true,
                                      :install_dir => spec.base_dir,
-                                     :env_shebang => installer_env_shebang,
+                                     :env_shebang => env_shebang,
                                      :build_args => spec.build_args)
+
       if options[:only_executables] then
         installer.generate_bin
       else

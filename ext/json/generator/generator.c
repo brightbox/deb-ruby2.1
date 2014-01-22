@@ -273,7 +273,18 @@ static void convert_UTF8_to_JSON(FBuffer *buffer, VALUE string)
                     escape_len = 2;
                     break;
                 default:
-                    end++;
+                    {
+                        unsigned short clen = trailingBytesForUTF8[c] + 1;
+                        if (end + clen > len) {
+                            rb_raise(rb_path2class("JSON::GeneratorError"),
+                                    "partial character in source, but hit end");
+                        }
+                        if (!isLegalUTF8((UTF8 *) p, clen)) {
+                            rb_raise(rb_path2class("JSON::GeneratorError"),
+                                    "source sequence is illegal/malformed utf-8");
+                        }
+                        end += clen;
+                    }
                     continue;
                     break;
             }
@@ -511,11 +522,8 @@ static VALUE cState_configure(VALUE self, VALUE opts)
 {
     VALUE tmp;
     GET_STATE(self);
-    tmp = rb_convert_type(opts, T_HASH, "Hash", "to_hash");
+    tmp = rb_check_convert_type(opts, T_HASH, "Hash", "to_hash");
     if (NIL_P(tmp)) tmp = rb_convert_type(opts, T_HASH, "Hash", "to_h");
-    if (NIL_P(tmp)) {
-        rb_raise(rb_eArgError, "opts has to be hash like or convertable into a hash");
-    }
     opts = tmp;
     tmp = rb_hash_aref(opts, ID2SYM(i_indent));
     if (RTEST(tmp)) {
@@ -894,8 +902,8 @@ static int isArrayOrObject(VALUE string)
     long string_len = RSTRING_LEN(string);
     char *p = RSTRING_PTR(string), *q = p + string_len - 1;
     if (string_len < 2) return 0;
-    for (; p < q && isspace(*p); p++);
-    for (; q > p && isspace(*q); q--);
+    for (; p < q && isspace((unsigned char)*p); p++);
+    for (; q > p && isspace((unsigned char)*q); q--);
     return (*p == '[' && *q == ']') || (*p == '{' && *q == '}');
 }
 
