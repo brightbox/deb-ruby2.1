@@ -42,7 +42,7 @@ shortlen(long len, BDIGIT *ds)
 	num = SHORTDN(num);
 	offset++;
     }
-    return (len - 1)*sizeof(BDIGIT)/2 + offset;
+    return (len - 1)*SIZEOF_BDIGITS/2 + offset;
 }
 #define SHORTLEN(x) shortlen((x),d)
 #endif
@@ -130,7 +130,7 @@ rb_marshal_define_compat(VALUE newclass, VALUE oldclass, VALUE (*dumper)(VALUE),
     st_insert(compat_allocator_tbl, (st_data_t)allocator, (st_data_t)compat);
 }
 
-#define MARSHAL_INFECTION (FL_TAINT|FL_UNTRUSTED)
+#define MARSHAL_INFECTION FL_TAINT
 typedef char ruby_check_marshal_viral_flags[MARSHAL_INFECTION == (int)MARSHAL_INFECTION ? 1 : -1];
 
 struct dump_arg {
@@ -186,6 +186,7 @@ memsize_dump_arg(const void *ptr)
 static const rb_data_type_t dump_arg_data = {
     "dump_arg",
     {mark_dump_arg, free_dump_arg, memsize_dump_arg,},
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 static const char *
@@ -598,7 +599,7 @@ w_object(VALUE obj, struct dump_arg *arg, int limit)
     st_table *ivtbl = 0;
     st_data_t num;
     int hasiv = 0;
-#define has_ivars(obj, ivtbl) (((ivtbl) = rb_generic_ivar_table(obj)) != 0 || \
+#define has_ivars(obj, ivtbl) ((((ivtbl) = rb_generic_ivar_table(obj)) != 0) || \
 			       (!SPECIAL_CONST_P(obj) && !ENCODING_IS_ASCII8BIT(obj)))
 
     if (limit == 0) {
@@ -656,11 +657,8 @@ w_object(VALUE obj, struct dump_arg *arg, int limit)
 
 	    v = rb_funcall2(obj, s_mdump, 0, 0);
 	    check_dump_arg(arg, s_mdump);
-	    hasiv = has_ivars(v, ivtbl);
-	    if (hasiv) w_byte(TYPE_IVAR, arg);
 	    w_class(TYPE_USRMARSHAL, obj, arg, FALSE);
 	    w_object(v, arg, limit);
-	    if (hasiv) w_ivar(v, ivtbl, &c_arg);
 	    return;
 	}
 	if (rb_obj_respond_to(obj, s_dump, TRUE)) {
@@ -786,7 +784,7 @@ w_object(VALUE obj, struct dump_arg *arg, int limit)
 
 		w_long(len, arg);
 		for (i=0; i<RARRAY_LEN(obj); i++) {
-		    w_object(RARRAY_PTR(obj)[i], arg, limit);
+		    w_object(RARRAY_AREF(obj, i), arg, limit);
 		    if (len != RARRAY_LEN(obj)) {
 			rb_raise(rb_eRuntimeError, "array modified during dump");
 		    }
@@ -799,8 +797,7 @@ w_object(VALUE obj, struct dump_arg *arg, int limit)
 	    if (NIL_P(RHASH_IFNONE(obj))) {
 		w_byte(TYPE_HASH, arg);
 	    }
-	    else if (FL_TEST(obj, FL_USER2)) {
-		/* FL_USER2 means HASH_PROC_DEFAULT (see hash.c) */
+	    else if (FL_TEST(obj, HASH_PROC_DEFAULT)) {
 		rb_raise(rb_eTypeError, "can't dump hash with default proc");
 	    }
 	    else {
@@ -823,8 +820,8 @@ w_object(VALUE obj, struct dump_arg *arg, int limit)
 		w_long(len, arg);
 		mem = rb_struct_members(obj);
 		for (i=0; i<len; i++) {
-		    w_symbol(SYM2ID(RARRAY_PTR(mem)[i]), arg);
-		    w_object(RSTRUCT_PTR(obj)[i], arg, limit);
+		    w_symbol(SYM2ID(RARRAY_AREF(mem, i)), arg);
+		    w_object(RSTRUCT_GET(obj, i), arg, limit);
 		}
 	    }
 	    break;
@@ -913,11 +910,11 @@ io_needed(void)
  *
  * Marshal can't dump following objects:
  * * anonymous Class/Module.
- * * objects which related to its system (ex: Dir, File::Stat, IO, File, Socket
+ * * objects which are related to system (ex: Dir, File::Stat, IO, File, Socket
  *   and so on)
  * * an instance of MatchData, Data, Method, UnboundMethod, Proc, Thread,
  *   ThreadGroup, Continuation
- * * objects which defines singleton methods
+ * * objects which define singleton methods
  */
 static VALUE
 marshal_dump(int argc, VALUE *argv)
@@ -1024,6 +1021,7 @@ memsize_load_arg(const void *ptr)
 static const rb_data_type_t load_arg_data = {
     "load_arg",
     {mark_load_arg, free_load_arg, memsize_load_arg,},
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 #define r_entry(v, arg) r_entry0((v), (arg)->data->num_entries, (arg))
@@ -1338,7 +1336,7 @@ r_entry0(VALUE v, st_index_t num, struct load_arg *arg)
 }
 
 static VALUE
-r_leave(VALUE v, struct load_arg *arg)
+r_fixup_compat(VALUE v, struct load_arg *arg)
 {
     st_data_t data;
     if (st_lookup(arg->compat_tbl, v, &data)) {
@@ -1352,10 +1350,42 @@ r_leave(VALUE v, struct load_arg *arg)
         st_delete(arg->compat_tbl, &key, 0);
         v = real_obj;
     }
+    return v;
+}
+
+static VALUE
+r_post_proc(VALUE v, struct load_arg *arg)
+{
     if (arg->proc) {
 	v = rb_funcall(arg->proc, s_call, 1, v);
 	check_load_arg(arg, s_call);
     }
+    return v;
+}
+
+static VALUE
+r_leave(VALUE v, struct load_arg *arg)
+{
+    v = r_fixup_compat(v, arg);
+    v = r_post_proc(v, arg);
+    return v;
+}
+
+static int
+copy_ivar_i(st_data_t key, st_data_t val, st_data_t arg)
+{
+    VALUE obj = (VALUE)arg, value = (VALUE)val;
+    ID vid = (ID)key;
+
+    if (!rb_ivar_defined(obj, vid))
+	rb_ivar_set(obj, vid, value);
+    return ST_CONTINUE;
+}
+
+static VALUE
+r_copy_ivar(VALUE v, VALUE data)
+{
+    rb_ivar_foreach(data, copy_ivar_i, (st_data_t)v);
     return v;
 }
 
@@ -1392,11 +1422,11 @@ path2class(VALUE path)
     return v;
 }
 
-static VALUE
-path2module(VALUE path)
-{
-    VALUE v = rb_path_to_class(path);
+#define path2module(path) must_be_module(rb_path_to_class(path), path)
 
+static VALUE
+must_be_module(VALUE v, VALUE path)
+{
     if (!RB_TYPE_P(v, T_MODULE)) {
 	rb_raise(rb_eArgError, "%"PRIsVALUE" does not refer to module", path);
     }
@@ -1433,7 +1463,7 @@ append_extmod(VALUE obj, VALUE extmod)
 {
     long i = RARRAY_LEN(extmod);
     while (i > 0) {
-	VALUE m = RARRAY_PTR(extmod)[--i];
+	VALUE m = RARRAY_AREF(extmod, --i);
 	rb_extend_object(obj, m);
     }
     return obj;
@@ -1461,10 +1491,7 @@ r_object0(struct load_arg *arg, int *ivp, VALUE extmod)
 	    rb_raise(rb_eArgError, "dump format error (unlinked)");
 	}
 	v = (VALUE)link;
-	if (arg->proc) {
-	    v = rb_funcall(arg->proc, s_call, 1, v);
-	    check_load_arg(arg, s_call);
-	}
+	r_post_proc(v, arg);
 	break;
 
       case TYPE_IVAR:
@@ -1478,16 +1505,36 @@ r_object0(struct load_arg *arg, int *ivp, VALUE extmod)
 
       case TYPE_EXTENDED:
 	{
-	    VALUE m = path2module(r_unique(arg));
+	    VALUE path = r_unique(arg);
+	    VALUE m = rb_path_to_class(path);
 
-            if (NIL_P(extmod)) extmod = rb_ary_tmp_new(0);
-            rb_ary_push(extmod, m);
+	    if (RB_TYPE_P(m, T_CLASS)) { /* prepended */
+		VALUE c;
 
-	    v = r_object0(arg, 0, extmod);
-            while (RARRAY_LEN(extmod) > 0) {
-                m = rb_ary_pop(extmod);
-                rb_extend_object(v, m);
-            }
+		v = r_object0(arg, 0, Qnil);
+		c = CLASS_OF(v);
+		if (c != m || FL_TEST(c, FL_SINGLETON)) {
+		    rb_raise(rb_eArgError,
+			     "prepended class %"PRIsVALUE" differs from class %"PRIsVALUE,
+			     path, rb_class_name(c));
+		}
+		c = rb_singleton_class(v);
+		while (RARRAY_LEN(extmod) > 0) {
+		    m = rb_ary_pop(extmod);
+		    rb_prepend_module(c, m);
+		}
+	    }
+	    else {
+		must_be_module(m, path);
+		if (NIL_P(extmod)) extmod = rb_ary_tmp_new(0);
+		rb_ary_push(extmod, m);
+
+		v = r_object0(arg, 0, extmod);
+		while (RARRAY_LEN(extmod) > 0) {
+		    m = rb_ary_pop(extmod);
+		    rb_extend_object(v, m);
+		}
+	    }
 	}
 	break;
 
@@ -1508,7 +1555,7 @@ r_object0(struct load_arg *arg, int *ivp, VALUE extmod)
 
 		if (TYPE(v) != TYPE(tmp)) goto format_error;
 	    }
-	    RBASIC(v)->klass = c;
+	    RBASIC_SET_CLASS(v, c);
 	}
 	break;
 
@@ -1564,44 +1611,15 @@ r_object0(struct load_arg *arg, int *ivp, VALUE extmod)
       case TYPE_BIGNUM:
 	{
 	    long len;
-	    BDIGIT *digits;
 	    VALUE data;
+            int sign;
 
-	    NEWOBJ_OF(big, struct RBignum, rb_cBignum, T_BIGNUM);
-	    RBIGNUM_SET_SIGN(big, (r_byte(arg) == '+'));
+	    sign = r_byte(arg);
 	    len = r_long(arg);
 	    data = r_bytes0(len * 2, arg);
-#if SIZEOF_BDIGITS == SIZEOF_SHORT
-            rb_big_resize((VALUE)big, len);
-#else
-            rb_big_resize((VALUE)big, (len + 1) * 2 / sizeof(BDIGIT));
-#endif
-            digits = RBIGNUM_DIGITS(big);
-	    MEMCPY(digits, RSTRING_PTR(data), char, len * 2);
+            v = rb_integer_unpack(RSTRING_PTR(data), len, 2, 0,
+                INTEGER_PACK_LITTLE_ENDIAN | (sign == '-' ? INTEGER_PACK_NEGATIVE : 0));
 	    rb_str_resize(data, 0L);
-#if SIZEOF_BDIGITS > SIZEOF_SHORT
-	    MEMZERO((char *)digits + len * 2, char,
-		    RBIGNUM_LEN(big) * sizeof(BDIGIT) - len * 2);
-#endif
-	    len = RBIGNUM_LEN(big);
-	    while (len > 0) {
-		unsigned char *p = (unsigned char *)digits;
-		BDIGIT num = 0;
-#if SIZEOF_BDIGITS > SIZEOF_SHORT
-		int shift = 0;
-		int i;
-
-		for (i=0; i<SIZEOF_BDIGITS; i++) {
-		    num |= (int)p[i] << shift;
-		    shift += 8;
-		}
-#else
-		num = p[0] | (p[1] << 8);
-#endif
-		*digits++ = num;
-		len--;
-	    }
-	    v = rb_big_norm((VALUE)big);
 	    v = r_entry(v, arg);
             v = r_leave(v, arg);
 	}
@@ -1679,7 +1697,7 @@ r_object0(struct load_arg *arg, int *ivp, VALUE extmod)
 	    }
 	    arg->readable += 2;
 	    if (type == TYPE_HASH_DEF) {
-		RHASH_IFNONE(v) = r_object(arg);
+		RHASH_SET_IFNONE(v, r_object(arg));
 	    }
             v = r_leave(v, arg);
 	}
@@ -1710,11 +1728,11 @@ r_object0(struct load_arg *arg, int *ivp, VALUE extmod)
 	    for (i=0; i<len; i++) {
 		slot = r_symbol(arg);
 
-		if (RARRAY_PTR(mem)[i] != ID2SYM(slot)) {
+		if (RARRAY_AREF(mem, i) != ID2SYM(slot)) {
 		    rb_raise(rb_eTypeError, "struct %s not compatible (:%s for :%s)",
 			     rb_class2name(klass),
 			     rb_id2name(slot),
-			     rb_id2name(SYM2ID(RARRAY_PTR(mem)[i])));
+			     rb_id2name(SYM2ID(RARRAY_AREF(mem, i))));
 		}
                 rb_ary_push(values, r_object(arg));
 		arg->readable -= 2;
@@ -1765,7 +1783,9 @@ r_object0(struct load_arg *arg, int *ivp, VALUE extmod)
 	    data = r_object(arg);
 	    rb_funcall2(v, s_mload, 1, &data);
 	    check_load_arg(arg, s_mload);
-            v = r_leave(v, arg);
+	    v = r_fixup_compat(v, arg);
+	    v = r_copy_ivar(v, data);
+	    v = r_post_proc(v, arg);
 	    if (!NIL_P(extmod)) {
 		if (oldclass) append_extmod(v, extmod);
 		rb_ary_clear(extmod);
@@ -1897,8 +1917,8 @@ clear_load_arg(struct load_arg *arg)
  * Returns the result of converting the serialized data in source into a
  * Ruby object (possibly with associated subordinate objects). source
  * may be either an instance of IO or an object that responds to
- * to_str. If proc is specified, it will be passed each object as it
- * is deserialized.
+ * to_str. If proc is specified, each object will be passed to the proc, as the object
+ * is being deserialized.
  *
  * Never pass untrusted data (including user supplied input) to this method.
  * Please see the overview for further details.
@@ -1920,7 +1940,7 @@ marshal_load(int argc, VALUE *argv)
     }
     else if (rb_respond_to(port, s_getbyte) && rb_respond_to(port, s_read)) {
 	rb_check_funcall(port, s_binmode, 0, 0);
-	infection = (int)(FL_TAINT | FL_TEST(port, FL_UNTRUSTED));
+	infection = (int)FL_TAINT;
     }
     else {
 	io_needed();
@@ -2098,7 +2118,9 @@ Init_marshal(void)
     rb_define_module_function(rb_mMarshal, "load", marshal_load, -1);
     rb_define_module_function(rb_mMarshal, "restore", marshal_load, -1);
 
+    /* major version */
     rb_define_const(rb_mMarshal, "MAJOR_VERSION", INT2FIX(MARSHAL_MAJOR));
+    /* minor version */
     rb_define_const(rb_mMarshal, "MINOR_VERSION", INT2FIX(MARSHAL_MINOR));
 
     compat_allocator_tbl = st_init_numtable();

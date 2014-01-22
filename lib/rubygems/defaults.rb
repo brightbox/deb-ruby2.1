@@ -15,6 +15,14 @@ module Gem
   end
 
   ##
+  # Default spec directory path to be used if an alternate value is not
+  # specified in the environment
+
+  def self.default_spec_cache_dir
+    File.join Gem.user_home, '.gem', 'specs'
+  end
+
+  ##
   # Default home directory path to be used if an alternate value is not
   # specified in the environment
 
@@ -41,6 +49,17 @@ module Gem
            end
 
     @default_dir ||= File.join(*path)
+  end
+
+  ##
+  # Returns binary extensions dir for specified RubyGems base dir or nil
+  # if such directory cannot be determined.
+  #
+  # By default, the binary extensions are located side by side with their
+  # Ruby counterparts, therefore nil is returned
+
+  def self.default_ext_dir_for base_dir
+    nil
   end
 
   ##
@@ -126,4 +145,19 @@ module Gem
   def self.default_cert_path
     File.join Gem.user_home, ".gem", "gem-public_cert.pem"
   end
+
+  ##
+  # Whether to expect full paths in default gems - true for non-MRI
+  # ruby implementations
+  def self.default_gems_use_full_paths?
+    ruby_engine != 'ruby'
+  end
+
+  ##
+  # Install extensions into lib as well as into the extension directory.
+
+  def self.install_extension_in_lib # :nodoc:
+    true
+  end
+
 end

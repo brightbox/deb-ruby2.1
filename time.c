@@ -296,107 +296,41 @@ w2v(wideval_t w)
 }
 
 #if WIDEVALUE_IS_WIDER
-static int
-bdigit_find_maxbit(BDIGIT d)
-{
-    int res = 0;
-    if (d & ~(BDIGIT)0xffff) {
-        d >>= 16;
-        res += 16;
-    }
-    if (d & ~(BDIGIT)0xff) {
-        d >>= 8;
-        res += 8;
-    }
-    if (d & ~(BDIGIT)0xf) {
-        d >>= 4;
-        res += 4;
-    }
-    if (d & ~(BDIGIT)0x3) {
-        d >>= 2;
-        res += 2;
-    }
-    if (d & ~(BDIGIT)0x1) {
-        d >>= 1;
-        res += 1;
-    }
-    return res;
-}
-
-static VALUE
-rb_big_abs_find_maxbit(VALUE big)
-{
-    BDIGIT *ds = RBIGNUM_DIGITS(big);
-    BDIGIT d;
-    long len = RBIGNUM_LEN(big);
-    VALUE res;
-    while (0 < len && ds[len-1] == 0)
-        len--;
-    if (len == 0)
-        return Qnil;
-    res = mul(LONG2NUM(len-1), INT2FIX(SIZEOF_BDIGITS * CHAR_BIT));
-    d = ds[len-1];
-    res = add(res, LONG2FIX(bdigit_find_maxbit(d)));
-    return res;
-}
-
-static VALUE
-rb_big_abs_find_minbit(VALUE big)
-{
-    BDIGIT *ds = RBIGNUM_DIGITS(big);
-    BDIGIT d;
-    long len = RBIGNUM_LEN(big);
-    long i;
-    VALUE res;
-    for (i = 0; i < len; i++)
-        if (ds[i])
-            break;
-    if (i == len)
-        return Qnil;
-    res = mul(LONG2NUM(i), INT2FIX(SIZEOF_BDIGITS * CHAR_BIT));
-    d = ds[i];
-    res = add(res, LONG2FIX(ffs(d)-1));
-    return res;
-}
-
 static wideval_t
 v2w_bignum(VALUE v)
 {
-    long len = RBIGNUM_LEN(v);
-    BDIGIT *ds;
-    wideval_t w;
-    VALUE maxbit;
-    ds = RBIGNUM_DIGITS(v);
-    w = WIDEVAL_WRAP(v);
-    maxbit = rb_big_abs_find_maxbit(v);
-    if (NIL_P(maxbit))
+    int sign;
+    uwideint_t u;
+    sign = rb_integer_pack(v, &u, 1, sizeof(u), 0,
+        INTEGER_PACK_NATIVE_BYTE_ORDER);
+    if (sign == 0)
         return WINT2FIXWV(0);
-    if (lt(maxbit, INT2FIX(sizeof(wideint_t) * CHAR_BIT - 2)) ||
-        (eq(maxbit, INT2FIX(sizeof(wideint_t) * CHAR_BIT - 2)) &&
-         RBIGNUM_NEGATIVE_P(v) &&
-         eq(rb_big_abs_find_minbit(v), INT2FIX(sizeof(wideint_t) * CHAR_BIT - 2)))) {
-        wideint_t i;
-        i = 0;
-        while (len)
-            i = (i << sizeof(BDIGIT)*CHAR_BIT) | ds[--len];
-        if (RBIGNUM_NEGATIVE_P(v)) {
-            i = -i;
-        }
-        w = WINT2FIXWV(i);
+    else if (sign == -1) {
+        if (u <= -FIXWV_MIN)
+            return WINT2FIXWV(-(wideint_t)u);
     }
-    return w;
+    else if (sign == +1) {
+        if (u <= FIXWV_MAX)
+            return WINT2FIXWV((wideint_t)u);
+    }
+    return WIDEVAL_WRAP(v);
 }
 #endif
 
 static inline wideval_t
 v2w(VALUE v)
 {
+    if (RB_TYPE_P(v, T_RATIONAL)) {
+        if (RRATIONAL(v)->den != LONG2FIX(1))
+            return v;
+        v = RRATIONAL(v)->num;
+    }
 #if WIDEVALUE_IS_WIDER
     if (FIXNUM_P(v)) {
         return WIDEVAL_WRAP((WIDEVALUE)(SIGNED_WIDEVALUE)(long)v);
     }
     else if (RB_TYPE_P(v, T_BIGNUM) &&
-        RBIGNUM_LEN(v) * sizeof(BDIGIT) <= sizeof(WIDEVALUE)) {
+        rb_absint_size(v, NULL) <= sizeof(WIDEVALUE)) {
         return v2w_bignum(v);
     }
 #endif
@@ -716,30 +650,6 @@ num_exact(VALUE v)
 }
 
 /* time_t */
-
-#ifndef TYPEOF_TIMEVAL_TV_SEC
-# define TYPEOF_TIMEVAL_TV_SEC time_t
-#endif
-#ifndef TYPEOF_TIMEVAL_TV_USEC
-# if INT_MAX >= 1000000
-# define TYPEOF_TIMEVAL_TV_USEC int
-# else
-# define TYPEOF_TIMEVAL_TV_USEC long
-# endif
-#endif
-
-#if SIZEOF_TIME_T == SIZEOF_LONG
-typedef unsigned long unsigned_time_t;
-#elif SIZEOF_TIME_T == SIZEOF_INT
-typedef unsigned int unsigned_time_t;
-#elif SIZEOF_TIME_T == SIZEOF_LONG_LONG
-typedef unsigned LONG_LONG unsigned_time_t;
-#else
-# error cannot find integer type which size is same as time_t.
-#endif
-
-#define TIMET_MAX (~(time_t)0 <= 0 ? (time_t)((~(unsigned_time_t)0) >> 1) : (time_t)(~(unsigned_time_t)0))
-#define TIMET_MIN (~(time_t)0 <= 0 ? (time_t)(((unsigned_time_t)1) << (sizeof(time_t) * CHAR_BIT - 1)) : (time_t)0)
 
 static wideval_t
 rb_time_magnify(wideval_t w)
@@ -1722,7 +1632,10 @@ localtime_with_gmtoff_zone(const time_t *t, struct tm *result, long *gmtoff, con
 
         if (zone) {
 #if defined(HAVE_TM_ZONE)
-            *zone = zone_str(tm.tm_zone);
+            if (tm.tm_zone)
+                *zone = zone_str(tm.tm_zone);
+            else
+                *zone = zone_str("(NO-TIMEZONE-ABBREVIATION)");
 #elif defined(HAVE_TZNAME) && defined(HAVE_DAYLIGHT)
             /* this needs tzset or localtime, instead of localtime_r */
             *zone = zone_str(tzname[daylight && tm.tm_isdst]);
@@ -1888,6 +1801,7 @@ time_memsize(const void *tobj)
 static const rb_data_type_t time_data_type = {
     "time",
     {time_mark, time_free, time_memsize,},
+    NULL, NULL, RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 static VALUE
@@ -1910,7 +1824,7 @@ get_timeval(VALUE obj)
     struct time_object *tobj;
     TypedData_Get_Struct(obj, struct time_object, &time_data_type, tobj);
     if (!TIME_INIT_P(tobj)) {
-	rb_raise(rb_eTypeError, "uninitialized %"PRIsVALUE, CLASS_OF(obj));
+	rb_raise(rb_eTypeError, "uninitialized %"PRIsVALUE, rb_obj_class(obj));
     }
     return tobj;
 }
@@ -1921,7 +1835,7 @@ get_new_timeval(VALUE obj)
     struct time_object *tobj;
     TypedData_Get_Struct(obj, struct time_object, &time_data_type, tobj);
     if (TIME_INIT_P(tobj)) {
-	rb_raise(rb_eTypeError, "already initialized %"PRIsVALUE, CLASS_OF(obj));
+	rb_raise(rb_eTypeError, "already initialized %"PRIsVALUE, rb_obj_class(obj));
     }
     return tobj;
 }
@@ -2310,24 +2224,25 @@ time_init(int argc, VALUE *argv, VALUE time)
 static void
 time_overflow_p(time_t *secp, long *nsecp)
 {
-    time_t tmp, sec = *secp;
+    time_t sec = *secp;
     long nsec = *nsecp;
+    long sec2;
 
     if (nsec >= 1000000000) {	/* nsec positive overflow */
-	tmp = sec + nsec / 1000000000;
-	nsec %= 1000000000;
-	if (sec > 0 && tmp < 0) {
+        sec2 = nsec / 1000000000;
+	if (TIMET_MAX - sec2 < sec) {
 	    rb_raise(rb_eRangeError, "out of Time range");
 	}
-	sec = tmp;
+	nsec -= sec2 * 1000000000;
+	sec += sec2;
     }
-    if (nsec < 0) {		/* nsec negative overflow */
-	tmp = sec + NDIV(nsec,1000000000); /* negative div */
-	nsec = NMOD(nsec,1000000000);      /* negative mod */
-	if (sec < 0 && tmp > 0) {
+    else if (nsec < 0) {		/* nsec negative overflow */
+	sec2 = NDIV(nsec,1000000000); /* negative div */
+	if (sec < TIMET_MIN - sec2) {
 	    rb_raise(rb_eRangeError, "out of Time range");
 	}
-	sec = tmp;
+	nsec -= sec2 * 1000000000;
+	sec += sec2;
     }
 #ifndef NEGATIVE_TIME_T
     if (sec < 0)
@@ -2373,9 +2288,9 @@ rb_time_new(time_t sec, long usec)
 	usec -= sec2 * 1000000;
 	sec += sec2;
     }
-    else if (usec <= 1000000) {
-	long sec2 = usec / 1000000;
-	if (sec < -TIMET_MAX - sec2) {
+    else if (usec < 0) {
+	long sec2 = NDIV(usec,1000000); /* negative div */
+	if (sec < TIMET_MIN - sec2) {
 	    rb_raise(rb_eRangeError, "out of Time range");
 	}
 	usec -= sec2 * 1000000;
@@ -2806,7 +2721,7 @@ timegm_noleapsecond(struct tm *tm)
 #endif
 
 #ifdef DEBUG_GUESSRANGE
-#define DEBUG_REPORT_GUESSRANGE fprintf(stderr, "find time guess range: %ld - %ld : %lu\n", guess_lo, guess_hi, (unsigned_time_t)(guess_hi-guess_lo))
+#define DEBUG_REPORT_GUESSRANGE fprintf(stderr, "find time guess range: %ld - %ld : %"PRI_TIMET_PREFIX"u\n", guess_lo, guess_hi, (unsigned_time_t)(guess_hi-guess_lo))
 #else
 #define DEBUG_REPORT_GUESSRANGE
 #endif
@@ -3060,7 +2975,7 @@ find_time_t(struct tm *tptr, int utc_p, time_t *tp)
 	}
     }
 
-    /* Given argument has no corresponding time_t. Let's outerpolation. */
+    /* Given argument has no corresponding time_t. Let's extrapolate. */
     /*
      *  `Seconds Since the Epoch' in SUSv3:
      *  tm_sec + tm_min*60 + tm_hour*3600 + tm_yday*86400 +
@@ -4488,15 +4403,18 @@ strftimev(const char *fmt, VALUE time, rb_encoding *enc)
  *      %S - Second of the minute (00..60)
  *
  *      %L - Millisecond of the second (000..999)
+ *           The digits under millisecond are truncated to not produce 1000.
  *      %N - Fractional seconds digits, default is 9 digits (nanosecond)
- *              %3N  milli second (3 digits)
- *              %6N  micro second (6 digits)
- *              %9N  nano second (9 digits)
- *              %12N pico second (12 digits)
- *              %15N femto second (15 digits)
- *              %18N atto second (18 digits)
- *              %21N zepto second (21 digits)
- *              %24N yocto second (24 digits)
+ *              %3N  millisecond (3 digits)
+ *              %6N  microsecond (6 digits)
+ *              %9N  nanosecond (9 digits)
+ *              %12N picosecond (12 digits)
+ *              %15N femtosecond (15 digits)
+ *              %18N attosecond (18 digits)
+ *              %21N zeptosecond (21 digits)
+ *              %24N yoctosecond (24 digits)
+ *           The digits under the specified length are truncated to avoid
+ *           carry up.
  *
  *    Time zone:
  *      %z - Time zone as hour and minute offset from UTC (e.g. +0900)
@@ -4547,8 +4465,8 @@ strftimev(const char *fmt, VALUE time, rb_encoding *enc)
  *
  *  This method is similar to strftime() function defined in ISO C and POSIX.
  *
- *  While all directives are locale independant since Ruby 1.9 %Z is platform
- *  dependant.
+ *  While all directives are locale independent since Ruby 1.9, %Z is platform
+ *  dependent.
  *  So, the result may differ even if the same format string is used in other
  *  systems such as C.
  *
@@ -4938,7 +4856,7 @@ time_load(VALUE klass, VALUE str)
  *    Time.new(2002)         #=> 2002-01-01 00:00:00 -0500
  *    Time.new(2002, 10)     #=> 2002-10-01 00:00:00 -0500
  *    Time.new(2002, 10, 31) #=> 2002-10-31 00:00:00 -0500
- *    Time.new(2002, 10, 31, 2, 2, 2, "+02:00") #=> 2002-10-31 02:02:02 -0200
+ *    Time.new(2002, 10, 31, 2, 2, 2, "+02:00") #=> 2002-10-31 02:02:02 +0200
  *
  *  You can also use #gm, #local and
  *  #utc to infer GMT, local and UTC timezones instead of using

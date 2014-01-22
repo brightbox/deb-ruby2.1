@@ -266,7 +266,7 @@ module Net   #:nodoc:
   #     response = http.request request # Net::HTTPResponse object
   #   end
   #
-  # In previous versions of ruby you would need to require 'net/https' to use
+  # In previous versions of Ruby you would need to require 'net/https' to use
   # HTTPS.  This is no longer true.
   #
   # === Proxies
@@ -334,6 +334,7 @@ module Net   #:nodoc:
   #   HTTPResetContent::                    205
   #   HTTPPartialContent::                  206
   #   HTTPMultiStatus::                     207
+  #   HTTPIMUsed::                          226
   # HTTPRedirection::                    3xx
   #   HTTPMultipleChoices::                 300
   #   HTTPMovedPermanently::                301
@@ -395,8 +396,8 @@ module Net   #:nodoc:
     end
     # :startdoc:
 
-    # Turns on net/http 1.2 (ruby 1.8) features.
-    # Defaults to ON in ruby 1.8 or later.
+    # Turns on net/http 1.2 (Ruby 1.8) features.
+    # Defaults to ON in Ruby 1.8 or later.
     def HTTP.version_1_2
       true
     end
@@ -671,7 +672,7 @@ module Net   #:nodoc:
     #
     # Sets an output stream for debugging.
     #
-    #   http = Net::HTTP.new
+    #   http = Net::HTTP.new(hostname)
     #   http.set_debug_output $stderr
     #   http.start { .... }
     #
@@ -877,6 +878,7 @@ module Net   #:nodoc:
       s = Timeout.timeout(@open_timeout, Net::OpenTimeout) {
         TCPSocket.open(conn_address, conn_port, @local_host, @local_port)
       }
+      s.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
       D "opened"
       if use_ssl?
         ssl_parameters = Hash.new

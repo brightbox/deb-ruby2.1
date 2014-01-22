@@ -209,6 +209,12 @@ class TestMethod < Test::Unit::TestCase
     assert_equal(class << o; self; end, m.owner)
     assert_equal(:foo, m.unbind.name)
     assert_equal(class << o; self; end, m.unbind.owner)
+    class << o
+      alias bar foo
+    end
+    m = o.method(:bar)
+    assert_equal(:bar, m.name)
+    assert_equal(:foo, m.original_name)
   end
 
   def test_instance_method
@@ -300,6 +306,61 @@ class TestMethod < Test::Unit::TestCase
     assert_equal(:meth, c.new.meth, feature4254)
   end
 
+  def test_define_method_visibility
+    c = Class.new do
+      public
+      define_method(:foo) {:foo}
+      protected
+      define_method(:bar) {:bar}
+      private
+      define_method(:baz) {:baz}
+    end
+
+    assert_equal(true, c.public_method_defined?(:foo))
+    assert_equal(false, c.public_method_defined?(:bar))
+    assert_equal(false, c.public_method_defined?(:baz))
+
+    assert_equal(false, c.protected_method_defined?(:foo))
+    assert_equal(true, c.protected_method_defined?(:bar))
+    assert_equal(false, c.protected_method_defined?(:baz))
+
+    assert_equal(false, c.private_method_defined?(:foo))
+    assert_equal(false, c.private_method_defined?(:bar))
+    assert_equal(true, c.private_method_defined?(:baz))
+
+    m = Module.new do
+      module_function
+      define_method(:foo) {:foo}
+    end
+    assert_equal(true, m.respond_to?(:foo))
+    assert_equal(false, m.public_method_defined?(:foo))
+    assert_equal(false, m.protected_method_defined?(:foo))
+    assert_equal(true, m.private_method_defined?(:foo))
+  end
+
+  def test_define_method_in_private_scope
+    bug9005 = '[ruby-core:57747] [Bug #9005]'
+    c = Class.new
+    class << c
+      public :define_method
+    end
+    TOPLEVEL_BINDING.eval("proc{|c|c.define_method(:x) {|x|throw x}}").call(c)
+    o = c.new
+    assert_throw(bug9005) {o.x(bug9005)}
+  end
+
+  def test_singleton_define_method_in_private_scope
+    bug9141 = '[ruby-core:58497] [Bug #9141]'
+    o = Object.new
+    class << o
+      public :define_singleton_method
+    end
+    TOPLEVEL_BINDING.eval("proc{|o|o.define_singleton_method(:x) {|x|throw x}}").call(o)
+    assert_throw(bug9141) do
+      o.x(bug9141)
+    end
+  end
+
   def test_super_in_proc_from_define_method
     c1 = Class.new {
       def m
@@ -323,15 +384,6 @@ class TestMethod < Test::Unit::TestCase
     assert_equal(:bar, m.clone.bar)
   end
 
-  def test_call
-    o = Object.new
-    def o.foo; p 1; end
-    def o.bar(x); x; end
-    m = o.method(:foo)
-    m.taint
-    assert_raise(SecurityError) { m.call }
-  end
-
   def test_inspect
     o = Object.new
     def o.foo; end
@@ -351,6 +403,12 @@ class TestMethod < Test::Unit::TestCase
     c2.class_eval { private :foo }
     m2 = c2.new.method(:foo)
     assert_equal("#<Method: #{ c2.inspect }(#{ c.inspect })#foo>", m2.inspect)
+
+    bug7806 = '[ruby-core:52048] [Bug #7806]'
+    c3 = Class.new(c)
+    c3.class_eval { alias bar foo }
+    m3 = c3.new.method(:bar)
+    assert_equal("#<Method: #{c3.inspect}(#{c.inspect})#bar(foo)>", m3.inspect, bug7806)
   end
 
   def test_callee_top_level
@@ -376,14 +434,16 @@ class TestMethod < Test::Unit::TestCase
   end
 
   def test_default_accessibility
-    assert T.public_instance_methods.include?(:normal_method), 'normal methods are public by default'
-    assert !T.public_instance_methods.include?(:initialize), '#initialize is private'
-    assert !T.public_instance_methods.include?(:initialize_copy), '#initialize_copy is private'
-    assert !T.public_instance_methods.include?(:initialize_clone), '#initialize_clone is private'
-    assert !T.public_instance_methods.include?(:initialize_dup), '#initialize_dup is private'
-    assert !T.public_instance_methods.include?(:respond_to_missing?), '#respond_to_missing? is private'
-    assert !M.public_instance_methods.include?(:func), 'module methods are private by default'
-    assert M.public_instance_methods.include?(:meth), 'normal methods are public by default'
+    tmethods = T.public_instance_methods
+    assert_include tmethods, :normal_method, 'normal methods are public by default'
+    assert_not_include tmethods, :initialize, '#initialize is private'
+    assert_not_include tmethods, :initialize_copy, '#initialize_copy is private'
+    assert_not_include tmethods, :initialize_clone, '#initialize_clone is private'
+    assert_not_include tmethods, :initialize_dup, '#initialize_dup is private'
+    assert_not_include tmethods, :respond_to_missing?, '#respond_to_missing? is private'
+    mmethods = M.public_instance_methods
+    assert_not_include mmethods, :func, 'module methods are private by default'
+    assert_include mmethods, :meth, 'normal methods are public by default'
   end
 
   define_method(:pm0) {||}
@@ -568,9 +628,37 @@ class TestMethod < Test::Unit::TestCase
     assert_equal(c, c.instance_method(:foo).owner)
     assert_equal(c, x.method(:foo).owner)
     assert_equal(x.singleton_class, x.method(:bar).owner)
-    assert(x.method(:foo) != x.method(:bar), bug7613)
+    assert_not_equal(x.method(:foo), x.method(:bar), bug7613)
     assert_equal(c, x.method(:zot).owner, bug7993)
     assert_equal(c, c.instance_method(:zot).owner, bug7993)
+  end
+
+  def test_included
+    m = Module.new {
+      def foo
+      end
+    }
+    c = Class.new {
+      def foo
+      end
+      include m
+    }
+    assert_equal(c, c.instance_method(:foo).owner)
+  end
+
+  def test_prepended
+    bug7836 = '[ruby-core:52160] [Bug #7836]'
+    bug7988 = '[ruby-core:53038] [Bug #7988]'
+    m = Module.new {
+      def foo
+      end
+    }
+    c = Class.new {
+      def foo
+      end
+      prepend m
+    }
+    assert_raise(NameError, bug7988) {Module.new{prepend m}.instance_method(:bar)}
   end
 
   def test_gced_bmethod
@@ -589,14 +677,30 @@ class TestMethod < Test::Unit::TestCase
 
   def test_unlinked_method_entry_in_method_object_bug
     bug8100 = '[ruby-core:53640] [Bug #8100]'
-    assert_ruby_status [], %q{
+    begin
+      assert_normal_exit %q{
       loop do
         def x
           "hello" * 1000
         end
         method(:x).call
       end
-    }, bug8100, timeout: 2
-  rescue Timeout::Error
+      }, bug8100, timeout: 2
+    rescue Timeout::Error => e
+    else
+    end
+    assert_raise(Timeout::Error, bug8100) {raise e if e}
+  end
+
+  def test_singleton_method
+    feature8391 = '[ruby-core:54914] [Feature #8391]'
+    c1 = Class.new
+    c1.class_eval { def foo; :foo; end }
+    o = c1.new
+    def o.bar; :bar; end
+    assert_nothing_raised(NameError) {o.method(:foo)}
+    assert_raise(NameError, feature8391) {o.singleton_method(:foo)}
+    m = assert_nothing_raised(NameError, feature8391) {break o.singleton_method(:bar)}
+    assert_equal(:bar, m.call, feature8391)
   end
 end

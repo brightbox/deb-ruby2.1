@@ -55,7 +55,7 @@ static VALUE
 cmp_eq_recursive(VALUE arg1, VALUE arg2, int recursive)
 {
     if (recursive) return Qfalse;
-    return rb_funcall(arg1, cmp, 1, arg2);
+    return rb_funcallv(arg1, cmp, 1, &arg2);
 }
 
 static VALUE
@@ -83,7 +83,7 @@ cmp_failed(void)
  *  _obj_ and _other_ are the same object.
  *
  *  Even if _obj_ <=> _other_ raised an exception, the exception
- *  is ignoread and returns false.
+ *  is ignored and returns false.
  */
 
 static VALUE

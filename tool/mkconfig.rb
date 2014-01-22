@@ -39,7 +39,6 @@ win32 = /mswin/ =~ arch
 universal = /universal.*darwin/ =~ arch
 v_fast = []
 v_others = []
-v_runtime = {}
 vars = {}
 continued_name = nil
 continued_line = nil
@@ -75,6 +74,7 @@ File.foreach "config.status" do |line|
     when /^(?:ac_.*|configure_input|(?:top_)?srcdir|\w+OBJS)$/; next
     when /^(?:X|(?:MINI|RUN|BASE)RUBY$)/; next
     when /^(?:MAJOR|MINOR|TEENY)$/; next
+    when /^LIBRUBY_D?LD/; next
     when /^RUBY_INSTALL_NAME$/; next if $install_name
     when /^RUBY_SO_NAME$/; next if $so_name
     when /^arch$/; if val.empty? then val = arch else arch = val end
@@ -116,12 +116,6 @@ File.foreach "config.status" do |line|
     eq = win32 && vars[name] ? '<< "\n"' : '='
     vars[name] = val
     if name == "configure_args"
-      if win32
-        val.gsub!(/\G(--[-a-z0-9]+)((=\S+)|(?:\s+(?!-)\S+)+)?(\s*)/) {
-          _, opt, list, arg, sep = *$~
-          "#{opt}#{arg || list && list.sub(/^\s+/, '=').tr_s(' ', ',')}#{sep}"
-        }
-      end
       val.gsub!(/--with-out-ext/, "--without-ext")
     end
     val = val.gsub(/\$(?:\$|\{?(\w+)\}?)/) {$1 ? "$(#{$1})" : $&}.dump

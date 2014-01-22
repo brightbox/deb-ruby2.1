@@ -71,7 +71,6 @@ class TestGemVersion < Gem::TestCase
       1.0\n2.0
       1..2
       1.2\ 3.4
-      1-2-3
     ].each do |bad|
       e = assert_raises ArgumentError, bad do
         Gem::Version.new bad
@@ -127,6 +126,15 @@ class TestGemVersion < Gem::TestCase
     assert_equal "5.2.4", v("5.2.4").to_s
   end
 
+  def test_semver
+    assert_less_than "1.0.0-alpha", "1.0.0-alpha.1"
+    assert_less_than "1.0.0-alpha.1", "1.0.0-beta.2"
+    assert_less_than "1.0.0-beta.2", "1.0.0-beta.11"
+    assert_less_than "1.0.0-beta.11", "1.0.0-rc.1"
+    assert_less_than "1.0.0-rc1", "1.0.0"
+    assert_less_than "1.0.0-1", "1"
+  end
+
   # Asserts that +version+ is a prerelease.
 
   def assert_prerelease version
@@ -164,6 +172,12 @@ class TestGemVersion < Gem::TestCase
     first, second = v(first), v(second)
     assert first.eql?(second), "#{first} is eql? #{second}"
     assert second.eql?(first), "#{second} is eql? #{first}"
+  end
+
+  def assert_less_than left, right
+    l = v(left)
+    r = v(right)
+    assert l < r, "#{left} not less than #{right}"
   end
 
   # Refute the assumption that +version+ is a prerelease.

@@ -253,7 +253,7 @@ def next_token # :nodoc:
       [:STRINGLINE, line]
     end
   else
-    raise "[BUG] parsing error may occurred."
+    raise "[BUG] parsing error may occured."
   end
 end
 
