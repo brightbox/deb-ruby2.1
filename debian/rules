@@ -12,8 +12,8 @@ DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 configure_options += --enable-multiarch
 configure_options += --target=$(DEB_HOST_MULTIARCH)
-configure_options += --program-suffix=2.0
-configure_options += --with-soname=ruby-2.0
+configure_options += --program-suffix=2.1
+configure_options += --with-soname=ruby-2.1
 configure_options += --enable-shared
 configure_options += --disable-rpath
 configure_options += --with-baseruby=/usr/bin/ruby
@@ -48,10 +48,10 @@ override_dh_auto_build-arch:
 override_dh_auto_install-arch:
 	$(MAKE) install-nodoc DESTDIR=$(CURDIR)/debian/tmp
 	# remove RPATH from tcltklib bindings
-	chrpath --delete $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/ruby/2.0.0/tcltklib.so
+	chrpath --delete $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/ruby/2.1.0/tcltklib.so
 	# handle embedded copy of jquery
-	$(RM) $(CURDIR)/debian/tmp/usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/js/jquery.js
-	dh_link -plibruby2.0 /usr/share/javascript/jquery/jquery.min.js /usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/js/jquery.js
+	$(RM) $(CURDIR)/debian/tmp/usr/lib/ruby/2.1.0/rdoc/generator/template/darkfish/js/jquery.js
+	dh_link -plibruby2.1 /usr/share/javascript/jquery/jquery.min.js /usr/lib/ruby/2.1.0/rdoc/generator/template/darkfish/js/jquery.js
 	# sanity check
 	debian/sanity_check
 
@@ -59,7 +59,7 @@ override_dh_auto_build-indep:
 	$(MAKE) docs V=1
 
 override_dh_auto_install-indep:
-	$(MAKE) install-doc DESTDIR=$(CURDIR)/debian/ruby2.0-doc
+	$(MAKE) install-doc DESTDIR=$(CURDIR)/debian/ruby2.1-doc
 
 override_dh_install-arch:
 	dh_install

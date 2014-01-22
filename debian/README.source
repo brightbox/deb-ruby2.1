@@ -6,7 +6,7 @@ would force the maintainers to shuffle those files around to make sure the
 source directory matches the upstream tarball after `debian/rules clean`.
 Because of this, and since we are already using dh_autoreconf anyway, the orig
 tarballs used in this package come from the git repository at
-https://github.com/ruby/ruby, branch `ruby_2_0_0`.
+https://github.com/ruby/ruby, branch `ruby_2_1`.
 
 
 Additional sources
@@ -16,6 +16,6 @@ Source for lib/rdoc/generator/template/darkfish/js/jquery.js (which is minified
 and thus cannot be properly modified as is) is available at
 debian/jquery-1.6.2.js.
 
-When libruby2.0 is installed, however,
-/usr/lib/ruby/2.0.0/rdoc/generator/template/darkfish/js/jquery.js is a symlink
+When libruby2.1 is installed, however,
+/usr/lib/ruby/2.1.0/rdoc/generator/template/darkfish/js/jquery.js is a symlink
 to jquery.js provided by the libjs-jquery package.
