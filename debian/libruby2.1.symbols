@@ -233,6 +233,7 @@ libruby-2.1.so.2.1 libruby2.1 #MINVER#
  rb_big2str0@Base 2.1.0
  rb_big2str@Base 2.1.0
  rb_big2str_generic@Base 2.1.0
+ rb_big2str_gmp@Base 2.1.0
  rb_big2str_poweroftwo@Base 2.1.0
  rb_big2ull@Base 2.1.0
  rb_big2ulong@Base 2.1.0
@@ -243,6 +244,8 @@ libruby-2.1.so.2.1 libruby2.1 #MINVER#
  rb_big_cmp@Base 2.1.0
  rb_big_div@Base 2.1.0
  rb_big_divmod@Base 2.1.0
+ rb_big_mul_gmp@Base 2.1.0
+ rb_big_divrem_gmp@Base 2.1.0
  rb_big_divrem_normal@Base 2.1.0
  rb_big_eq@Base 2.1.0
  rb_big_eql@Base 2.1.0
@@ -688,6 +691,7 @@ libruby-2.1.so.2.1 libruby2.1 #MINVER#
  rb_gc_unregister_address@Base 2.1.0
  rb_gc_writebarrier@Base 2.1.0
  rb_gc_writebarrier_unprotect_promoted@Base 2.1.0
+ rb_gcd_gmp@Base 2.1.0
  rb_gcd_normal@Base 2.1.0
  rb_generic_ivar_memsize@Base 2.1.0
  rb_generic_ivar_table@Base 2.1.0
@@ -1127,6 +1131,7 @@ libruby-2.1.so.2.1 libruby2.1 #MINVER#
  rb_stderr@Base 2.1.0
  rb_stdin@Base 2.1.0
  rb_stdout@Base 2.1.0
+ rb_str2big_gmp@Base 2.1.0
  rb_str2big_karatsuba@Base 2.1.0
  rb_str2big_normal@Base 2.1.0
  rb_str2big_poweroftwo@Base 2.1.0

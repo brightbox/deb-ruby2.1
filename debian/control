@@ -3,7 +3,7 @@ Section: ruby
 Priority: extra
 Maintainer: Antonio Terceiro <terceiro@debian.org>
 Uploaders: Christian Hofstaedtler <zeha@debian.org>
-Build-Depends: debhelper (>= 8.0.0), autotools-dev, dh-autoreconf, ruby | ruby-interpreter, bison, libgdbm-dev, libncursesw5-dev, libncurses5-dev, libreadline6-dev, tcl-dev, tk-dev, zlib1g-dev, libssl-dev, procps, file, libffi-dev, libyaml-dev, openssl, chrpath, coreutils (>= 7.5)
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, dh-autoreconf, ruby | ruby-interpreter, bison, libgdbm-dev, libncursesw5-dev, libncurses5-dev, libreadline6-dev, tcl-dev, tk-dev, zlib1g-dev, libssl-dev, procps, file, libffi-dev, libyaml-dev, openssl, chrpath, coreutils (>= 7.5), libgmp-dev
 Standards-Version: 3.9.5
 Homepage: http://www.ruby-lang.org/
 Vcs-Git: git://anonscm.debian.org/collab-maint/ruby2.1.git
