@@ -4,7 +4,7 @@ as small as possible, avoiding non-upstreamed patches at all costs.
 
 The Debian packaging is maintained in the following Git repository:
 
-  http://anonscm.debian.org/gitweb/?p=collab-maint/ruby2.0.git
+  http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 
 To obtain a view of the individual commits that affect non-Debian-specific
 files, you can clone that repository, and from the master branch, run:
