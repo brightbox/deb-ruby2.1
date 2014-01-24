@@ -1,3 +1,12 @@
+ruby2.1 (2.1.0-1~exp1) experimental; urgency=medium
+
+  * New release train, branch off and rename everything to ruby2.1.
+  * Build with GMP library for faster Bignum operations.
+  * Target experimental as long as ruby 1:1.9.3.1 has not entered
+    unstable, dropping the versioned dependency for now.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Thu, 23 Jan 2014 19:25:19 +0100
+
 ruby2.0 (2.0.0.484-1) UNRELEASED; urgency=medium
 
   [ Antonio Terceiro ]
