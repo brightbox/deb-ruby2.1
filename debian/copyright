@@ -133,7 +133,8 @@ Files:
  missing/strstr.c missing/strtol.c missing/tgamma.c
  ext/digest/sha1/sha1.c ext/digest/sha1/sha1.h
 Copyright: Public Domain
-License: Public Domain
+License:
+ Thise files have been placed in the Public Domain.
 
 Files: missing/crypt.c
 Copyright:
@@ -230,7 +231,14 @@ Copyright:
  Developed by ActiveWare Internet Corp.
  Other modifications Copyright (c) 1997, 1998 by Gurusamy Sarathy
  <gsar@umich.edu> and Jan Dubois <jan.dubois@ibm.net>
-License: Artistic or GPL
+License: GPL-1+ or Artistic
+ You may distribute under the terms of either the GNU General Public
+ License or the Artistic License, as specified in the README file
+ of the Perl distribution.
+ .
+ On Debian GNU/Linux systems, the complete text of the GNU General
+ Public License can be found in `/usr/share/common-licenses/GPL-1' and
+ the Artistic Licence in `/usr/share/common-licenses/Artistic'.
 
 Files: debian/*
 Copyright: 2013 Antonio Terceiro <terceiro@debian.org>
@@ -275,7 +283,7 @@ License: 3C-BSD
  3. Neither the name of the University nor the names of its contributors
     may be used to endorse or promote products derived from this software
     without specific prior written permission.
-
+ .
  THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
