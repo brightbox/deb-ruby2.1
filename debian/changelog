@@ -1,9 +1,7 @@
-ruby2.0 (2.0.0.484-1) UNRELEASED; urgency=medium
+ruby2.0 (2.0.0.484-1) unstable; urgency=medium
 
   [ Antonio Terceiro ]
   * New upstream snapshot.
-  * Add patch by Yamashita Yuu to fix build against newer OpenSSL
-    (Closes: #733372)
 
   [ Christian Hofstaedtler ]
   * Use any valid Ruby interpreter to bootstrap
@@ -15,7 +13,7 @@ ruby2.0 (2.0.0.484-1) UNRELEASED; urgency=medium
   * Stop installing alternatives/symlinks for binaries:
     * /usr/bin/{ruby,erb,testrb,irb,rdoc,ri}
 
- -- Christian Hofstaedtler <zeha@debian.org>  Fri, 17 Jan 2014 16:35:57 +0100
+ -- Antonio Terceiro <terceiro@debian.org>  Sun, 02 Feb 2014 08:22:10 -0300
 
 ruby2.0 (2.0.0.353-1) unstable; urgency=low
 
