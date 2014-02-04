@@ -40,7 +40,7 @@ Description: Libraries necessary to run Ruby 2.1
 Package: ruby2.1-dev
 Multi-Arch: same
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, libruby2.1 (= ${binary:Version})
 Description: Header files for compiling extension modules for the Ruby 2.1
  Ruby is the interpreted scripting language for quick and easy
  object-oriented programming.  It has many features to process text
