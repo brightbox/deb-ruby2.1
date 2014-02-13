@@ -644,10 +644,10 @@ libruby-2.1.so.2.1 libruby2.1 #MINVER#
  rb_find_file_ext@Base 2.1.0
  rb_find_file_ext_safe@Base 2.1.0
  rb_find_file_safe@Base 2.1.0
- rb_fix2int@Base 2.1.0
+ (arch=any-amd64 ia64 s390x)rb_fix2int@Base 2.1.0
  rb_fix2short@Base 2.1.0
  rb_fix2str@Base 2.1.0
- rb_fix2uint@Base 2.1.0
+ (arch=any-amd64 ia64 s390x)rb_fix2uint@Base 2.1.0
  rb_fix2ushort@Base 2.1.0
  rb_float_new@Base 2.1.0
  rb_float_new_in_heap@Base 2.1.0
