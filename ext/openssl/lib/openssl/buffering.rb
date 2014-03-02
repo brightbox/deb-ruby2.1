@@ -12,7 +12,7 @@
 #  (See the file 'LICENCE'.)
 #
 #= Version
-#  $Id$
+#  $Id: buffering.rb 43964 2013-12-03 01:44:41Z drbrain $
 #++
 
 ##

@@ -1,5 +1,5 @@
 #
-# $Id$
+# $Id: filter.rb 36954 2012-09-12 23:04:41Z zzak $
 #
 # Copyright (c) 2004,2005 Minero Aoki
 #

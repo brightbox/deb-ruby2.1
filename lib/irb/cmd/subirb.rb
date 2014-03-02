@@ -1,6 +1,6 @@
 #   multi.rb -
 #   	$Release Version: 0.9.6$
-#   	$Revision$
+#   	$Revision: 38358 $
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

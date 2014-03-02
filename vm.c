@@ -2,7 +2,7 @@
 
   vm.c -
 
-  $Author$
+  $Author: naruse $
 
   Copyright (C) 2004-2007 Koichi Sasada
 

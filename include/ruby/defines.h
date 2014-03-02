@@ -2,7 +2,7 @@
 
   defines.h -
 
-  $Author$
+  $Author: akr $
   created at: Wed May 18 00:21:44 JST 1994
 
 ************************************************/

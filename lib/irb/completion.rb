@@ -1,7 +1,7 @@
 #
 #   irb/completor.rb -
 #   	$Release Version: 0.9$
-#   	$Revision$
+#   	$Revision: 41062 $
 #   	by Keiju ISHITSUKA(keiju@ishitsuka.com)
 #       From Original Idea of shugo@ruby-lang.org
 #
@@ -11,7 +11,7 @@ require "readline"
 module IRB
   module InputCompletor # :nodoc:
 
-    @RCS_ID='-$Id$-'
+    @RCS_ID='-$Id: completion.rb 41062 2013-06-04 14:17:17Z eregon $-'
 
     # Set of reserved words used by Ruby, you should not use these for
     # constants or variables

@@ -2,7 +2,7 @@
 
   proc.c - Proc, Binding, Env
 
-  $Author$
+  $Author: naruse $
   created at: Wed Jan 17 12:13:14 2007
 
   Copyright (C) 2004-2007 Koichi Sasada
@@ -825,7 +825,7 @@ proc_arity(VALUE self)
 static inline int
 rb_iseq_min_max_arity(const rb_iseq_t *iseq, int *max)
 {
-    *max = iseq->arg_rest == -1 ?
+    *max = (iseq->arg_rest == -1 && iseq->arg_keyword == -1) ?
         iseq->argc + iseq->arg_post_len + iseq->arg_opts - (iseq->arg_opts > 0)
       : UNLIMITED_ARGUMENTS;
     return iseq->argc + iseq->arg_post_len;
@@ -1171,10 +1171,6 @@ mnew_from_me(rb_method_entry_t *me, VALUE defined_class, VALUE klass,
 	goto again;
     }
 
-    if (RB_TYPE_P(defined_class, T_ICLASS)) {
-	defined_class = RBASIC_CLASS(defined_class);
-    }
-
     klass = defined_class;
 
     while (rclass != klass &&
@@ -1396,9 +1392,16 @@ static VALUE
 method_owner(VALUE obj)
 {
     struct METHOD *data;
+    VALUE defined_class;
 
     TypedData_Get_Struct(obj, struct METHOD, &method_data_type, data);
-    return data->defined_class;
+    defined_class = data->defined_class;
+
+    if (RB_TYPE_P(defined_class, T_ICLASS)) {
+	defined_class = RBASIC_CLASS(defined_class);
+    }
+
+    return defined_class;
 }
 
 void

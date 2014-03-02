@@ -1,7 +1,7 @@
 #
 #   irb/help.rb - print usage module
 #   	$Release Version: 0.9.6$
-#   	$Revision$
+#   	$Revision: 38515 $
 #   	by Keiju ISHITSUKA(keiju@ishitsuka.com)
 #
 # --

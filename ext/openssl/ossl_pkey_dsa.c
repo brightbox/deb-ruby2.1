@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: ossl_pkey_dsa.c 40316 2013-04-16 02:24:09Z zzak $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

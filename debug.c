@@ -2,7 +2,7 @@
 
   debug.c -
 
-  $Author$
+  $Author: ko1 $
   created at: 04/08/25 02:31:54 JST
 
   Copyright (C) 2004-2007 Koichi Sasada

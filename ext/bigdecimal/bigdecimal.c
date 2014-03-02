@@ -1221,8 +1221,10 @@ BigDecimal_divide(Real **c, Real **res, Real **div, VALUE self, VALUE r)
 
     *div = b;
     mx = a->Prec + vabs(a->exponent);
-    if (mx<b->Prec + vabs(b->exponent)) mx = b->Prec + vabs(b->exponent);
-    mx =(mx + 1) * VpBaseFig();
+    if (mx < b->Prec + vabs(b->exponent)) mx = b->Prec + vabs(b->exponent);
+    mx++; /* NOTE: An additional digit is needed for the compatibility to
+                   the version 1.2.1 and the former.  */
+    mx = (mx + 1) * VpBaseFig();
     GUARD_OBJ((*c), VpCreateRbObject(mx, "#0"));
     GUARD_OBJ((*res), VpCreateRbObject((mx+1) * 2 +(VpBaseFig() + 1), "#0"));
     VpDivd(*c, *res, a, b);
@@ -2479,7 +2481,9 @@ BigDecimal_initialize_copy(VALUE self, VALUE other)
     Real *pv = rb_check_typeddata(self, &BigDecimal_data_type);
     Real *x = rb_check_typeddata(other, &BigDecimal_data_type);
 
-    DATA_PTR(self) = VpCopy(pv, x);
+    if (self != other) {
+	DATA_PTR(self) = VpCopy(pv, x);
+    }
     return self;
 }
 
@@ -2517,8 +2521,8 @@ BigDecimal_new(int argc, VALUE *argv)
       case T_RATIONAL:
 	if (NIL_P(nFig)) {
 	    rb_raise(rb_eArgError,
-		     "can't omit precision for a %s.",
-		     rb_class2name(CLASS_OF(iniValue)));
+		     "can't omit precision for a %"PRIsVALUE".",
+		     rb_obj_class(iniValue));
 	}
 	return GetVpValueWithPrec(iniValue, mf, 1);
 

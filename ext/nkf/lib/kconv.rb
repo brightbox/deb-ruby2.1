@@ -1,7 +1,7 @@
 #
 # kconv.rb - Kanji Converter.
 #
-# $Id$
+# $Id: kconv.rb 30112 2010-12-07 11:47:39Z naruse $
 #
 # ----
 #

@@ -2,7 +2,7 @@
 
   math.c -
 
-  $Author$
+  $Author: nobu $
   created at: Tue Jan 25 14:12:56 JST 1994
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

@@ -1,4 +1,4 @@
-# $Id$
+# $Id: generate.rb 34802 2012-02-25 07:08:47Z naruse $
 
 require 'optparse'
 

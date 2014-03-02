@@ -11,7 +11,7 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id$
+  $Id: ssl.rb 42995 2013-09-20 15:24:03Z zzak $
 =end
 
 require "openssl/buffering"

@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: ossl_x509cert.c 35190 2012-03-31 03:07:53Z emboss $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

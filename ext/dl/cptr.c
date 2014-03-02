@@ -1,5 +1,5 @@
 /* -*- C -*-
- * $Id$
+ * $Id: cptr.c 44903 2014-02-10 11:45:14Z naruse $
  */
 
 #include <ruby/ruby.h>
@@ -391,9 +391,8 @@ rb_dlptr_inspect(VALUE self)
     char str[1024];
 
     TypedData_Get_Struct(self, struct ptr_data, &dlptr_data_type, data);
-    snprintf(str, 1023, "#<%s:%p ptr=%p size=%ld free=%p>",
-	     rb_class2name(CLASS_OF(self)), data, data->ptr, data->size, data->free);
-    return rb_str_new2(str);
+    return rb_sprintf("#<%"PRIsVALUE":%p ptr=%p size=%ld free=%p>",
+		      rb_obj_class(self), data, data->ptr, data->size, data->free);
 }
 
 /*

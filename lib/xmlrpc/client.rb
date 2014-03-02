@@ -4,7 +4,7 @@
 # Released under the same term of license as Ruby.
 #
 # History
-#   $Id$
+#   $Id: client.rb 45112 2014-02-22 05:46:06Z naruse $
 #
 require "xmlrpc/parser"
 require "xmlrpc/create"
@@ -76,8 +76,6 @@ module XMLRPC # :nodoc:
     # implemented, no Digest.
     #
     # If +use_ssl+ is set to +true+, communication over SSL is enabled.
-    #
-    # Note, that you need the SSL package from RAA installed.
     #
     # Parameter +timeout+ is the time to wait for a XML-RPC response, defaults to 30.
     def initialize(host=nil, path=nil, port=nil, proxy_host=nil, proxy_port=nil,

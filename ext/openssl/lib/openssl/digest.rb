@@ -14,7 +14,7 @@
 # (See the file 'LICENCE'.)
 #
 # = Version
-# $Id$
+# $Id: digest.rb 44116 2013-12-10 07:16:03Z nobu $
 #
 #++
 

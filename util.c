@@ -2,7 +2,7 @@
 
   util.c -
 
-  $Author$
+  $Author: nobu $
   created at: Fri Mar 10 17:22:34 JST 1995
 
   Copyright (C) 1993-2008 Yukihiro Matsumoto

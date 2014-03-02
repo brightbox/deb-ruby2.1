@@ -5,7 +5,7 @@
  * Documented by mathew <meta@pobox.com>
  *
  * $RoughId: syslog.c,v 1.21 2002/02/25 12:21:17 knu Exp $
- * $Id$
+ * $Id: syslog.c 44904 2014-02-10 13:35:07Z naruse $
  */
 
 #include "ruby/ruby.h"
@@ -312,7 +312,7 @@ static VALUE mSyslog_log(int argc, VALUE *argv, VALUE self)
     pri = *argv++;
 
     if (!FIXNUM_P(pri)) {
-      rb_raise(rb_eTypeError, "type mismatch: %s given", rb_class2name(CLASS_OF(pri)));
+	rb_raise(rb_eTypeError, "type mismatch: %"PRIsVALUE" given", rb_obj_class(pri));
     }
 
     syslog_write(FIX2INT(pri), argc, argv);

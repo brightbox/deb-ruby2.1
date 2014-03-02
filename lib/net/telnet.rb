@@ -162,7 +162,7 @@ module Net
     CR   = "\015"
     LF   = "\012"
     EOL  = CR + LF
-    REVISION = '$Id$'
+    REVISION = '$Id: telnet.rb 35304 2012-04-11 21:20:51Z drbrain $'
     # :startdoc:
 
     #

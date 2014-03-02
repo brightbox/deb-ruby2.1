@@ -1,7 +1,7 @@
 #
 #   output-method.rb - output methods used by irb
 #   	$Release Version: 0.9.6$
-#   	$Revision$
+#   	$Revision: 38604 $
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

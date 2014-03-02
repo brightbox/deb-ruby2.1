@@ -1,7 +1,7 @@
 #
 #   irb.rb - irb main module
 #       $Release Version: 0.9.6 $
-#       $Revision$
+#       $Revision: 42045 $
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --
@@ -337,7 +337,7 @@ STDOUT.sync = true
 #   # quit irb
 #   irb(main):010:0> exit
 module IRB
-  @RCS_ID='-$Id$-'
+  @RCS_ID='-$Id: irb.rb 42045 2013-07-18 13:50:32Z zzak $-'
 
   # An exception raised by IRB.irb_abort
   class Abort < Exception;end

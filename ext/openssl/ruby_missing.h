@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: ruby_missing.h 33843 2011-11-26 01:49:36Z emboss $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2003  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

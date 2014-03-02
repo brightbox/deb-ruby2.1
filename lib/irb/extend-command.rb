@@ -1,7 +1,7 @@
 #
 #   irb/extend-command.rb - irb extend command
 #   	$Release Version: 0.9.6$
-#   	$Revision$
+#   	$Revision: 38515 $
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --

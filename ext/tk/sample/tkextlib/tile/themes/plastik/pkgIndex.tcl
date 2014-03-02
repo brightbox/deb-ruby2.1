@@ -6,7 +6,7 @@
 # To use this automatically within tile, the tile-using application should
 # use tile::availableThemes and tile::setTheme
 #
-# $Id$
+# $Id: pkgIndex.tcl 31689 2011-05-22 09:26:02Z nobu $
 
 if {![file isdirectory [file join $dir plastik]]} { return }
 if {![package vsatisfies [package provide Tcl] 8.4]} { return }

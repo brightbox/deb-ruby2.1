@@ -2,7 +2,7 @@
 
   io.c -
 
-  $Author$
+  $Author: naruse $
   created at: Fri Oct 15 18:08:59 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -4572,6 +4572,7 @@ rb_io_syswrite(VALUE io, VALUE str)
     }
 
     n = rb_write_internal(fptr->fd, RSTRING_PTR(str), RSTRING_LEN(str));
+    RB_GC_GUARD(str);
 
     if (n == -1) rb_sys_fail_path(fptr->pathv);
 
