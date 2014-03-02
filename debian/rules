@@ -61,7 +61,7 @@ override_dh_auto_build-indep:
 override_dh_auto_install-indep:
 	$(MAKE) install-doc DESTDIR=$(CURDIR)/debian/ruby2.1-doc
 
-override_dh_install-arch:
+override_dh_install:
 	dh_install
 	# split Ruby/Tk files
 	ruby debian/split-tk-out.rb
