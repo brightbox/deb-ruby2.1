@@ -1,6 +1,6 @@
 # Copyright (C) 2001, 2002, 2003 by Michael Neumann (mneumann@ntecs.de)
 #
-# $Id$
+# $Id: parser.rb 37688 2012-11-16 16:55:29Z marcandre $
 #
 
 

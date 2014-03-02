@@ -1,4 +1,4 @@
-# $Id$
+# $Id: test_scanfio.rb 25426 2009-10-21 03:44:56Z nobu $
 #
 # scanf for Ruby
 #

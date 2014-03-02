@@ -1,7 +1,7 @@
 #
 #   irb/multi-irb.rb - multiple irb module
 #   	$Release Version: 0.9.6$
-#   	$Revision$
+#   	$Revision: 38515 $
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --
@@ -13,7 +13,7 @@ require "thread"
 
 module IRB
   class JobManager
-    @RCS_ID='-$Id$-'
+    @RCS_ID='-$Id: multi-irb.rb 38515 2012-12-21 05:45:50Z zzak $-'
 
     # Creates a new JobManager object
     def initialize

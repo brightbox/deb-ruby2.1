@@ -1,6 +1,6 @@
 /*	$NetBSD: sha1.h,v 1.2 1998/05/29 22:55:44 thorpej Exp $	*/
 /*	$RoughId: sha1.h,v 1.3 2002/02/24 08:14:32 knu Exp $	*/
-/*	$Id$	*/
+/*	$Id: sha1.h 27437 2010-04-22 08:04:13Z nobu $	*/
 
 /*
  * SHA-1 in C

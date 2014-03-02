@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: ossl_pkey.h 33634 2011-11-04 07:19:23Z nobu $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001 Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.

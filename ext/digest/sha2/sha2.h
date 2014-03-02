@@ -31,7 +31,7 @@
  *
  * $OrigId: sha2.h,v 1.1 2001/11/08 00:02:01 adg Exp adg $
  * $RoughId: sha2.h,v 1.3 2002/02/24 08:14:32 knu Exp $
- * $Id$
+ * $Id: sha2.h 27437 2010-04-22 08:04:13Z nobu $
  */
 
 #ifndef __SHA2_H__

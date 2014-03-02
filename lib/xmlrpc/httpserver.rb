@@ -1,6 +1,6 @@
 # Copyright (C) 2001, 2002, 2003 by Michael Neumann (mneumann@ntecs.de)
 #
-# $Id$
+# $Id: httpserver.rb 44091 2013-12-09 07:04:43Z a_matsuda $
 #
 
 

@@ -1,7 +1,7 @@
 #
 #   irb/version.rb - irb version definition file
 #   	$Release Version: 0.9.6$
-#   	$Revision$
+#   	$Revision: 38358 $
 #   	by Keiju ISHITSUKA(keiju@ishitsuka.com)
 #
 # --

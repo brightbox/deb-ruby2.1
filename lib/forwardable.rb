@@ -1,7 +1,7 @@
 #
 #   forwardable.rb -
 #       $Release Version: 1.1$
-#       $Revision$
+#       $Revision: 40906 $
 #       by Keiju ISHITSUKA(keiju@ishitsuka.com)
 #       original definition by delegator.rb
 #       Revised by Daniel J. Berger with suggestions from Florian Gross.

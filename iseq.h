@@ -2,7 +2,7 @@
 
   iseq.h -
 
-  $Author$
+  $Author: ko1 $
   created at: 04/01/01 23:36:57 JST
 
   Copyright (C) 2004-2008 Koichi Sasada

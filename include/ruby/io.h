@@ -2,7 +2,7 @@
 
   rubyio.h -
 
-  $Author$
+  $Author: nobu $
   created at: Fri Nov 12 16:47:09 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

@@ -1,7 +1,7 @@
 #
 #   irb/input-method.rb - input methods used irb
 #   	$Release Version: 0.9.6$
-#   	$Revision$
+#   	$Revision: 38544 $
 #   	by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --
@@ -14,7 +14,7 @@ require 'irb/magic-file'
 module IRB
   STDIN_FILE_NAME = "(line)" # :nodoc:
   class InputMethod
-    @RCS_ID='-$Id$-'
+    @RCS_ID='-$Id: input-method.rb 38544 2012-12-21 17:29:18Z zzak $-'
 
     # Creates a new input method object
     def initialize(file = STDIN_FILE_NAME)

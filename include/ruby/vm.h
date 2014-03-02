@@ -2,7 +2,7 @@
 
   ruby/vm.h -
 
-  $Author$
+  $Author: nobu $
   created at: Sat May 31 15:17:36 2008
 
   Copyright (C) 2008 Yukihiro Matsumoto
