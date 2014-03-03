@@ -1,3 +1,11 @@
+ruby2.1 (2.1.0-2) unstable; urgency=medium
+
+  * ruby2.1-dev: Depend on libgmp-dev.
+    Thanks to John Leach <john@johnleach.co.uk>
+  * Fix FTBFS with libreadline 6.x, by applying upstream r45225.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 03 Mar 2014 21:10:32 +0100
+
 ruby2.1 (2.1.0-1) unstable; urgency=medium
 
   * Upload to unstable.
