@@ -935,7 +935,13 @@ check_match(VALUE pattern, VALUE target, enum vm_check_match_type type)
       case VM_CHECKMATCH_TYPE_CASE: {
 	VALUE defined_class;
 	rb_method_entry_t *me = rb_method_entry_with_refinements(CLASS_OF(pattern), idEqq, &defined_class);
-	return vm_call0(GET_THREAD(), pattern, idEqq, 1, &target, me, defined_class);
+	if (me) {
+	  return vm_call0(GET_THREAD(), pattern, idEqq, 1, &target, me, defined_class);
+	}
+	else {
+	  /* fallback to funcall (e.g. method_missing) */
+	  return rb_funcall2(pattern, idEqq, 1, &target);
+	}
       }
       default:
 	rb_bug("check_match: unreachable");
@@ -1833,7 +1839,7 @@ vm_call_method(rb_thread_t *th, rb_control_frame_t *cfp, rb_call_info_t *ci)
 		    ci->me = me;
 		    ci->defined_class = defined_class;
 		    if (me->def->type != VM_METHOD_TYPE_REFINED) {
-			goto normal_method_dispatch;
+			goto start_method_dispatch;
 		    }
 		}
 
@@ -1842,11 +1848,8 @@ vm_call_method(rb_thread_t *th, rb_control_frame_t *cfp, rb_call_info_t *ci)
 		    ci->me = ci->me->def->body.orig_me;
 		    if (UNDEFINED_METHOD_ENTRY_P(ci->me)) {
 			ci->me = 0;
-			goto start_method_dispatch;
 		    }
-		    else {
-			goto normal_method_dispatch;
-		    }
+		    goto start_method_dispatch;
 		}
 		else {
 		    klass = ci->me->klass;
@@ -2027,6 +2030,12 @@ vm_search_super_method(rb_thread_t *th, rb_control_frame_t *reg_cfp, rb_call_inf
 		 "implicit argument passing of super from method defined"
 		 " by define_method() is not supported."
 		 " Specify all arguments explicitly.");
+    }
+    if (!ci->klass) {
+	/* bound instance method of module */
+	ci->aux.missing_reason = NOEX_SUPER;
+	CI_SET_FASTPATH(ci, vm_call_method_missing, 1);
+	return;
     }
 
     /* TODO: use inline cache */

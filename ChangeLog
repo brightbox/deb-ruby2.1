@@ -1,3 +1,466 @@
+Mon Mar  3 01:43:30 2014  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* eval_error.c (warn_printf): use rb_vsprintf instead so ruby specific
+	  extensions like PRIsVALUE can be used in format strings
+	* eval_error.c (error_print): use warn_print_str (alias for
+	  rb_write_error_str) to print a string value instead of using
+	  RSTRING_PTR and RSTRING_LEN manually
+	* eval.c (setup_exception): use PRIsVALUE instead of %s and RSTRING_PTR
+
+Mon Mar  3 01:32:14 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/readline/extconf.rb (rl_hook_func_t): define as Function for
+	  very old readline versions.  [ruby-core:61209] [Bug #9578]
+
+Mon Mar  3 01:32:14 2014  Tanaka Akira  <akr@fsij.org>
+
+	* ext/readline/readline.c (Init_readline): Use rl_hook_func_t instead
+	  of Function to support readline-6.3.  (rl_hook_func_t is available
+	  since readline-4.2.)
+	  Reported by Dmitry Medvinsky.  [ruby-core:61141] [Bug #9578]
+
+Mon Mar  3 01:25:28 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* eval.c (setup_exception): preserve errinfo across calling #to_s
+	  method on the exception.  [ruby-core:61091] [Bug #9568]
+
+Mon Mar  3 01:00:00 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* numeric.c (ruby_num_interval_step_size): check signs and get rid
+	  of implementation dependent behavior of negative division.
+	  [ruby-core:61106] [Bug #9570]
+
+Mon Mar  3 00:43:33 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	(merged partially from r42781)
+	* test/ruby/test_numeric.rb (assert_step): introduce assert_step.
+
+Mon Mar  3 00:24:38 2014  Zachary Scott  <e@zzak.io>
+
+	* README.EXT.ja: [DOC] Fix typo "macro macro" @utenmiki [Fixes GH-551]
+	  https://github.com/ruby/ruby/pull/551
+
+Sat Feb 22 22:11:58 2014  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* ext/io/console/console.c (console_dev): need read access for conout$
+	  because some functions need it.  [Bug#9554]
+
+Sat Feb 22 14:01:42 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* iseq.c (iseq_load): keep type_map to get rid of memory leak.
+	  based on a patch by Eric Wong at [ruby-core:59699].  [Bug #9399]
+
+Sat Feb 22 13:56:38 2014  Charlie Somerville  <charliesome@ruby-lang.org>
+
+	* compile.c (iseq_build_from_ary_body): Use :blockptr instead of :block
+	  as hash key when loading serialized instruction sequences from arrays.
+	  [Bug #9455] [ruby-core:60146]
+
+Sat Feb 22 13:04:54 2014  Shugo Maeda  <shugo@ruby-lang.org>
+
+	* ext/socket/init.c (wait_connectable): break if the socket is
+	  writable to avoid infinite loops on FreeBSD and other platforms
+	  which conforms to SUSv3.  This problem cannot be reproduced with
+	  loopback interfaces, so it's hard to write test code.
+	  rsock_connect() and wait_connectable() are overly complicated, so
+	  they should be refactored, but I commit this fix as a workaround
+	  for the release of Ruby 1.9.3 scheduled on Feb 24.
+	  [ruby-core:60940] [Bug #9547]
+
+Sat Feb 22 12:55:24 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	(merged partially from r42927)
+	* lib/rubygems/core_ext/kernel_require.rb: Backport a fix for concurrent
+	  requires. [ruby-core:58918] [Backport #9224]
+	  see also https://github.com/rubygems/rubygems/pull/833
+
+Sat Feb 22 11:50:52 2014  Eric Wong  <e@80x24.org>
+
+	* ext/socket/ancdata.c (bsock_sendmsg_internal): only retry on error
+	  (bsock_recvmsg_internal): ditto
+	* test/socket/test_unix.rb: test above for infinite loop
+
+Sat Feb 22 11:44:50 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* class.c (rb_mod_init_copy): do nothing if copying self.
+	  [ruby-dev:47989] [Bug #9535]
+
+	* hash.c (rb_hash_initialize_copy): ditto.
+
+Thu Feb 20 02:14:18 2014  Zachary Scott  <e@zzak.io>
+
+	* ext/openssl/lib/openssl/buffering.rb: Fix warning in copyright
+
+Thu Feb 20 02:14:18 2014  Zachary Scott  <e@zzak.io>
+
+	* ext/openssl/lib/openssl/buffering.rb: [DOC] Fix HEREDOC comment for
+	  OpenSSL::Buffering which breaks overview because of RDoc bug
+
+Thu Feb 20 02:04:09 2014  Eric Hodel  <drbrain@segment7.net>
+
+	* ext/.document:  Add syslog/lib to documentable items. [Bug #9228]
+
+Thu Feb 20 01:54:08 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_insnhelper.c (vm_search_super_method): when super called in a
+	  bound UnboundMethod generated from a module, no superclass is
+	  found since the current defined class is the module, then call
+	  method_missing in that case.  [ruby-core:59619] [Bug #9377]
+
+Thu Feb 20 01:33:06 2014  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/optparse.rb:  The Integer acceptable now allows binary and
+	  hexadecimal numbers per the documentation.  [ruby-trunk - Bug #8865]
+
+	  DecimalInteger, OctalInteger, DecimalNumeric now validate their input
+	  before converting to a number.  [ruby-trunk - Bug #8865]
+
+	* test/optparse/test_acceptable.rb:  Tests for the above, tests for all
+	  numeric acceptables for existing behavior.
+
+Thu Feb 20 01:23:36 2014  Aaron Pfeifer  <aaron.pfeifer@gmail.com>
+
+	* thread.c (terminate_atfork_i): fix locking mutexes not unlocked in
+	  forks when not tracked in thread.  [ruby-core:55102] [Bug #8433]
+
+Tue Feb 18 23:48:03 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* test/ruby/envutil.rb (assert_separately): require envutil in the
+	  child process too.
+
+Tue Feb 18 22:38:01 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* test/ruby/envutil.rb (Test::Unit::Assertions#assert_separately):
+	  specify the encoding of source.
+
+Mon Feb 17 02:00:36 2014  Tanaka Akira  <akr@fsij.org>
+
+	* lib/open-uri.rb: Make proxy disabling working again.
+	  Fixed by Christophe Philemotte.   [ruby-core:59650] [Bug #9385]
+
+Mon Feb 17 01:57:45 2014  Benoit Daloze  <eregontp@gmail.com>
+
+	* range.c (Range#size): [DOC] improve description and add examples.
+	  Patch by @skade. [Fixes GH-501]
+
+Mon Feb 17 01:51:49 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/webrick/htmlutils.rb (WEBrick::HTMLUtils#escape): replace HTML
+	  meta chars even in non-ascii string.  [Bug #8425] [ruby-core:55052]
+
+	* lib/webrick/httputils.rb (WEBrick::HTTPUtils#{_escape,_unescape}):
+	  fix %-escape encodings.  [Bug #8425] [ruby-core:55052]
+
+Mon Feb 17 01:51:49 2014  Ayumu AIZAWA  <ayumu.aizawa@gmail.com>
+
+	* test/webrick/test_htmlutils.rb: add test for WEBrick::HTMLUtils.
+
+Mon Feb 17 01:41:59 2014  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* array.c (rb_hash_rehash): use hash_alloc() instead of rb_hash_new().
+	  [Bug #9187]
+
+Mon Feb 17 01:41:59 2014  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* hash.c (rb_hash_rehash): make temporary st_table under the control
+	  of GC. [Bug #9187]
+
+	* test/ruby/test_hash.rb: add a test for above.
+
+Mon Feb 17 01:41:59 2014  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* hash.c (rb_hash_rehash): fix to free new st_table when exception
+	  is raised in do_hash(). [Bug #9187]
+
+Mon Feb 17 01:18:04 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* eval.c (rb_mod_s_constants): return its own constants for other
+	  than Module itself.  [ruby-core:59763] [Bug #9413]
+
+Mon Feb 17 01:16:00 2014  Eric Wong <e@80x24.org>
+
+	* ext/json/generator/depend: add build dependencies for json extension
+	  [Bug #9374] [ruby-core:59609]
+	* ext/json/parser/depend: ditto
+
+Mon Feb 17 01:12:57 2014  Yusuke Endoh  <mame@tsg.ne.jp>
+
+	* ext/fiddle/closure.c: use sizeof(*pcl) for correct sizeof value.
+	  [ruby-core:57599] [Bug #8978].
+
+Mon Feb 17 01:12:57 2014  Aaron Patterson <aaron@tenderlovemaking.com>
+
+	* ext/fiddle/closure.c: use sizeof(*pcl) for correct sizeof value.
+	  [ruby-core:57599] [Bug #8978].  Thanks mame!
+
+Mon Feb 17 01:09:52 2014  Eric Wong <e@80x24.org>
+
+	* benchmark/driver: avoid large alloc in driver process
+	  [ruby-core:59869] [Bug #9430]
+
+Mon Feb 17 00:59:40 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* thread_pthread.c (rb_thread_create_timer_thread): fix for platforms
+	  where PTHREAD_STACK_MIN is a dynamic value and not a compile-time
+	  constant.  [ruby-dev:47911] [Bug #9436]
+
+Mon Feb 17 00:59:40 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* thread_pthread.c (rb_thread_create_timer_thread): expand timer
+	  thread stack size to get rid of segfault on FreeBSD/powerpc64.
+	  based on the patch by Steve Wills at [ruby-core:59923].
+	  [ruby-core:56590] [Bug #8783]
+
+Mon Feb 17 00:45:44 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* string.c (rb_str_modify_expand): enable capacity and disable
+	  association with packed objects when setting capa, so that
+	  pack("p") string fails to unpack properly after modified.
+
+Sun Feb 16 01:36:57 2014  Aaron Patterson <aaron@tenderlovemaking.com>
+
+	* ext/psych/yaml/emitter.c: merge libyaml 0.1.5
+	* ext/psych/yaml/loader.c: ditto
+	* ext/psych/yaml/parser.c: ditto
+	* ext/psych/yaml/reader.c: ditto
+	* ext/psych/yaml/scanner.c: ditto
+	* ext/psych/yaml/writer.c: ditto
+	* ext/psych/yaml/yaml_private.h: ditto
+
+Sun Feb 16 01:02:32 2014  Zachary Scott  <e@zzak.io>
+
+	* lib/racc/rdoc/grammar.en.rdoc: [DOC] Correct grammar and typos
+	  Patch by Giorgos Tsiftsis [Bug #9429] [ci skip]
+
+Sun Feb 16 01:00:45 2014  Zachary Scott  <e@zzak.io>
+
+	* lib/open-uri.rb: [DOC] use lower case version of core classes, same
+	  as commit r44878, based on patch by Jonathan Jackson [Bug #9483]
+
+Sun Feb 16 01:00:45 2014  Zachary Scott  <e@zzak.io>
+
+	* ext/ripper/lib/ripper/lexer.rb: [DOC] use lower case version of core
+	  classes when referring to return value, since we aren't directly
+	  talking about the class. Patch by Jonathan Jackson [Bug #9483]
+
+Sun Feb 16 00:57:13 2014  Ayumu AIZAWA  <ayumu.aizawa@gmail.com>
+
+	* variable.c: [DOC] adding extra example in docs.
+	  patched by Steve Klabnik. [Bug #9210]
+
+Sun Feb 16 00:54:50 2014  Tanaka Akira  <akr@fsij.org>
+
+	* lib/resolv.rb (Resolv::DNS::Resource::TXT#data): Return concatenated
+	  string.
+	  Patch by Ryan Brunner.  [ruby-core:58220] [Bug #9093]
+
+Sun Feb 16 00:50:59 2014  Zachary Scott  <e@zzak.io>
+
+	* ext/openssl/ossl_pkey_dh.c: Fixed typo by Sandor Szuecs [Bug #9243]
+
+Sun Feb 16 00:47:36 2014  Zachary Scott  <e@zzak.io>
+
+	* lib/xmlrpc/client.rb: [DOC] Remove note about SSL package on RAA
+	  Since RAA has been deprecated, and the SSL package has been replaced
+	  with net/https this statement is entirely false and should be
+	  deleted. [Bug #9152]
+
+Sun Feb 16 00:44:51 2014  Zachary Scott  <e@zzak.io>
+
+	* lib/net/smtp.rb: [DOC] Remove dead link to RAA by Giorgos Tsiftsis
+	  Fixes the following bugs: [Bug #9152] [Bug #9268] [Bug #9394]
+	* lib/open-uri.rb: ditto
+
+Sun Feb 16 00:27:04 2014  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* hash.c (rb_hash_assoc): revert r42224. table->type->compare is
+	  called only if hashes are matched.
+
+	* test/ruby/test_hash.rb: add a test to check using #== to compare.
+
+Sun Feb 16 00:27:04 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* hash.c (rb_hash_initialize_copy): copy st_table type even if empty.
+	  [ruby-core:56256] [Bug #8703]
+
+Sun Feb 16 00:27:04 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* hash.c (rb_hash_initialize_copy): clear old table before copy new
+	  table.
+
+Sun Feb 16 00:27:04 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* hash.c (rb_hash_assoc): aggregate object can be initialized only
+	  with link time constants.
+
+Sun Feb 16 00:27:04 2014  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* hash.c (rb_hash_assoc): performance improvement by replacing
+	  compare function in RHASH(hash)->ntbl->type temporarily.
+
+Sun Feb 16 00:01:16 2014  Tanaka Akira  <akr@fsij.org>
+
+	* lib/resolv.rb: Ignore name servers which cause EAFNOSUPPORT on
+	  socket creation.
+	  Reported by Bjoern Rennhak.  [ruby-core:60442] [Bug #9477]
+
+Sat Feb 15 23:58:31 2014  Tanaka Akira  <akr@fsij.org>
+
+	* lib/resolv.rb (Resolv::DNS::Message::MessageDecoder): Raise
+	  DecodeError if no data before the limit.
+	  Reported by Will Bryant.  [ruby-core:60557] [Bug #9498]
+
+Sat Feb 15 23:46:31 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (IDSET_ATTRSET_FOR_INTERN): fix off-by-one bug.
+
+	* parse.y (rb_enc_symname_type): junk ID succeeded by '=' is also
+	  attrset ID.  [ruby-core:60668] [Bug #8756]
+
+Sat Feb 15 23:42:04 2014  Richo Healy  <richo@psych0tik.net>
+
+	* test/ruby/test_struct.rb: Add regression test for question marks and
+	  bangs in struct members. [Closes GH-468]
+
+Sat Feb 15 23:26:31 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* struct.c (new_struct): fix warning message, class name and encoding.
+
+Sat Feb 15 16:08:26 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* struct.c (make_struct): avoid inadvertent symbol creation.
+	  (rb_struct_aref): ditto.
+	  (rb_struct_aset): ditto.
+
+Sat Feb 15 15:32:46 2014  Shugo Maeda  <shugo@ruby-lang.org>
+
+	* vm_insnhelper.c (vm_call_method): should check ci->me->flag of
+	  a refining method in case the method is private.
+	  [ruby-core:60111] [Bug #9452]
+
+	* vm_method.c (make_method_entry_refined): set me->flag of a refined
+	  method entry to NOEX_PUBLIC in case the original method is private
+	  and it is refined as a public method.  The original flag is stored
+	  in me->def->body.orig_me, so it's OK to make a refined method
+	  entry public.  [ruby-core:60111] [Bug #9452]
+
+	* test/ruby/test_refinement.rb: related tests.
+
+Tue Feb 11 23:21:02 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* test/ruby/test_struct.rb (test_struct_question_mark): add a testcase
+	  for Struct attribute with question mark. the patch was originally
+	  written by Eric Wong [ruby-core:59095] [Backport #9248]
+
+Tue Feb 11 23:21:02 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (rb_id_attrset, intern_str): allow junk attrset ID for
+	  Struct.
+
+	* parse.y (rb_id_attrset): fix inconsistency with literals, allow
+	  ID_ATTRSET and return it itself, but ID_JUNK cannot make ID_ATTRSET.
+	  and raise a NameError instead of rb_bug() for invalid argument.
+
+Tue Feb 11 23:21:02 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (rb_enc_symname_type): allow ID_ATTRSET for ID_INSTANCE,
+	  ID_GLOBAL, ID_CLASS, ID_JUNK too.  [Bug #8756]
+
+Tue Feb 11 23:21:02 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (rb_id_attrset): allow other than ID_ATTRSET.
+
+	* parse.y (intern_str): ditto.  try stem ID for ID_INSTANCE,
+	  ID_GLOBAL, ID_CLASS, ID_JUNK too.  [Bug #8756]
+
+Tue Feb 11 23:21:02 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (rb_id_attrset): check if the argument is valid type as an
+	  attribute.
+
+Tue Feb 11 00:26:19 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* file.c (GetLastError): already defined in windows.h on nowadays
+	  cygwin, and caused the confliction with the system provided
+	  definition on cygwin64.  by @kou1okada [Fixes GH-433].
+
+Mon Feb 10 01:15:10 2014  Kouhei Sutou  <kou@cozmixng.org>
+
+	* ext/socket/raddrinfo.c (nogvl_getaddrinfo): Fix indent.
+
+Mon Feb 10 01:15:10 2014  Kouhei Sutou  <kou@cozmixng.org>
+
+	* ext/socket/raddrinfo.c (nogvl_getaddrinfo): Add missing return
+	  value assignment.
+
+Mon Feb 10 01:15:10 2014  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* ext/socket/raddrinfo.c (nogvl_getaddrinfo): work around for Ubuntu
+	  13.04's getaddrinfo issue with mdns4. [ruby-list:49420]
+
+Mon Feb 10 00:42:12 2014  Masaki Matsushita  <glass.saga@gmail.com>
+
+	* ext/thread/thread.c (rb_szqueue_clear): notify SZQUEUE_WAITERS
+	  on SizedQueue#clear. [ruby-core:59462] [Bug #9342]
+
+	* test/thread/test_queue.rb: add test. the patch is from
+	  Justin Collins.
+
+Mon Feb 10 00:27:33 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (local_push_gen, local_pop_gen): save cmdarg_stack to
+	  isolate command argument state from outer scope.
+	  [ruby-core:59342] [Bug #9308]
+
+Mon Feb 10 00:02:18 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* dir.c (glob_helper): don't skip current directories if FNM_DOTMATCH
+	  is given.  [ruby-core:53108] [Bug #8006]
+
+Wed Feb  5 23:39:36 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (intern_str): sigil only names are junk, at least one
+	  identifier character is needed.  [ruby-dev:47723] [Bug #8928]
+
+	* parse.y (rb_enc_symname_type): fix out of bound access.
+
+Wed Feb  5 22:54:52 2014  Kazuki Tsujimoto  <kazuki@callcc.net>
+
+	* time.c (get_timeval, get_new_timeval): use rb_obj_class()
+	  instead of CLASS_OF() because CLASS_OF() may return
+	  a singleton class.
+
+Sun Feb 2 05:48:42 2014  Eric Wong <e@80x24.org>
+
+	* io.c (rb_io_syswrite): add RB_GC_GUARD
+	  [Bug #9472][ruby-core:60407]
+
+Fri Jan 31 00:51:50 2014  Shugo Maeda  <shugo@ruby-lang.org>
+
+	* configure.in: use $@ instead of $(.TARGET) because .TARGET is not
+	  supported by GNU make.
+
+Fri Jan 31 00:49:41 2014  Yamashita Yuu  <yamashita@geishatokyo.com>
+
+	* ext/openssl/ossl_ssl.c (Init_ossl_ssl): Declare a constant
+	  `OP_MSIE_SSLV2_RSA_PADDING` only if the macro is defined.  The
+	  `SSL_OP_MSIE_SSLV2_RSA_PADDING` has been removed from latest
+	  snapshot of OpenSSL 1.0.1.  [Fixes GH-488]
+
+Thu Jan 23 21:08:16 2014  Shota Fukumori  <her@sorah.jp>
+
+	* vm_insnhelper.c (check_match): Fix SEGV with VM_CHECKMATCH_TYPE_CASE
+	  and class of `pattern` has `method_missing`
+	  [Bug #8882] [ruby-core:58606]
+
+Mon Jan 20 01:02:18 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/bigdecimal/bigdecimal.c (CLASS_NAME): macro to wrap
+	  depending on PRIsVALUE for 1.9.  [Backport #9406]
+
+	* ext/bigdecimal/bigdecimal.c (DECIMAL_SIZE_OF_BITS): fallback
+	  definition for 2.1 or older.  [ruby-core:59750] [Backport #9406]
+
 Sun Jan 12 22:46:49 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
 
 	patch inspired from r44260 on trunk. [ruby-core:58652] [Bug #9168]
