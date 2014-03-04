@@ -1,8 +1,10 @@
-ruby2.0 (2.0.0.484-2) UNRELEASED; urgency=medium
+ruby2.0 (2.0.0.484+really457-1) UNRELEASED; urgency=medium
 
+  * New upstream snapshot. Note that the previous upstream snapshot was
+    wrongly versioned as patch level 484 (should be 384).
   * ruby2.0-dev: add missing dependency on libruby2.0
 
- -- Antonio Terceiro <terceiro@debian.org>  Tue, 04 Feb 2014 17:32:34 -0300
+ -- Antonio Terceiro <terceiro@debian.org>  Tue, 04 Mar 2014 11:05:54 +0800
 
 ruby2.0 (2.0.0.484-1) unstable; urgency=medium
 
