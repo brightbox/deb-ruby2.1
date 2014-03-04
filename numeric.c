@@ -223,17 +223,19 @@ coerce_body(VALUE *x)
     return rb_funcall(x[1], id_coerce, 1, x[0]);
 }
 
+NORETURN(static void coerce_failed(VALUE x, VALUE y));
+static void
+coerce_failed(VALUE x, VALUE y)
+{
+    rb_raise(rb_eTypeError, "%"PRIsVALUE" can't be coerced into %"PRIsVALUE,
+	     (rb_special_const_p(y)? rb_inspect(y) : rb_obj_class(y)),
+	     rb_obj_class(x));
+}
+
 static VALUE
 coerce_rescue(VALUE *x)
 {
-    volatile VALUE v = rb_inspect(x[1]);
-
-    rb_raise(rb_eTypeError, "%s can't be coerced into %s",
-	     rb_special_const_p(x[1])?
-	     RSTRING_PTR(v):
-	     rb_obj_classname(x[1]),
-	     rb_obj_classname(x[0]));
-
+    coerce_failed(x[0], x[1]);
     return Qnil;		/* dummy */
 }
 
@@ -306,9 +308,9 @@ num_sadded(VALUE x, VALUE name)
     /* Numerics should be values; singleton_methods should not be added to them */
     rb_remove_method_id(rb_singleton_class(x), mid);
     rb_raise(rb_eTypeError,
-	     "can't define singleton method \"%s\" for %s",
-	     rb_id2name(mid),
-	     rb_obj_classname(x));
+	     "can't define singleton method \"%"PRIsVALUE"\" for %"PRIsVALUE,
+	     rb_id2str(mid),
+	     rb_obj_class(x));
 
     UNREACHABLE;
 }
@@ -318,7 +320,7 @@ static VALUE
 num_init_copy(VALUE x, VALUE y)
 {
     /* Numerics are immutable values, which should not be copied */
-    rb_raise(rb_eTypeError, "can't copy %s", rb_obj_classname(x));
+    rb_raise(rb_eTypeError, "can't copy %"PRIsVALUE, rb_obj_class(x));
 
     UNREACHABLE;
 }
@@ -1814,21 +1816,29 @@ VALUE
 num_interval_step_size(VALUE from, VALUE to, VALUE step, int excl)
 {
     if (FIXNUM_P(from) && FIXNUM_P(to) && FIXNUM_P(step)) {
-	long delta, diff, result;
+	long delta, diff;
 
 	diff = FIX2LONG(step);
+	if (!diff) rb_num_zerodiv();
 	delta = FIX2LONG(to) - FIX2LONG(from);
-	if (excl) {
-	    delta += (diff > 0 ? -1 : +1);
+	if (diff < 0) {
+	    diff = -diff;
+	    delta = -delta;
 	}
-	result = delta / diff;
-	return LONG2FIX(result >= 0 ? result + 1 : 0);
+	if (excl) {
+	    delta--;
+	}
+	if (delta < 0) {
+	    return INT2FIX(0);
+	}
+	return ULONG2NUM(delta / diff + 1UL);
     }
     else if (RB_TYPE_P(from, T_FLOAT) || RB_TYPE_P(to, T_FLOAT) || RB_TYPE_P(step, T_FLOAT)) {
 	double n = ruby_float_step_size(NUM2DBL(from), NUM2DBL(to), NUM2DBL(step), excl);
 
 	if (isinf(n)) return DBL2NUM(n);
-	return LONG2FIX(n);
+	if (POSFIXABLE(n)) return LONG2FIX(n);
+	return rb_dbl2big(n);
     }
     else {
 	VALUE result;
@@ -3196,11 +3206,7 @@ bit_coerce(VALUE *x, VALUE *y, int err)
 	if (!FIXNUM_P(*x) && !RB_TYPE_P(*x, T_BIGNUM)
 	    && !FIXNUM_P(*y) && !RB_TYPE_P(*y, T_BIGNUM)) {
 	    if (!err) return FALSE;
-	    rb_raise(rb_eTypeError,
-		     "%s can't be coerced into %s for bitwise arithmetic",
-		     rb_special_const_p(*y) ?
-			RSTRING_PTR(rb_inspect(*y)) : rb_obj_classname(*y),
-		     rb_obj_classname(*x));
+	    coerce_failed(*x, *y);
 	}
     }
     return TRUE;
