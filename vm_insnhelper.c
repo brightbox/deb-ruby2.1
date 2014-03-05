@@ -126,20 +126,22 @@ NORETURN(static void argument_error(const rb_iseq_t *iseq, int miss_argc, int mi
 static void
 argument_error(const rb_iseq_t *iseq, int miss_argc, int min_argc, int max_argc)
 {
+    rb_thread_t *th = GET_THREAD();
     VALUE exc = rb_arg_error_new(miss_argc, min_argc, max_argc);
-    VALUE bt = rb_make_backtrace();
-    VALUE err_line = 0;
+    VALUE at;
 
     if (iseq) {
-	int line_no = FIX2INT(rb_iseq_first_lineno(iseq->self));
-
-	err_line = rb_sprintf("%s:%d:in `%s'",
-			      RSTRING_PTR(iseq->location.path),
-			      line_no, RSTRING_PTR(iseq->location.label));
-	rb_funcall(bt, rb_intern("unshift"), 1, err_line);
+	vm_push_frame(th, iseq, VM_FRAME_MAGIC_METHOD, Qnil /* self */, Qnil /* klass */, Qnil /* specval*/,
+		      iseq->iseq_encoded, th->cfp->sp, 0 /* local_size */, 0 /* me */, 0 /* stack_max */);
+	at = rb_vm_backtrace_object();
+	vm_pop_frame(th);
+    }
+    else {
+	at = rb_vm_backtrace_object();
     }
 
-    rb_funcall(exc, rb_intern("set_backtrace"), 1, bt);
+    rb_iv_set(exc, "bt_locations", at);
+    rb_funcall(exc, rb_intern("set_backtrace"), 1, at);
     rb_exc_raise(exc);
 }
 
@@ -1827,7 +1829,7 @@ vm_call_method(rb_thread_t *th, rb_control_frame_t *cfp, rb_call_info_t *ci)
 		    ci->me = me;
 		    ci->defined_class = defined_class;
 		    if (me->def->type != VM_METHOD_TYPE_REFINED) {
-			goto normal_method_dispatch;
+			goto start_method_dispatch;
 		    }
 		}
 
@@ -1836,11 +1838,8 @@ vm_call_method(rb_thread_t *th, rb_control_frame_t *cfp, rb_call_info_t *ci)
 		    ci->me = ci->me->def->body.orig_me;
 		    if (UNDEFINED_METHOD_ENTRY_P(ci->me)) {
 			ci->me = 0;
-			goto start_method_dispatch;
 		    }
-		    else {
-			goto normal_method_dispatch;
-		    }
+		    goto start_method_dispatch;
 		}
 		else {
 		    klass = ci->me->klass;
@@ -2002,7 +2001,8 @@ vm_search_super_method(rb_thread_t *th, rb_control_frame_t *reg_cfp, rb_call_inf
 	current_defined_class = RCLASS_REFINED_CLASS(current_defined_class);
     }
 
-    if (!FL_TEST(current_defined_class, RMODULE_INCLUDED_INTO_REFINEMENT) &&
+    if (BUILTIN_TYPE(current_defined_class) != T_MODULE &&
+	!FL_TEST(current_defined_class, RMODULE_INCLUDED_INTO_REFINEMENT) &&
 	!rb_obj_is_kind_of(ci->recv, current_defined_class)) {
 	VALUE m = RB_TYPE_P(current_defined_class, T_ICLASS) ?
 	    RBASIC(current_defined_class)->klass : current_defined_class;
@@ -2021,6 +2021,12 @@ vm_search_super_method(rb_thread_t *th, rb_control_frame_t *reg_cfp, rb_call_inf
 		 "implicit argument passing of super from method defined"
 		 " by define_method() is not supported."
 		 " Specify all arguments explicitly.");
+    }
+    if (!ci->klass) {
+	/* bound instance method of module */
+	ci->aux.missing_reason = NOEX_SUPER;
+	CI_SET_FASTPATH(ci, vm_call_method_missing, 1);
+	return;
     }
 
     /* TODO: use inline cache */

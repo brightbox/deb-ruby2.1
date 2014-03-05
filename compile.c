@@ -1203,7 +1203,7 @@ iseq_set_arguments(rb_iseq_t *iseq, LINK_ANCHOR *optargs, NODE *node_args)
 		node = node->nd_next;
 		i += 1;
 	    }
-	    iseq->arg_keyword_check = (args->kw_rest_arg->nd_vid & ID_SCOPE_MASK) == ID_JUNK;
+	    iseq->arg_keyword_check = args->kw_rest_arg->nd_cflag != 0;
 	    iseq->arg_keywords = i;
 	    iseq->arg_keyword_required = r;
 	    iseq->arg_keyword_table = ALLOC_N(ID, i);
@@ -5766,7 +5766,7 @@ iseq_build_from_ary_body(rb_iseq_t *iseq, LINK_ANCHOR *anchor,
 				VALUE vmid = rb_hash_aref(op, ID2SYM(rb_intern("mid")));
 				VALUE vflag = rb_hash_aref(op, ID2SYM(rb_intern("flag")));
 				VALUE vorig_argc = rb_hash_aref(op, ID2SYM(rb_intern("orig_argc")));
-				VALUE vblock = rb_hash_aref(op, ID2SYM(rb_intern("block")));
+				VALUE vblock = rb_hash_aref(op, ID2SYM(rb_intern("blockptr")));
 
 				if (!NIL_P(vmid)) mid = SYM2ID(vmid);
 				if (!NIL_P(vflag)) flag = NUM2ULONG(vflag);
