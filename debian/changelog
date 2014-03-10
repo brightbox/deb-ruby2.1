@@ -1,3 +1,10 @@
+ruby2.1 (2.1.1-1) unstable; urgency=medium
+
+  * Imported Upstream version 2.1.1
+  * Update lintian overrides
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Wed, 05 Mar 2014 18:22:58 +0100
+
 ruby2.1 (2.1.0-2) unstable; urgency=medium
 
   * ruby2.1-dev: Depend on libgmp-dev.
