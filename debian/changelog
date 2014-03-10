@@ -1,3 +1,10 @@
+ruby2.1 (2.1.1-2) unstable; urgency=medium
+
+  * Tie Tcl/Tk dependency to version 8.5, as upstream does not support
+    Tcl/Tk 8.6 yet.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 10 Mar 2014 12:49:12 +0100
+
 ruby2.1 (2.1.1-1) unstable; urgency=medium
 
   * Imported Upstream version 2.1.1
