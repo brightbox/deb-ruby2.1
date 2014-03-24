@@ -6,6 +6,8 @@ ruby2.0 (2.0.0.484+really457-1) UNRELEASED; urgency=medium
   * ruby2.0-dev: add missing dependency on libruby2.0
   * debian/patches/0001-Backport-multiarch-support-to-Ruby-2.0.patch: make
     multiarch changes explicit in their own patch.
+  * Change Build-Depends from tcl-dev/tk-dev to tcl8.5-dev/tk8.5-dev
+    - Ruby does not support tcl/tk 8.6 (the current default) yet.
 
  -- Antonio Terceiro <terceiro@debian.org>  Tue, 04 Mar 2014 11:05:54 +0800
 
