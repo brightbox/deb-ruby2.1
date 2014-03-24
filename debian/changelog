@@ -4,6 +4,8 @@ ruby2.0 (2.0.0.484+really457-1) UNRELEASED; urgency=medium
     wrongly versioned as patch level 484 (should be 384).
     - include fix for FTBFS with recent readline (Closes: Bug#741825)
   * ruby2.0-dev: add missing dependency on libruby2.0
+  * debian/patches/0001-Backport-multiarch-support-to-Ruby-2.0.patch: make
+    multiarch changes explicit in their own patch.
 
  -- Antonio Terceiro <terceiro@debian.org>  Tue, 04 Mar 2014 11:05:54 +0800
 
