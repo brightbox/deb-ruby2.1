@@ -1,14 +1,15 @@
 ruby2.0 (2.0.0.484+really457-1) unstable; urgency=medium
 
+  [ Antonio Terceiro ]
   * New upstream snapshot. Note that the previous upstream snapshot was
     wrongly versioned as patch level 484 (should be 384).
     - include fix for FTBFS with recent readline (Closes: Bug#741825)
-  [ Antonio Terceiro ]
   * ruby2.0-dev: add missing dependency on libruby2.0
   * debian/patches/0001-Backport-multiarch-support-to-Ruby-2.0.patch: make
     multiarch changes explicit in their own patch.
-  * Change Build-Depends from tcl-dev/tk-dev to tcl8.5-dev/tk8.5-dev
-    - Ruby does not support tcl/tk 8.6 (the current default) yet.
+
+  [ Christian Hofstaedtler ]
+  * Tie Tcl/Tk dependency to version 8.5. Upstream does not support 8.6 yet.
 
  -- Antonio Terceiro <terceiro@debian.org>  Mon, 24 Mar 2014 21:31:32 -0300
 
