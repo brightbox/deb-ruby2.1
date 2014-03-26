@@ -1,3 +1,12 @@
+ruby2.1 (2.1.1-2bbox1) precise; urgency=medium
+
+  [ Christian Hofstaedtler ]
+  * Tie Tcl/Tk dependency to version 8.5, applying patch from Ubuntu.
+    Thanks to Matthias Klose <doko@debian.org>
+  * Update lintian overrides
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 26 Mar 2014 23:42:58 +0000
+
 ruby2.1 (2.1.1-1bbox2~precise1) precise; urgency=low
 
   * New upstream release, 2.1.1
@@ -5,6 +14,14 @@ ruby2.1 (2.1.1-1bbox2~precise1) precise; urgency=low
   * Fix dependency on libgmp-dev
 
  -- John Leach <john@brightbox.co.uk>  Sun, 02 Mar 2014 21:53:43 +0000
+
+ruby2.1 (2.1.0-2) unstable; urgency=medium
+
+  * ruby2.1-dev: Depend on libgmp-dev.
+    Thanks to John Leach <john@johnleach.co.uk>
+  * Fix FTBFS with libreadline 6.x, by applying upstream r45225.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 03 Mar 2014 21:10:32 +0100
 
 ruby2.1 (2.1.0-1) unstable; urgency=medium
 
