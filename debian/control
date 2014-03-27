@@ -1,8 +1,7 @@
 Source: ruby2.1
 Section: ruby
 Priority: extra
-Maintainer: Antonio Terceiro <terceiro@debian.org>
-Uploaders: Christian Hofstaedtler <zeha@debian.org>
+Maintainer: John Leach <john@brightbox.co.uk>
 Build-Depends: debhelper (>= 8.0.0), autotools-dev, dh-autoreconf, ruby | ruby-interpreter, bison, libgdbm-dev, libncursesw5-dev, libncurses5-dev, libreadline6-dev, tcl8.5-dev, tk8.5-dev, zlib1g-dev, libssl-dev, procps, file, libffi-dev, libyaml-dev, openssl, chrpath, coreutils (>= 7.5), libgmp-dev
 Standards-Version: 3.9.5
 Homepage: http://www.ruby-lang.org/
@@ -12,7 +11,7 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 Package: ruby2.1
 Multi-Arch: foreign
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ruby
+Depends: ${shlibs:Depends}, ${misc:Depends}, ruby, rubygems-integration
 Provides: ruby-interpreter
 Description: Interpreter of object-oriented scripting language Ruby
  Ruby is the interpreted scripting language for quick and easy
