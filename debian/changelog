@@ -1,3 +1,10 @@
+ruby2.0 (2.0.0.484+really457-2) unstable; urgency=medium
+
+  * Downgrade dependency on rubygems-integration to Recommends. This is
+    needed so ruby2.1 can be built.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 31 Mar 2014 14:39:10 +0200
+
 ruby2.0 (2.0.0.484+really457-1) unstable; urgency=medium
 
   [ Antonio Terceiro ]
