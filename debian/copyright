@@ -41,7 +41,7 @@ License: 2C-BSD
  2. Redistributions in binary form must reproduce the above copyright
  notice, this list of conditions and the following disclaimer in the
  documentation and/or other materials provided with the distribution.
- . 
+ .
  THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -101,9 +101,9 @@ License: Ruby
      For the list of those files and their copying conditions, see the
      file LEGAL.
  .
-  5. The scripts and library files supplied as input to or produced as 
+  5. The scripts and library files supplied as input to or produced as
      output from the software do not automatically fall under the
-     copyright of the software, but belong to whomever generated them, 
+     copyright of the software, but belong to whomever generated them,
      and may be sold commercially, and may be aggregated with this
      software.
  .

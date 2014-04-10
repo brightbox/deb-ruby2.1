@@ -3,7 +3,26 @@ Section: ruby
 Priority: extra
 Maintainer: Antonio Terceiro <terceiro@debian.org>
 Uploaders: Christian Hofstaedtler <zeha@debian.org>
-Build-Depends: debhelper (>= 8.0.0), autotools-dev, dh-autoreconf, ruby | ruby-interpreter, bison, libgdbm-dev, libncursesw5-dev, libncurses5-dev, libreadline6-dev, tcl8.5-dev, tk8.5-dev, zlib1g-dev, libssl-dev, procps, file, libffi-dev, libyaml-dev, openssl, chrpath, coreutils (>= 7.5)
+Build-Depends: autotools-dev,
+               bison,
+               chrpath,
+               coreutils (>= 7.5),
+               debhelper (>= 8.0.0),
+               dh-autoreconf,
+               file,
+               libffi-dev,
+               libgdbm-dev,
+               libncurses5-dev,
+               libncursesw5-dev,
+               libreadline6-dev,
+               libssl-dev,
+               libyaml-dev,
+               openssl,
+               procps,
+               ruby | ruby-interpreter,
+               tcl8.5-dev,
+               tk8.5-dev,
+               zlib1g-dev
 Standards-Version: 3.9.5
 Homepage: http://www.ruby-lang.org/
 Vcs-Git: git://anonscm.debian.org/collab-maint/ruby.git
@@ -12,7 +31,7 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 Package: ruby2.0
 Multi-Arch: foreign
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ruby (>= 1:1.9.3.1)
+Depends: ruby (>= 1:1.9.3.1), ${misc:Depends}, ${shlibs:Depends}
 Recommends: rubygems-integration
 Provides: ruby-interpreter
 Description: Interpreter of object-oriented scripting language Ruby
@@ -28,7 +47,10 @@ Package: libruby2.0
 Section: libs
 Multi-Arch: same
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ruby2.0 (= ${binary:Version}), libjs-jquery
+Depends: libjs-jquery,
+         ruby2.0 (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: Libraries necessary to run Ruby 2.0
  Ruby is the interpreted scripting language for quick and easy
  object-oriented programming.  It has many features to process text
@@ -41,7 +63,7 @@ Description: Libraries necessary to run Ruby 2.0
 Package: ruby2.0-dev
 Multi-Arch: same
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libruby2.0 (= ${binary:Version})
+Depends: libruby2.0 (= ${binary:Version}), ${misc:Depends}, ${shlibs:Depends}
 Description: Header files for compiling extension modules for the Ruby 2.0
  Ruby is the interpreted scripting language for quick and easy
  object-oriented programming.  It has many features to process text
@@ -66,7 +88,7 @@ Description: Documentation for Ruby 2.0
 
 Package: ruby2.0-tcltk
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ruby/Tk for Ruby 2.0
  Ruby is the interpreted scripting language for quick and easy
  object-oriented programming.  It has many features to process text
