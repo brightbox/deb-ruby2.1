@@ -1,3 +1,12 @@
+ruby2.0 (2.0.0.484+really457-3) UNRELEASED; urgency=medium
+
+  * Disable rubygems-integration during the build. This will avoid having
+    `make install` put the metadata for the default gemspec under
+    /var/lib/gems instead of their correct location which is
+    /usr/lib/ruby/gems.2.0.0.
+
+ -- Antonio Terceiro <terceiro@debian.org>  Thu, 10 Apr 2014 16:27:30 -0300
+
 ruby2.0 (2.0.0.484+really457-2) unstable; urgency=medium
 
   * Downgrade dependency on rubygems-integration to Recommends. This is

@@ -3,6 +3,8 @@
 
 # export DH_VERBOSE=1
 
+export DEBIAN_DISABLE_RUBYGEMS_INTEGRATION = 1
+
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 TESTOPTS += -v
