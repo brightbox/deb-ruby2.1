@@ -4,6 +4,9 @@ ruby2.0 (2.0.0.484+really457-3) UNRELEASED; urgency=medium
     `make install` put the metadata for the default gemspec under
     /var/lib/gems instead of their correct location which is
     /usr/lib/ruby/gems.2.0.0.
+  * Add rubygems-integration back as a dependency
+  * Build-depend on rubygems-integration (>= 1.6) which is the version that
+    introduced the mechanism for being disabled.
 
  -- Antonio Terceiro <terceiro@debian.org>  Thu, 10 Apr 2014 16:27:30 -0300
 

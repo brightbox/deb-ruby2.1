@@ -20,6 +20,7 @@ Build-Depends: autotools-dev,
                openssl,
                procps,
                ruby | ruby-interpreter,
+               rubygems-integration (>= 1.6),
                tcl8.5-dev,
                tk8.5-dev,
                zlib1g-dev
@@ -31,8 +32,7 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 Package: ruby2.0
 Multi-Arch: foreign
 Architecture: any
-Depends: ruby (>= 1:1.9.3.1), ${misc:Depends}, ${shlibs:Depends}
-Recommends: rubygems-integration
+Depends: ruby (>= 1:1.9.3.1), rubygems-integration, ${misc:Depends}, ${shlibs:Depends}
 Provides: ruby-interpreter
 Description: Interpreter of object-oriented scripting language Ruby
  Ruby is the interpreted scripting language for quick and easy
