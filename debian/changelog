@@ -1,4 +1,4 @@
-ruby2.0 (2.0.0.484+really457-3) UNRELEASED; urgency=medium
+ruby2.0 (2.0.0.484+really457-3) unstable; urgency=medium
 
   * Disable rubygems-integration during the build. This will avoid having
     `make install` put the metadata for the default gemspec under
@@ -8,7 +8,7 @@ ruby2.0 (2.0.0.484+really457-3) UNRELEASED; urgency=medium
   * Build-depend on rubygems-integration (>= 1.6) which is the version that
     introduced the mechanism for being disabled.
 
- -- Antonio Terceiro <terceiro@debian.org>  Thu, 10 Apr 2014 16:27:30 -0300
+ -- Antonio Terceiro <terceiro@debian.org>  Sat, 12 Apr 2014 16:50:26 -0300
 
 ruby2.0 (2.0.0.484+really457-2) unstable; urgency=medium
 
