@@ -46,6 +46,8 @@ export DEB_LDFLAGS_MAINT_APPEND = -L$(CURDIR)/debian/lib
 	dh $@ --parallel --with autotools-dev --with autoreconf
 
 override_dh_auto_configure:
+	cp /usr/share/misc/config.guess tool
+	cp /usr/share/misc/config.sub tool
 	mkdir -p debian/lib
 	ln -sf /usr/lib/$(DEB_HOST_MULTIARCH)/libtcl$(vtcltk).so debian/lib/libtcl.so
 	ln -sf /usr/lib/$(DEB_HOST_MULTIARCH)/libtk$(vtcltk).so debian/lib/libtk.so
@@ -53,6 +55,7 @@ override_dh_auto_configure:
 
 override_dh_auto_clean:
 	dh_auto_clean
+	rm -f tool/config.guess tool/config.sub
 	rm -rf debian/lib
 	$(RM) -r .ext
 	$(RM) -r doc/capi
