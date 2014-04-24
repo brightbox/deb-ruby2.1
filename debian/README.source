@@ -18,7 +18,7 @@ Additional sources
 
 Source for lib/rdoc/generator/template/darkfish/js/jquery.js (which is minified
 and thus cannot be properly modified as is) is available at
-debian/jquery-1.6.2.js.
+debian/missing-sources/jquery.js.
 
 When libruby2.1 is installed, however,
 /usr/lib/ruby/2.1.0/rdoc/generator/template/darkfish/js/jquery.js is a symlink
