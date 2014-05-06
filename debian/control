@@ -22,6 +22,7 @@ Build-Depends: autotools-dev,
                procps,
                ruby | ruby-interpreter,
                rubygems-integration (>= 1.6),
+               systemtap-sdt-dev [linux-any],
                tcl8.5-dev,
                tk8.5-dev,
                zlib1g-dev
