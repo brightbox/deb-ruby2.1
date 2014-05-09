@@ -1,3 +1,123 @@
+Thu May  8 01:13:10 2014  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* configure.in: correct pthread_setname_np's prototype on NetBSD.
+	  [Bug #9586]
+
+Tue May  6 00:54:56 2014  Narihiro Nakamura  <authornari@gmail.com>
+
+	* gc.c (gc_after_sweep): suppress unnecessary expanding heap.
+	  Tomb heap pages are freed pages here, so expanding heap is
+	  not required.
+
+Mon May  5 02:35:20 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/openssl/ossl_pkey.c (ossl_pkey_verify): as EVP_VerifyFinal()
+	  finalizes only a copy of the digest context, the context must be
+	  cleaned up after initialization by EVP_MD_CTX_cleanup() or a
+	  memory leak will occur.  [ruby-core:62038] [Bug #9743]
+
+Mon May  5 02:21:48 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/dl/cptr.c (dlptr_free), ext/dl/handle.c (dlhandle_free),
+	  ext/fiddle/handle.c (fiddle_handle_free),
+	  ext/fiddle/pointer.c (fiddle_ptr_free): fix memory leak.
+	  based on the patch Heesob Park at [ruby-dev:48021] [Bug #9599].
+
+Mon May  5 01:20:27 2014  Eric Wong  <e@80x24.org>
+
+	* gc.c (rb_gc_writebarrier): drop special case for big hash/array
+	  [Bug #9518]
+
+Mon May  5 01:13:00 2014  Koichi Sasada  <ko1@atdot.net>
+
+	* gc.c (gc_before_sweep): cap `malloc_limit' to
+	  gc_params.malloc_limit_max.  It can grow and grow with such case:
+	    `loop{"a" * (1024 ** 2)}'
+	  [Bug #9687]
+
+	  This issue is pointed by Tim Robertson.
+	  http://www.omniref.com/blog/blog/2014/03/27/ruby-garbage-collection-still-not-ready-for-production/
+
+Mon May  5 00:52:18 2014  Kenta Murata  <mrkn@mrkn.jp>
+
+	* ext/bigdecimal/bigdecimal.c (BigDecimal_initialize): Insert GC guard.
+
+	* ext/bigdecimal/bigdecimal.c (BigDecimal_global_new): ditto.
+
+Mon May  5 00:42:35 2014  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* ext/psych/psych.gemspec: update gemspec for psych-2.0.5
+
+Mon May  5 00:42:35 2014  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* ext/psych/lib/psych.rb: Merge psych-2.0.5. bump version to
+	  libyaml-0.1.6 for CVE-2014-2525.
+	* ext/psych/yaml/config.h: ditto.
+	* ext/psych/yaml/scanner.c: ditto.
+	* ext/psych/yaml/yaml_private.h: ditto.
+
+Mon May  5 00:35:20 2014  Aaron Patterson <aaron@tenderlovemaking.com>
+
+	* ext/psych/lib/psych/visitors/yaml_tree.rb: support dumping Encoding
+	  objects.
+
+	* ext/psych/lib/psych/visitors/to_ruby.rb: support loading Encoding
+	  objects.
+
+	* test/psych/test_encoding.rb: add test
+
+	* ext/psych/lib/psych.rb: add version
+
+Mon May  5 00:16:35 2014  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* gc.c: Fix up default GC params by @csfrancis [fix GH-556]
+
+Fri May  2 00:19:36 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/openssl/ossl.c (ossl_make_error): check NULL for unknown
+	  error reasons with old OpenSSL, and insert a colon iff formatted
+	  message is not empty.
+
+Thu May  1 20:56:56 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/readline/extconf.rb (rl_hook_func_t): check pointer type.
+	  [ruby-dev:48089] [Bug #9702]
+
+Thu May  1 20:47:08 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/readline/extconf.rb: fix typo, `$defs` not `$DEFS`.
+	  [ruby-core:61756] [Bug #9578]
+
+Thu May  1 20:47:08 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/readline/extconf.rb (rl_hook_func_t): define as Function for
+	  very old readline versions.  [ruby-core:61209] [Bug #9578]
+
+Thu May  1 20:47:08 2014  Tanaka Akira  <akr@fsij.org>
+
+	* ext/readline/readline.c (Init_readline): Use rl_hook_func_t instead
+	  of Function to support readline-6.3.  (rl_hook_func_t is available
+	  since readline-4.2.)
+	  Reported by Dmitry Medvinsky.  [ruby-core:61141] [Bug #9578]
+
+Sat Mar  1 21:00:27 2014  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* proc.c: Having optional keyword arguments makes maximum arity +1,
+	  not unlimited [#8072]
+
+Sat Mar  1 17:25:12 2014  Marc-Andre Lafortune  <ruby-core@marc-andre.ca>
+
+	* proc.c: Having any mandatory keyword argument increases min arity
+	  [#9299]
+
+Mon Feb 24 14:56:41 2014  WATANABE Hirofumi  <eban@ruby-lang.org>
+
+	* tool/make-snapshot: needs CXXFLAGS.  [ruby-core:59393][Bug #9320]
+
+Mon Feb 24 14:56:41 2014  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* tool/make-snapshot: support new version scheme.
+
 Mon Feb 24 13:05:48 2014  Aaron Patterson <aaron@tenderlovemaking.com>
 
 	* ext/psych/lib/psych.rb: New release of psych.
