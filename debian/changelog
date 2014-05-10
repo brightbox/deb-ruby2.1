@@ -1,3 +1,17 @@
+ruby2.1 (2.1.2-1) unstable; urgency=medium
+
+  [ Christian Hofstaedtler ]
+  * New upstream version
+  * Update watch file
+
+  [ Sebastian Boehm ]
+  * Build with basic systemtap support. (Closes: #747232)
+
+  [ Antonio Terceiro ]
+  * 2.1 is now the main development branch
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sat, 10 May 2014 15:51:13 +0200
+
 ruby2.1 (2.1.1-4) unstable; urgency=medium
 
   * Use Debian copy of config.{guess,sub}
