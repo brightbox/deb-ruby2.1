@@ -2,27 +2,29 @@ Source: ruby2.1
 Section: ruby
 Priority: extra
 Maintainer: John Leach <john@brightbox.co.uk>
-Build-Depends: debhelper (>= 8.0.0),
-	       autotools-dev,
-	       dh-autoreconf,
-	       ruby | ruby-interpreter,
-	       bison,
-	       libgdbm-dev,
-	       libncursesw5-dev,
-	       libncurses5-dev,
-	       libreadline6-dev,
-	       tcl-dev (<< 8.6) | tcl8.5-dev,
-	       tk-dev (<< 8.5) | tk8.5-dev,
-	       zlib1g-dev,
-	       libssl-dev,
-	       procps,
-	       file,
-	       libffi-dev,
-	       libyaml-dev,
-	       openssl,
-	       chrpath,
-	       coreutils (>= 7.5),
-	       libgmp-dev
+Build-Depends: autotools-dev,
+               bison,
+               chrpath,
+               coreutils (>= 7.5),
+               debhelper (>= 8.0.0),
+               dh-autoreconf,
+               file,
+               libffi-dev,
+               libgdbm-dev,
+               libgmp-dev,
+               libncurses5-dev,
+               libncursesw5-dev,
+               libreadline6-dev,
+               libssl-dev,
+               libyaml-dev,
+               openssl,
+               procps,
+               ruby | ruby-interpreter,
+               rubygems-integration (>= 1.6),
+               systemtap-sdt-dev [linux-any],
+               tcl-dev (<< 8.6) | tcl8.5-dev,
+               tk-dev (<< 8.5) | tk8.5-dev,
+               zlib1g-dev
 Standards-Version: 3.9.5
 Homepage: http://www.ruby-lang.org/
 Vcs-Git: git://anonscm.debian.org/collab-maint/ruby.git -b master2.1
@@ -31,7 +33,10 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 Package: ruby2.1
 Multi-Arch: foreign
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ruby, rubygems-integration
+Depends: ruby (>= 1:1.9.3.1 ) | ruby,
+         rubygems-integration,
+         ${shlibs:Depends},
+         ${misc:Depends},
 Provides: ruby-interpreter
 Description: Interpreter of object-oriented scripting language Ruby
  Ruby is the interpreted scripting language for quick and easy
@@ -46,7 +51,10 @@ Package: libruby2.1
 Section: libs
 Multi-Arch: same
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ruby2.1 (= ${binary:Version}), libjs-jquery
+Depends: libjs-jquery,
+         ruby2.1 (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: Libraries necessary to run Ruby 2.1
  Ruby is the interpreted scripting language for quick and easy
  object-oriented programming.  It has many features to process text
@@ -59,7 +67,10 @@ Description: Libraries necessary to run Ruby 2.1
 Package: ruby2.1-dev
 Multi-Arch: same
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libruby2.1 (= ${binary:Version}), libgmp-dev
+Depends: libgmp-dev,
+         libruby2.1 (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Description: Header files for compiling extension modules for the Ruby 2.1
  Ruby is the interpreted scripting language for quick and easy
  object-oriented programming.  It has many features to process text
@@ -84,7 +95,7 @@ Description: Documentation for Ruby 2.1
 
 Package: ruby2.1-tcltk
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ruby/Tk for Ruby 2.1
  Ruby is the interpreted scripting language for quick and easy
  object-oriented programming.  It has many features to process text

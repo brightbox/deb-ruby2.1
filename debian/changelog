@@ -1,3 +1,35 @@
+ruby2.1 (2.1.2-1) unstable; urgency=medium
+
+  [ Christian Hofstaedtler ]
+  * New upstream version
+  * Update watch file
+
+  [ Sebastian Boehm ]
+  * Build with basic systemtap support. (Closes: #747232)
+
+  [ Antonio Terceiro ]
+  * 2.1 is now the main development branch
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sat, 10 May 2014 15:51:13 +0200
+
+ruby2.1 (2.1.1-4) unstable; urgency=medium
+
+  * Use Debian copy of config.{guess,sub}
+    Instead of downloading it from the Internet, which could be down or
+    insecure. Thanks to Scott Kitterman for the report AND patch.
+    (Closes: 745699)
+  * Move jquery source file to d/missing-sources
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Fri, 25 Apr 2014 00:57:13 +0200
+
+ruby2.1 (2.1.1-3) unstable; urgency=medium
+
+  [ Antonio Terceiro ]
+  * Disable rubygems-integration during the build. This fixes the install
+    location of the gemspecs for the bundled libraries. (Closes: #745465)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Tue, 22 Apr 2014 18:38:01 +0200
+
 ruby2.1 (2.1.1-2bbox3~trusty2) trusty; urgency=medium
 
   * Fix tcl/tk building for <= Trusty builds
