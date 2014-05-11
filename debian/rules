@@ -1,24 +1,25 @@
-#!/usr/bin/make -f
+#utoto!/usr/bin/make -f
 # -*- makefile -*-
 
 # export DH_VERBOSE=1
 
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
-TESTOPTS += -v
-export TESTOPTS
+#TESTOPTS += -v
+#export TESTOPTS
 
-DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+#DEB_HOST_GNU_TYPE := $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 
-configure_options += --enable-multiarch
-configure_options += --target=$(DEB_HOST_MULTIARCH)
-configure_options += --program-suffix=2.1
+
+#configure_options += --enable-multiarch
+#configure_options += --target=$(DEB_HOST_GNU_TYPE)
+configure_options = --program-suffix=2.1
 configure_options += --with-soname=ruby-2.1
 configure_options += --enable-shared
 configure_options += --disable-rpath
 configure_options += --with-baseruby=/usr/bin/ruby
 configure_options += --with-sitedir='/usr/local/lib/site_ruby'
-configure_options += --with-sitearchdir="/usr/local/lib/$(DEB_HOST_MULTIARCH)/site_ruby"
+#configure_options += --with-sitearchdir="/usr/local/lib/site_ruby"
 
 # the following are ignored by ./configure, but used by some extconf.rb scripts
 configure_options += --enable-ipv6
@@ -27,52 +28,32 @@ configure_options += --with-dbm-type=gdbm_compat
 # hardening and other standard Debian build flags
 configure_options += $(shell dpkg-buildflags --export=configure)
 
-# when we support tcltk latest again, just point to /usr/lib/$(DEB_HOST_MULTIARCH)
-vtcltk=8.5
-configure_options += --with-tcltkversion=$(vtcltk)
-configure_options += --with-tclConfig-dir=/usr/lib/$(DEB_HOST_MULTIARCH)/tcl$(vtcltk)/tclConfig.sh
-configure_options += --with-tkConfig-dir=/usr/lib/$(DEB_HOST_MULTIARCH)/tk$(vtcltk)/tkConfig.sh
-configure_options += --with-tcllib=tcl$(vtcltk)
-configure_options += --with-tklib=tk$(vtcltk)
-configure_options += --with-tcl-include=/usr/include/tcl$(vtcltk)
-configure_options += --with-tk-include=/usr/include/tcl$(vtcltk)
-configure_options += --with-tcl-lib=/usr/lib/$(DEB_HOST_MULTIARCH)
-configure_options += --with-tk-lib=/usr/lib/$(DEB_HOST_MULTIARCH)
-export DEB_LDFLAGS_MAINT_APPEND = -L$(CURDIR)/debian/lib
 
 %:
-	dh $@ --parallel --with autotools-dev --with autoreconf
+	dh $@ --parallel --with autoreconf
 
-override_dh_auto_configure:
-	mkdir -p debian/lib
-	ln -sf /usr/lib/$(DEB_HOST_MULTIARCH)/libtcl$(vtcltk).so debian/lib/libtcl.so
-	ln -sf /usr/lib/$(DEB_HOST_MULTIARCH)/libtk$(vtcltk).so debian/lib/libtk.so
-	dh_auto_configure -- $(configure_options)
+#override_dh_auto_configure:
+#	mkdir -p debian/lib
+#	dh_auto_configure -- $(configure_options)
 
-override_dh_auto_clean:
-	dh_auto_clean
-	rm -rf debian/lib
-	$(RM) -r .ext
-	$(RM) -r doc/capi
-
-override_dh_auto_build-arch:
-	dh_auto_build -- main V=1
+#override_dh_auto_build-arch:
+#	dh_auto_build -- main V=1
 
 override_dh_auto_install-arch:
-	$(MAKE) install-nodoc DESTDIR=$(CURDIR)/debian/tmp
+	make install-nodoc DESTDIR=./debian/tmp
 	# remove RPATH from tcltklib bindings
-	chrpath --delete $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/ruby/2.1.0/tcltklib.so
+	chrpath --delete ./debian/tmp/usr/lib/ruby/2.1.0/tcltklib.so
 	# handle embedded copy of jquery
-	$(RM) $(CURDIR)/debian/tmp/usr/lib/ruby/2.1.0/rdoc/generator/template/darkfish/js/jquery.js
+	rm ./debian/tmp/usr/lib/ruby/2.1.0/rdoc/generator/template/darkfish/js/jquery.js
 	dh_link -plibruby2.1 /usr/share/javascript/jquery/jquery.min.js /usr/lib/ruby/2.1.0/rdoc/generator/template/darkfish/js/jquery.js
 	# sanity check
 	debian/sanity_check
 
 override_dh_auto_build-indep:
-	$(MAKE) docs V=1
+	make docs V=1
 
 override_dh_auto_install-indep:
-	$(MAKE) install-doc DESTDIR=$(CURDIR)/debian/ruby2.1-doc
+	make install-doc DESTDIR=./debian/ruby2.1-doc
 
 override_dh_install:
 	dh_install
