@@ -1,5 +1,5 @@
 /* -*- C -*-
- * $Id: cptr.c 44903 2014-02-10 11:45:14Z naruse $
+ * $Id: cptr.c 45820 2014-05-04 17:32:44Z nagachika $
  */
 
 #include <ruby/ruby.h>
@@ -49,6 +49,7 @@ dlptr_free(void *ptr)
 	    (*(data->free))(data->ptr);
 	}
     }
+    xfree(ptr);
 }
 
 static size_t

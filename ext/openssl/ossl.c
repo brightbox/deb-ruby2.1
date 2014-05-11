@@ -1,5 +1,5 @@
 /*
- * $Id: ossl.c 44903 2014-02-10 11:45:14Z naruse $
+ * $Id: ossl.c 45778 2014-05-01 15:23:08Z nagachika $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.
@@ -311,10 +311,11 @@ ossl_make_error(VALUE exc, const char *fmt, va_list args)
 	else
 	    msg = ERR_reason_error_string(e);
 	if (NIL_P(str)) {
-	    str = rb_str_new_cstr(msg);
+	    if (msg) str = rb_str_new_cstr(msg);
 	}
 	else {
-	    rb_str_cat2(rb_str_cat2(str, ": "), msg);
+	    if (RSTRING_LEN(str)) rb_str_cat2(str, ": ");
+	    rb_str_cat2(str, msg ? msg : "(null)");
 	}
     }
     if (dOSSL == Qtrue){ /* show all errors on the stack */

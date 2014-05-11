@@ -19621,6 +19621,61 @@ fi
 done
 
     fi
+    if test "$ac_cv_func_pthread_setname_np" = yes; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking arguments of pthread_setname_np" >&5
+$as_echo_n "checking arguments of pthread_setname_np... " >&6; }
+if ${rb_cv_func_pthread_setname_np_arguments+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  rb_cv_func_pthread_setname_np_arguments=
+	    # Linux,AIX,  (pthread_self(), name)
+	    # NetBSD (pthread_self(), name, \"%s\")
+	    # Darwin (name)
+	    for mac in \
+		"(pthread_self(), name)" \
+		"(pthread_self(), name, \"%s\")" \
+		"(name)" \
+		; do
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+		    #include <pthread.h>
+		    #ifdef HAVE_PTHREAD_NP_H
+		    #include <pthread_np.h>
+		    #endif
+		    #define SET_THREAD_NAME(name) pthread_setname_np${mac}
+
+int
+main ()
+{
+if (SET_THREAD_NAME("conftest")) return 1;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  rb_cv_func_pthread_setname_np_arguments="${mac}"
+		    break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+	    done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $rb_cv_func_pthread_setname_np_arguments" >&5
+$as_echo "$rb_cv_func_pthread_setname_np_arguments" >&6; }
+	if test -n "${rb_cv_func_pthread_setname_np_arguments}"; then
+	    cat >>confdefs.h <<_ACEOF
+#define SET_THREAD_NAME(name) pthread_setname_np${rb_cv_func_pthread_setname_np_arguments}
+_ACEOF
+
+	else
+	    cat >>confdefs.h <<_ACEOF
+#define SET_THREAD_NAME(name) (void)0
+_ACEOF
+
+	fi
+    fi
 fi
 if test x"$ac_cv_header_ucontext_h" = xyes; then
     if test x"$rb_with_pthread" = xyes; then
