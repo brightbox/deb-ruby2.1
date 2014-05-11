@@ -1,3 +1,11 @@
+ruby2.1 (2.1.1-2bbox3~trusty2) trusty; urgency=medium
+
+  * Fix tcl/tk building for <= Trusty builds
+  * Revert back to alternatives system (fixes GH #3)
+  * Depend on rubygems-integration to fix gem install path (fixes GH #1)
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 31 Mar 2014 11:55:57 +0100
+
 ruby2.1 (2.1.1-2bbox1) precise; urgency=medium
 
   [ Christian Hofstaedtler ]
