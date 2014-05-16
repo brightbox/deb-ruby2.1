@@ -1,9 +1,9 @@
-ruby2.1 (2.1.2-2) UNRELEASED; urgency=medium
+ruby2.1 (2.1.2-2) unstable; urgency=medium
 
   * Support bootstrapping with Ruby 1.8 (which builds with gcc only) if another
     Ruby is not available.
 
- -- Antonio Terceiro <terceiro@debian.org>  Thu, 15 May 2014 22:33:17 -0300
+ -- Antonio Terceiro <terceiro@debian.org>  Thu, 15 May 2014 23:20:49 -0300
 
 ruby2.1 (2.1.2-1) unstable; urgency=medium
 
