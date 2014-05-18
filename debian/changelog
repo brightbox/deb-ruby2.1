@@ -1,3 +1,10 @@
+ruby2.1 (2.1.2-3) UNRELEASED; urgency=medium
+
+  * debian/rules: call debian/split-tk-out.rb with $(baseruby) instead of
+    `ruby` to actually support bootstrapping with ruby1.8 (and no `ruby`)
+
+ -- Antonio Terceiro <terceiro@debian.org>  Sun, 18 May 2014 17:37:41 -0300
+
 ruby2.1 (2.1.2-2) unstable; urgency=medium
 
   * Support bootstrapping with Ruby 1.8 (which builds with gcc only) if another

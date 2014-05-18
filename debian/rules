@@ -85,4 +85,4 @@ override_dh_auto_install-indep:
 override_dh_install-arch:
 	dh_install
 	# split Ruby/Tk files
-	ruby debian/split-tk-out.rb
+	$(baseruby) debian/split-tk-out.rb
