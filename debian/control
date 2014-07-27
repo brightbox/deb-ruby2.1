@@ -32,7 +32,7 @@ Vcs-Git: git://anonscm.debian.org/collab-maint/ruby.git -b master2.1
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 
 Package: ruby2.1
-Multi-Arch: foreign
+Multi-Arch: allowed
 Architecture: any
 Depends: ruby (>= 1:1.9.3.1),
          rubygems-integration,
