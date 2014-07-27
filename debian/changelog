@@ -1,7 +1,12 @@
 ruby2.1 (2.1.2-3) UNRELEASED; urgency=medium
 
+  [ Antonio Terceiro ]
   * debian/rules: call debian/split-tk-out.rb with $(baseruby) instead of
     `ruby` to actually support bootstrapping with ruby1.8 (and no `ruby`)
+
+  [ Christian Hofstaedtler ]
+  * Add missing man pages for gem, rdoc, testrb (Closes: #756053)
+  * Correct ruby2.1's Multi-Arch flag to 'allowed' (Closes: #745360)
 
  -- Antonio Terceiro <terceiro@debian.org>  Sun, 18 May 2014 17:37:41 -0300
 
