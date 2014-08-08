@@ -34,8 +34,7 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 Package: ruby2.1
 Multi-Arch: allowed
 Architecture: any
-Depends: ruby (>= 1:1.9.3.1),
-         rubygems-integration,
+Depends: rubygems-integration,
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: ruby-interpreter
@@ -53,7 +52,6 @@ Section: libs
 Multi-Arch: same
 Architecture: any
 Depends: libjs-jquery,
-         ruby2.1 (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Description: Libraries necessary to run Ruby 2.1
