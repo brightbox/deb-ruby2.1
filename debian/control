@@ -37,6 +37,7 @@ Architecture: any
 Depends: rubygems-integration,
          ${misc:Depends},
          ${shlibs:Depends}
+Recommends: libjs-jquery
 Provides: ruby-interpreter
 Description: Interpreter of object-oriented scripting language Ruby
  Ruby is the interpreted scripting language for quick and easy
@@ -51,8 +52,7 @@ Package: libruby2.1
 Section: libs
 Multi-Arch: same
 Architecture: any
-Depends: libjs-jquery,
-         ${misc:Depends},
+Depends: ${misc:Depends},
          ${shlibs:Depends}
 Description: Libraries necessary to run Ruby 2.1
  Ruby is the interpreted scripting language for quick and easy

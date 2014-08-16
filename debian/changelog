@@ -1,3 +1,12 @@
+ruby2.1 (2.1.2-4) UNRELEASED; urgency=medium
+
+  * Move libjs-jquery dependency from libruby2.1 to ruby2.1, and turn it into
+    Recommends:. This way programs that link against libruby2.1 won't pull in
+    libjs-jquery; OTOH those using rdoc (and thus needing libjs-jquery) would
+    be already using ruby2.1 anyway.
+
+ -- Antonio Terceiro <terceiro@debian.org>  Sat, 16 Aug 2014 10:25:18 -0300
+
 ruby2.1 (2.1.2-3) unstable; urgency=medium
 
   [ Antonio Terceiro ]
