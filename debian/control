@@ -28,7 +28,7 @@ Build-Depends: autotools-dev,
                zlib1g-dev
 Standards-Version: 3.9.5
 Homepage: http://www.ruby-lang.org/
-Vcs-Git: git://anonscm.debian.org/collab-maint/ruby.git -b master2.1
+Vcs-Git: git://anonscm.debian.org/collab-maint/ruby.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 
 Package: ruby2.1
