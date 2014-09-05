@@ -34,7 +34,7 @@ Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 Package: ruby2.1
 Multi-Arch: allowed
 Architecture: any
-Depends: rubygems-integration,
+Depends: rubygems-integration (>= 1.8),
          ${misc:Depends},
          ${shlibs:Depends}
 Recommends: libjs-jquery

@@ -9,6 +9,9 @@ ruby2.1 (2.1.2-4) UNRELEASED; urgency=medium
   [ Christian Hofstaedtler ]
   * Update Vcs-Git URL, as we've moved from master2.1 to master.
   * Prepare libruby21.symbols for x32 (Closes: #759615)
+  * Remove embedded copies of SSL certificates. Rubygems is advised by
+    rubygems-integration to use the ca-certificates provided certificates.
+    (Closes: #689074)
 
  -- Antonio Terceiro <terceiro@debian.org>  Sat, 16 Aug 2014 10:25:18 -0300
 
