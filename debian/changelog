@@ -1,4 +1,4 @@
-ruby2.1 (2.1.2-4) UNRELEASED; urgency=medium
+ruby2.1 (2.1.2-4) unstable; urgency=medium
 
   [ Antonio Terceiro ]
   * Move libjs-jquery dependency from libruby2.1 to ruby2.1, and turn it into
@@ -13,7 +13,7 @@ ruby2.1 (2.1.2-4) UNRELEASED; urgency=medium
     rubygems-integration to use the ca-certificates provided certificates.
     (Closes: #689074)
 
- -- Antonio Terceiro <terceiro@debian.org>  Sat, 16 Aug 2014 10:25:18 -0300
+ -- Christian Hofstaedtler <zeha@debian.org>  Fri, 05 Sep 2014 03:06:30 +0200
 
 ruby2.1 (2.1.2-3) unstable; urgency=medium
 
