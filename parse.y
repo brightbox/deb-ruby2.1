@@ -74,6 +74,7 @@ enum lex_state_bits {
     EXPR_DOT_bit,		/* right after `.' or `::', no reserved words. */
     EXPR_CLASS_bit,		/* immediate after `class', no here document. */
     EXPR_VALUE_bit,		/* alike EXPR_BEG but label is disallowed. */
+    EXPR_LABELARG_bit,		/* ignore significant, +/- is a sign. */
     EXPR_MAX_STATE
 };
 /* examine combinations */
@@ -90,7 +91,8 @@ enum lex_state_e {
     DEF_EXPR(DOT),
     DEF_EXPR(CLASS),
     DEF_EXPR(VALUE),
-    EXPR_BEG_ANY  =  (EXPR_BEG | EXPR_VALUE | EXPR_MID | EXPR_CLASS),
+    DEF_EXPR(LABELARG),
+    EXPR_BEG_ANY  =  (EXPR_BEG | EXPR_VALUE | EXPR_MID | EXPR_CLASS | EXPR_LABELARG),
     EXPR_ARG_ANY  =  (EXPR_ARG | EXPR_CMDARG),
     EXPR_END_ANY  =  (EXPR_END | EXPR_ENDARG | EXPR_ENDFN)
 };
@@ -244,6 +246,7 @@ struct parser_params {
     int parser_brace_nest;
     int parser_compile_for_eval;
     VALUE parser_cur_mid;
+    int parser_in_kwarg;
     int parser_in_defined;
     char *parser_tokenbuf;
     int parser_tokidx;
@@ -2612,12 +2615,18 @@ primary		: literal
 			$$ = dispatch1(paren, 0);
 		    %*/
 		    }
-		| tLPAREN_ARG expr {lex_state = EXPR_ENDARG;} rparen
+		| tLPAREN_ARG
 		    {
+			$<val>1 = cmdarg_stack;
+			cmdarg_stack = 0;
+		    }
+		  expr {lex_state = EXPR_ENDARG;} rparen
+		    {
+			cmdarg_stack = $<val>1;
 		    /*%%%*/
-			$$ = $2;
+			$$ = $3;
 		    /*%
-			$$ = dispatch1(paren, $2);
+			$$ = dispatch1(paren, $3);
 		    %*/
 		    }
 		| tLPAREN compstmt ')'
@@ -4403,9 +4412,14 @@ f_arglist	: '(' f_args rparen
 			lex_state = EXPR_BEG;
 			command_start = TRUE;
 		    }
-		| f_args term
+		|   {
+			$<num>$ = parser->parser_in_kwarg;
+			parser->parser_in_kwarg = 1;
+		    }
+		    f_args term
 		    {
-			$$ = $1;
+			parser->parser_in_kwarg = $<num>1;
+			$$ = $2;
 			lex_state = EXPR_BEG;
 			command_start = TRUE;
 		    }
@@ -5255,7 +5269,7 @@ parser_yyerror(struct parser_params *parser, const char *msg)
 	buf = ALLOCA_N(char, len+2);
 	MEMCPY(buf, p, char, len);
 	buf[len] = '\0';
-	rb_compile_error_append("%s%s%s", pre, buf, post);
+	rb_compile_error_with_enc(NULL, 0, (void *)current_enc, "%s%s%s", pre, buf, post);
 
 	i = (int)(lex_p - p);
 	p2 = buf; pe = buf + len;
@@ -7006,13 +7020,16 @@ parser_yylex(struct parser_params *parser)
 #endif
 	/* fall through */
       case '\n':
-	if (IS_lex_state(EXPR_BEG | EXPR_VALUE | EXPR_CLASS | EXPR_FNAME | EXPR_DOT)) {
+	if (IS_lex_state(EXPR_BEG | EXPR_VALUE | EXPR_CLASS | EXPR_FNAME | EXPR_DOT | EXPR_LABELARG)) {
 #ifdef RIPPER
             if (!fallthru) {
                 ripper_dispatch_scan_event(parser, tIGNORED_NL);
             }
             fallthru = FALSE;
 #endif
+	    if (IS_lex_state(EXPR_LABELARG) && parser->parser_in_kwarg) {
+		goto normal_newline;
+	    }
 	    goto retry;
 	}
 	while ((c = nextc())) {
@@ -8073,7 +8090,7 @@ parser_yylex(struct parser_params *parser)
 
       default:
 	if (!parser_is_identchar()) {
-	    rb_compile_error(PARSER_ARG  "Invalid char `\\x%02X' in expression", c);
+	    compile_error(PARSER_ARG  "Invalid char `\\x%02X' in expression", c);
 	    goto retry;
 	}
 
@@ -8144,7 +8161,7 @@ parser_yylex(struct parser_params *parser)
 
 	    if (IS_LABEL_POSSIBLE()) {
 		if (IS_LABEL_SUFFIX(0)) {
-		    lex_state = EXPR_BEG;
+		    lex_state = EXPR_LABELARG;
 		    nextc();
 		    set_yylval_name(TOK_INTERN(!ENC_SINGLE(mb)));
 		    return tLABEL;
@@ -8734,10 +8751,10 @@ is_private_local_id(ID name)
 
 #define LVAR_USED ((ID)1 << (sizeof(ID) * CHAR_BIT - 1))
 
-static ID
-shadowing_lvar_gen(struct parser_params *parser, ID name)
+static int
+shadowing_lvar_0(struct parser_params *parser, ID name)
 {
-    if (is_private_local_id(name)) return name;
+    if (is_private_local_id(name)) return 1;
     if (dyna_in_block()) {
 	if (dvar_curr(name)) {
 	    yyerror("duplicated argument name");
@@ -8748,6 +8765,7 @@ shadowing_lvar_gen(struct parser_params *parser, ID name)
 	    if (lvtbl->used) {
 		vtable_add(lvtbl->used, (ID)ruby_sourceline | LVAR_USED);
 	    }
+	    return 0;
 	}
     }
     else {
@@ -8755,6 +8773,13 @@ shadowing_lvar_gen(struct parser_params *parser, ID name)
 	    yyerror("duplicated argument name");
 	}
     }
+    return 1;
+}
+
+static ID
+shadowing_lvar_gen(struct parser_params *parser, ID name)
+{
+    shadowing_lvar_0(parser, name);
     return name;
 }
 
@@ -8767,7 +8792,7 @@ new_bv_gen(struct parser_params *parser, ID name)
 		      rb_id2name(name));
 	return;
     }
-    shadowing_lvar(name);
+    if (!shadowing_lvar_0(parser, name)) return;
     dyna_var(name);
 }
 
@@ -9670,30 +9695,25 @@ local_pop_gen(struct parser_params *parser)
 
 #ifndef RIPPER
 static ID*
-vtable_tblcpy(ID *buf, const struct vtable *src)
-{
-    int i, cnt = vtable_size(src);
-
-    if (cnt > 0) {
-        buf[0] = cnt;
-        for (i = 0; i < cnt; i++) {
-            buf[i] = src->tbl[i];
-        }
-        return buf;
-    }
-    return 0;
-}
-
-static ID*
 local_tbl_gen(struct parser_params *parser)
 {
-    int cnt = vtable_size(lvtbl->args) + vtable_size(lvtbl->vars);
+    int cnt_args = vtable_size(lvtbl->args);
+    int cnt_vars = vtable_size(lvtbl->vars);
+    int cnt = cnt_args + cnt_vars;
+    int i, j;
     ID *buf;
 
     if (cnt <= 0) return 0;
     buf = ALLOC_N(ID, cnt + 1);
-    vtable_tblcpy(buf+1, lvtbl->args);
-    vtable_tblcpy(buf+vtable_size(lvtbl->args)+1, lvtbl->vars);
+    MEMCPY(buf+1, lvtbl->args->tbl, ID, cnt_args);
+    /* remove IDs duplicated to warn shadowing */
+    for (i = 0, j = cnt_args+1; i < cnt_vars; ++i) {
+	ID id = lvtbl->vars->tbl[i];
+	if (!vtable_included(lvtbl->args, id)) {
+	    buf[j++] = id;
+	}
+    }
+    if (--j < cnt) REALLOC_N(buf, ID, (cnt = j) + 1);
     buf[0] = cnt;
     return buf;
 }
@@ -10383,7 +10403,7 @@ static VALUE
 setup_fake_str(struct RString *fake_str, const char *name, long len)
 {
     fake_str->basic.flags = T_STRING|RSTRING_NOEMBED;
-    RBASIC_SET_CLASS((VALUE)fake_str, rb_cString);
+    RBASIC_SET_CLASS_RAW((VALUE)fake_str, rb_cString);
     fake_str->as.heap.len = len;
     fake_str->as.heap.ptr = (char *)name;
     fake_str->as.heap.aux.capa = len;
@@ -10840,6 +10860,7 @@ parser_initialize(struct parser_params *parser)
     parser->parser_in_single = 0;
     parser->parser_in_def = 0;
     parser->parser_in_defined = 0;
+    parser->parser_in_kwarg = 0;
     parser->parser_compile_for_eval = 0;
     parser->parser_cur_mid = 0;
     parser->parser_tokenbuf = NULL;

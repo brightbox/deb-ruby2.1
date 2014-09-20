@@ -30,8 +30,12 @@
 #include <ieeefp.h>
 #endif
 
+#if !defined HAVE_ISFINITE && !defined isfinite
 #if defined HAVE_FINITE && !defined finite && !defined _WIN32
 extern int finite(double);
+# define HAVE_ISFINITE 1
+# define isfinite(x) finite(x)
+#endif
 #endif
 
 /* use IEEE 64bit values if not defined */
@@ -105,7 +109,7 @@ static VALUE fix_uminus(VALUE num);
 static VALUE fix_mul(VALUE x, VALUE y);
 static VALUE int_pow(long x, unsigned long y);
 
-static ID id_coerce, id_to_i, id_eq, id_div;
+static ID id_coerce, id_to_i, id_eq, id_div, id_cmp;
 
 VALUE rb_cNumeric;
 VALUE rb_cFloat;
@@ -115,7 +119,7 @@ VALUE rb_cFixnum;
 VALUE rb_eZeroDivError;
 VALUE rb_eFloatDomainError;
 
-static VALUE sym_to, sym_by;
+static ID id_to, id_by;
 
 void
 rb_num_zerodiv(void)
@@ -228,17 +232,19 @@ coerce_body(VALUE *x)
     return rb_funcall(x[1], id_coerce, 1, x[0]);
 }
 
+NORETURN(static void coerce_failed(VALUE x, VALUE y));
+static void
+coerce_failed(VALUE x, VALUE y)
+{
+    rb_raise(rb_eTypeError, "%"PRIsVALUE" can't be coerced into %"PRIsVALUE,
+	     (rb_special_const_p(y)? rb_inspect(y) : rb_obj_class(y)),
+	     rb_obj_class(x));
+}
+
 static VALUE
 coerce_rescue(VALUE *x)
 {
-    volatile VALUE v = rb_inspect(x[1]);
-
-    rb_raise(rb_eTypeError, "%s can't be coerced into %s",
-	     rb_special_const_p(x[1])?
-	     RSTRING_PTR(v):
-	     rb_obj_classname(x[1]),
-	     rb_obj_classname(x[0]));
-
+    coerce_failed(x[0], x[1]);
     return Qnil;		/* dummy */
 }
 
@@ -1164,7 +1170,7 @@ flo_cmp(VALUE x, VALUE y)
 	    if (a > 0.0) return INT2FIX(1);
 	    return INT2FIX(-1);
 	}
-	return rb_num_coerce_cmp(x, y, rb_intern("<=>"));
+	return rb_num_coerce_cmp(x, y, id_cmp);
     }
     return rb_dbl_cmp(a, b);
 }
@@ -1457,8 +1463,8 @@ flo_is_finite_p(VALUE num)
 {
     double value = RFLOAT_VALUE(num);
 
-#if HAVE_FINITE
-    if (!finite(value))
+#if HAVE_ISFINITE
+    if (!isfinite(value))
 	return Qfalse;
 #else
     if (isinf(value) || isnan(value))
@@ -1754,6 +1760,9 @@ ruby_float_step_size(double beg, double end, double unit, int excl)
     if (isinf(unit)) {
 	return unit > 0 ? beg <= end : beg >= end;
     }
+    if (unit == 0) {
+	return INFINITY;
+    }
     if (err>0.5) err=0.5;
     if (excl) {
 	if (n<=0) return 0;
@@ -1783,6 +1792,11 @@ ruby_float_step(VALUE from, VALUE to, VALUE step, int excl)
 	    /* if unit is infinity, i*unit+beg is NaN */
 	    if (n) rb_yield(DBL2NUM(beg));
 	}
+	else if (unit == 0) {
+	    VALUE val = DBL2NUM(beg);
+	    for (;;)
+		rb_yield(val);
+	}
 	else {
 	    for (i=0; i<n; i++) {
 		double d = i*unit+beg;
@@ -1799,25 +1813,39 @@ VALUE
 ruby_num_interval_step_size(VALUE from, VALUE to, VALUE step, int excl)
 {
     if (FIXNUM_P(from) && FIXNUM_P(to) && FIXNUM_P(step)) {
-	long delta, diff, result;
+	long delta, diff;
 
 	diff = FIX2LONG(step);
-	delta = FIX2LONG(to) - FIX2LONG(from);
-	if (excl) {
-	    delta += (diff > 0 ? -1 : +1);
+	if (diff == 0) {
+	    return DBL2NUM(INFINITY);
 	}
-	result = delta / diff;
-	return LONG2FIX(result >= 0 ? result + 1 : 0);
+	delta = FIX2LONG(to) - FIX2LONG(from);
+	if (diff < 0) {
+	    diff = -diff;
+	    delta = -delta;
+	}
+	if (excl) {
+	    delta--;
+	}
+	if (delta < 0) {
+	    return INT2FIX(0);
+	}
+	return ULONG2NUM(delta / diff + 1UL);
     }
     else if (RB_TYPE_P(from, T_FLOAT) || RB_TYPE_P(to, T_FLOAT) || RB_TYPE_P(step, T_FLOAT)) {
 	double n = ruby_float_step_size(NUM2DBL(from), NUM2DBL(to), NUM2DBL(step), excl);
 
 	if (isinf(n)) return DBL2NUM(n);
-	return LONG2FIX(n);
+	if (POSFIXABLE(n)) return LONG2FIX(n);
+	return rb_dbl2big(n);
     }
     else {
 	VALUE result;
-	ID cmp = RTEST(rb_funcall(step, '>', 1, INT2FIX(0))) ? '>' : '<';
+	ID cmp = '>';
+	switch (rb_cmpint(rb_num_coerce_cmp(step, INT2FIX(0), id_cmp), step, INT2FIX(0))) {
+	  case 0: return DBL2NUM(INFINITY);
+	  case -1: cmp = '<'; break;
+	}
 	if (RTEST(rb_funcall(from, cmp, 1, to))) return INT2FIX(0);
 	result = rb_funcall(rb_funcall(to, '-', 1, from), id_div, 1, step);
 	if (!excl || RTEST(rb_funcall(rb_funcall(from, '+', 1, rb_funcall(result, '*', 1, step)), cmp, 1, to))) {
@@ -1827,47 +1855,55 @@ ruby_num_interval_step_size(VALUE from, VALUE to, VALUE step, int excl)
     }
 }
 
-#define NUM_STEP_SCAN_ARGS(argc, argv, to, step, hash, desc) do {	\
-    argc = rb_scan_args(argc, argv, "02:", &to, &step, &hash);		\
-    if (!NIL_P(hash)) {							\
-	step = rb_hash_aref(hash, sym_by);				\
-	to = rb_hash_aref(hash, sym_to);				\
-    }									\
-    else {								\
-	/* compatibility */						\
-        if (argc > 1 && NIL_P(step)) {				       	\
-            rb_raise(rb_eTypeError, "step must be numeric");		\
-	}								\
-	if (rb_equal(step, INT2FIX(0))) {				\
-	    rb_raise(rb_eArgError, "step can't be 0");			\
-	}								\
-    }									\
-    if (NIL_P(step)) {							\
-        step = INT2FIX(1);						\
-    }									\
-    desc = !positive_int_p(step);					\
-    if (NIL_P(to)) {							\
-        to = desc ? DBL2NUM(-INFINITY) : DBL2NUM(INFINITY);		\
-    }									\
-} while (0)
+static int
+num_step_scan_args(int argc, const VALUE *argv, VALUE *to, VALUE *step)
+{
+    VALUE hash;
+    int desc;
 
-#define NUM_STEP_GET_INF(to, desc, inf) do {				\
-    if (RB_TYPE_P(to, T_FLOAT)) {					\
-	double f = RFLOAT_VALUE(to);					\
-	inf = isinf(f) && (signbit(f) ? desc : !desc);			\
-    }									\
-    else inf = 0;							\
-} while (0)
+    argc = rb_scan_args(argc, argv, "02:", to, step, &hash);
+    if (!NIL_P(hash)) {
+	ID keys[2];
+	VALUE values[2];
+	keys[0] = id_to;
+	keys[1] = id_by;
+	rb_get_kwargs(hash, keys, 0, 2, values);
+	if (values[0] != Qundef) {
+	    if (argc > 0) rb_raise(rb_eArgError, "to is given twice");
+	    *to = values[0];
+	}
+	if (values[1] != Qundef) {
+	    if (argc > 1) rb_raise(rb_eArgError, "step is given twice");
+	    *step = values[1];
+	}
+    }
+    else {
+	/* compatibility */
+	if (argc > 1 && NIL_P(*step)) {
+	    rb_raise(rb_eTypeError, "step must be numeric");
+	}
+	if (rb_equal(*step, INT2FIX(0))) {
+	    rb_raise(rb_eArgError, "step can't be 0");
+	}
+    }
+    if (NIL_P(*step)) {
+	*step = INT2FIX(1);
+    }
+    desc = !positive_int_p(*step);
+    if (NIL_P(*to)) {
+	*to = desc ? DBL2NUM(-INFINITY) : DBL2NUM(INFINITY);
+    }
+    return desc;
+}
 
 static VALUE
 num_step_size(VALUE from, VALUE args, VALUE eobj)
 {
-    VALUE to, step, hash;
-    int desc;
+    VALUE to, step;
     int argc = args ? RARRAY_LENINT(args) : 0;
     VALUE *argv = args ? RARRAY_PTR(args) : 0;
 
-    NUM_STEP_SCAN_ARGS(argc, argv, to, step, hash, desc);
+    num_step_scan_args(argc, argv, &to, &step);
 
     return ruby_num_interval_step_size(from, to, step, FALSE);
 }
@@ -1928,14 +1964,20 @@ num_step_size(VALUE from, VALUE args, VALUE eobj)
 static VALUE
 num_step(int argc, VALUE *argv, VALUE from)
 {
-    VALUE to, step, hash;
+    VALUE to, step;
     int desc, inf;
 
     RETURN_SIZED_ENUMERATOR(from, argc, argv, num_step_size);
 
-    NUM_STEP_SCAN_ARGS(argc, argv, to, step, hash, desc);
-    NUM_STEP_GET_INF(to, desc, inf);
-
+    desc = num_step_scan_args(argc, argv, &to, &step);
+    if (RTEST(rb_num_coerce_cmp(step, INT2FIX(0), id_eq))) {
+	inf = 1;
+    }
+    else if (RB_TYPE_P(to, T_FLOAT)) {
+	double f = RFLOAT_VALUE(to);
+	inf = isinf(f) && (signbit(f) ? desc : !desc);
+    }
+    else inf = 0;
 
     if (FIXNUM_P(from) && (inf || FIXNUM_P(to)) && FIXNUM_P(step)) {
 	long i = FIX2LONG(from);
@@ -3128,7 +3170,7 @@ fix_cmp(VALUE x, VALUE y)
         return rb_integer_float_cmp(x, y);
     }
     else {
-	return rb_num_coerce_cmp(x, y, rb_intern("<=>"));
+	return rb_num_coerce_cmp(x, y, id_cmp);
     }
 }
 
@@ -3257,11 +3299,7 @@ bit_coerce(VALUE *x, VALUE *y, int err)
 	if (!FIXNUM_P(*x) && !RB_TYPE_P(*x, T_BIGNUM)
 	    && !FIXNUM_P(*y) && !RB_TYPE_P(*y, T_BIGNUM)) {
 	    if (!err) return FALSE;
-	    rb_raise(rb_eTypeError,
-		     "%s can't be coerced into %s for bitwise arithmetic",
-		     rb_special_const_p(*y) ?
-			RSTRING_PTR(rb_inspect(*y)) : rb_obj_classname(*y),
-		     rb_obj_classname(*x));
+	    coerce_failed(*x, *y);
 	}
     }
     return TRUE;
@@ -3824,6 +3862,7 @@ Init_Numeric(void)
     id_to_i = rb_intern("to_i");
     id_eq = rb_intern("==");
     id_div = rb_intern("div");
+    id_cmp = rb_intern("<=>");
 
     rb_eZeroDivError = rb_define_class("ZeroDivisionError", rb_eStandardError);
     rb_eFloatDomainError = rb_define_class("FloatDomainError", rb_eRangeError);
@@ -4060,8 +4099,8 @@ Init_Numeric(void)
     rb_define_method(rb_cFloat, "infinite?", flo_is_infinite_p, 0);
     rb_define_method(rb_cFloat, "finite?",   flo_is_finite_p, 0);
 
-    sym_to = ID2SYM(rb_intern("to"));
-    sym_by = ID2SYM(rb_intern("by"));
+    id_to = rb_intern("to");
+    id_by = rb_intern("by");
 }
 
 #undef rb_float_value

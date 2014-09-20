@@ -571,8 +571,8 @@ native_thread_init_stack(rb_thread_t *th)
     size = end - base;
     space = size / 5;
     if (space > 1024*1024) space = 1024*1024;
-    th->machine_stack_start = (VALUE *)end - 1;
-    th->machine_stack_maxsize = size - space;
+    th->machine.stack_start = (VALUE *)end - 1;
+    th->machine.stack_maxsize = size - space;
 }
 
 #ifndef InterlockedExchangePointer
@@ -600,7 +600,7 @@ thread_start_func_1(void *th_ptr)
     thread_debug("thread created (th: %p, thid: %p, event: %p)\n", th,
 		 th->thread_id, th->native_thread_data.interrupt_event);
 
-    thread_start_func_2(th, th->machine_stack_start, rb_ia64_bsp());
+    thread_start_func_2(th, th->machine.stack_start, rb_ia64_bsp());
 
     w32_close_handle(thread_id);
     thread_debug("thread deleted (th: %p)\n", th);
@@ -753,6 +753,18 @@ ruby_stack_overflowed_p(const rb_thread_t *th, const void *addr)
 {
     return rb_thread_raised_p(th, RAISED_STACKOVERFLOW);
 }
+
+#if defined(__MINGW32__)
+LONG WINAPI
+rb_w32_stack_overflow_handler(struct _EXCEPTION_POINTERS *exception)
+{
+    if (exception->ExceptionRecord->ExceptionCode == EXCEPTION_STACK_OVERFLOW) {
+	rb_thread_raised_set(GET_THREAD(), RAISED_STACKOVERFLOW);
+	raise(SIGSEGV);
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
 
 #ifdef RUBY_ALLOCA_CHKSTK
 void
