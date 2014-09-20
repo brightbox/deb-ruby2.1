@@ -507,9 +507,12 @@ setup_exception(rb_thread_t *th, int tag, volatile VALUE mesg)
 	!rb_obj_is_kind_of(e, rb_eSystemExit)) {
 	int status;
 
+	mesg = e;
 	PUSH_TAG();
 	if ((status = EXEC_TAG()) == 0) {
-	    RB_GC_GUARD(e) = rb_obj_as_string(e);
+	    th->errinfo = Qnil;
+	    e = rb_obj_as_string(mesg);
+	    th->errinfo = mesg;
 	    if (file && line) {
 		warn_printf("Exception `%s' at %s:%d - %"PRIsVALUE"\n",
 			    rb_obj_classname(th->errinfo), file, line, e);
@@ -760,7 +763,7 @@ rb_rescue2(VALUE (* b_proc) (ANYARGS), VALUE data1,
 	}
     }
     else {
-	th->cfp = cfp; /* restore */
+	rb_vm_rewind_cfp(th, cfp);
 
 	if (state == TAG_RAISE) {
 	    int handle = FALSE;
@@ -819,7 +822,7 @@ rb_protect(VALUE (* proc) (VALUE), VALUE data, int * state)
 	SAVE_ROOT_JMPBUF(th, result = (*proc) (data));
     }
     else {
-	th->cfp = cfp;
+	rb_vm_rewind_cfp(th, cfp);
     }
     MEMCPY(&(th)->root_jmpbuf, &org_jmpbuf, rb_jmpbuf_t, 1);
     th->protect_tag = protect_tag.prev;
@@ -975,13 +978,6 @@ prev_frame_func(void)
     return frame_func_id(prev_cfp);
 }
 
-void
-rb_frame_pop(void)
-{
-    rb_thread_t *th = GET_THREAD();
-    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
-}
-
 /*
  *  call-seq:
  *     append_features(mod)   -> mod
@@ -1095,11 +1091,11 @@ rb_using_refinement(NODE *cref, VALUE klass, VALUE module)
     Check_Type(klass, T_CLASS);
     Check_Type(module, T_MODULE);
     if (NIL_P(cref->nd_refinements)) {
-	cref->nd_refinements = hidden_identity_hash_new();
+	RB_OBJ_WRITE(cref, &cref->nd_refinements, hidden_identity_hash_new());
     }
     else {
 	if (cref->flags & NODE_FL_CREF_OMOD_SHARED) {
-	    cref->nd_refinements = rb_hash_dup(cref->nd_refinements);
+	    RB_OBJ_WRITE(cref, &cref->nd_refinements, rb_hash_dup(cref->nd_refinements));
 	    cref->flags &= ~NODE_FL_CREF_OMOD_SHARED;
 	}
 	if (!NIL_P(c = rb_hash_lookup(cref->nd_refinements, klass))) {

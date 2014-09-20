@@ -606,6 +606,16 @@ class TestProcess < Test::Unit::TestCase
     }
   end
 
+  def test_execopts_redirect_nonascii_path
+    bug9946 = '[ruby-core:63185] [Bug #9946]'
+    with_tmpchdir {|d|
+      path = "t-\u{30c6 30b9 30c8 f6}.txt"
+      system(*ECHO["a"], out: path)
+      assert_file.for(bug9946).exist?(path)
+      assert_equal("a\n", File.read(path), bug9946)
+    }
+  end
+
   def test_execopts_redirect_dup2_child
     with_tmpchdir {|d|
       Process.wait spawn(RUBY, "-e", "STDERR.print 'err'; STDOUT.print 'out'",
@@ -1183,6 +1193,23 @@ class TestProcess < Test::Unit::TestCase
 
   def test_status_kill
     return unless Process.respond_to?(:kill)
+    return unless Signal.list.include?("KILL")
+
+    # assume the system supports signal if SIGQUIT is available
+    expected = Signal.list.include?("QUIT") ? [false, true, false, nil] : [true, false, false, true]
+
+    with_tmpchdir do
+      write_file("foo", "Process.kill(:KILL, $$); exit(42)")
+      system(RUBY, "foo")
+      s = $?
+      assert_equal(expected,
+                   [s.exited?, s.signaled?, s.stopped?, s.success?],
+                   "[s.exited?, s.signaled?, s.stopped?, s.success?]")
+    end
+  end
+
+  def test_status_quit
+    return unless Process.respond_to?(:kill)
     return unless Signal.list.include?("QUIT")
 
     with_tmpchdir do
@@ -1196,16 +1223,14 @@ class TestProcess < Test::Unit::TestCase
       end
       t = Time.now
       s = $?
-      assert_equal([false, true, false],
-                   [s.exited?, s.signaled?, s.stopped?],
-                   "[s.exited?, s.signaled?, s.stopped?]")
+      assert_equal([false, true, false, nil],
+                   [s.exited?, s.signaled?, s.stopped?, s.success?],
+                   "[s.exited?, s.signaled?, s.stopped?, s.success?]")
       assert_send(
         [["#<Process::Status: pid #{ s.pid } SIGQUIT (signal #{ s.termsig })>",
           "#<Process::Status: pid #{ s.pid } SIGQUIT (signal #{ s.termsig }) (core dumped)>"],
          :include?,
          s.inspect])
-      assert_equal(false, s.exited?)
-      assert_equal(nil, s.success?)
       EnvUtil.diagnostic_reports("QUIT", RUBY, pid, t)
     end
   end

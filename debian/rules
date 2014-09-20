@@ -12,13 +12,16 @@ export TESTOPTS
 
 DEB_HOST_MULTIARCH := $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
+# Bootstrap with Ruby 1.8 if proper Ruby is not available
+baseruby=$(shell test -x /usr/bin/ruby && echo /usr/bin/ruby || echo /usr/bin/ruby1.8)
+
 configure_options += --enable-multiarch
 configure_options += --target=$(DEB_HOST_MULTIARCH)
 configure_options += --program-suffix=2.1
 configure_options += --with-soname=ruby-2.1
 configure_options += --enable-shared
 configure_options += --disable-rpath
-configure_options += --with-baseruby=/usr/bin/ruby
+configure_options += --with-baseruby=$(baseruby)
 configure_options += --with-sitedir='/usr/local/lib/site_ruby'
 configure_options += --with-sitearchdir="/usr/local/lib/$(DEB_HOST_MULTIARCH)/site_ruby"
 
@@ -70,6 +73,8 @@ override_dh_auto_install-arch:
 	# handle embedded copy of jquery
 	$(RM) $(CURDIR)/debian/tmp/usr/lib/ruby/2.1.0/rdoc/generator/template/darkfish/js/jquery.js
 	dh_link -plibruby2.1 /usr/share/javascript/jquery/jquery.min.js /usr/lib/ruby/2.1.0/rdoc/generator/template/darkfish/js/jquery.js
+	# remove embedded SSL certificates (replaced using ca-certificates via rubygems-integration)
+	$(RM) $(CURDIR)/debian/tmp/usr/lib/ruby/2.1.0/rubygems/ssl_certs/*
 	# sanity check
 	debian/sanity_check
 
@@ -82,4 +87,4 @@ override_dh_auto_install-indep:
 override_dh_install:
 	dh_install
 	# split Ruby/Tk files
-	ruby debian/split-tk-out.rb
+	$(baseruby) debian/split-tk-out.rb

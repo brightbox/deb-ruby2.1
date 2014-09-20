@@ -1,7 +1,7 @@
 ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.1.0/gems/rake-10.1.0/bin/rake
 ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.1.0/gems/rdoc-4.1.0/bin/rdoc
 ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.1.0/gems/rdoc-4.1.0/bin/ri
-ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.1.0/gems/test-unit-2.1.1.0/bin/testrb
+ruby-script-but-no-ruby-dep usr/lib/ruby/gems/2.1.0/gems/test-unit-2.1.3.0/bin/testrb
 package-name-doesnt-match-sonames
 image-file-in-usr-lib
 package-contains-empty-directory

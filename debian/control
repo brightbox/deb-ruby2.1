@@ -19,7 +19,7 @@ Build-Depends: autotools-dev,
                libyaml-dev,
                openssl,
                procps,
-               ruby | ruby-interpreter,
+               ruby | ruby-interpreter | ruby1.8,
                rubygems-integration (>= 1.6),
                systemtap-sdt-dev [linux-any],
                tcl8.5-dev | tcl-dev (<< 8.6),
@@ -27,16 +27,16 @@ Build-Depends: autotools-dev,
                zlib1g-dev
 Standards-Version: 3.9.5
 Homepage: http://www.ruby-lang.org/
-Vcs-Git: git://anonscm.debian.org/collab-maint/ruby.git -b master2.1
+Vcs-Git: git://anonscm.debian.org/collab-maint/ruby.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ruby.git
 
 Package: ruby2.1
-Multi-Arch: foreign
+Multi-Arch: allowed
 Architecture: any
-Depends: ruby (>= 1:1.9.3.1 ) | ruby,
-         rubygems-integration,
-         ${shlibs:Depends},
+Depends: rubygems-integration (>= 1.8),
          ${misc:Depends},
+         ${shlibs:Depends}
+Recommends: libjs-jquery
 Provides: ruby-interpreter
 Description: Interpreter of object-oriented scripting language Ruby
  Ruby is the interpreted scripting language for quick and easy
@@ -51,9 +51,7 @@ Package: libruby2.1
 Section: libs
 Multi-Arch: same
 Architecture: any
-Depends: libjs-jquery,
-         ruby2.1 (= ${binary:Version}),
-         ${misc:Depends},
+Depends: ${misc:Depends},
          ${shlibs:Depends}
 Description: Libraries necessary to run Ruby 2.1
  Ruby is the interpreted scripting language for quick and easy

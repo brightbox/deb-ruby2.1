@@ -1,3 +1,48 @@
+ruby2.1 (2.1.3-1) unstable; urgency=medium
+
+  * New upstream version
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sat, 20 Sep 2014 16:55:47 +0200
+
+ruby2.1 (2.1.2-4) unstable; urgency=medium
+
+  [ Antonio Terceiro ]
+  * Move libjs-jquery dependency from libruby2.1 to ruby2.1, and turn it into
+    Recommends:. This way programs that link against libruby2.1 won't pull in
+    libjs-jquery; OTOH those using rdoc (and thus needing libjs-jquery) would
+    be already using ruby2.1 anyway.
+
+  [ Christian Hofstaedtler ]
+  * Update Vcs-Git URL, as we've moved from master2.1 to master.
+  * Prepare libruby21.symbols for x32 (Closes: #759615)
+  * Remove embedded copies of SSL certificates. Rubygems is advised by
+    rubygems-integration to use the ca-certificates provided certificates.
+    (Closes: #689074)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Fri, 05 Sep 2014 03:06:30 +0200
+
+ruby2.1 (2.1.2-3) unstable; urgency=medium
+
+  [ Antonio Terceiro ]
+  * debian/rules: call debian/split-tk-out.rb with $(baseruby) instead of
+    `ruby` to actually support bootstrapping with ruby1.8 (and no `ruby`)
+  * Break dependency loop (Closes: #747858)
+    - ruby2.1: drop dependency on ruby
+    - libruby2.1: drop dependency on ruby2.1
+
+  [ Christian Hofstaedtler ]
+  * Add missing man pages for gem, rdoc, testrb (Closes: #756053, #756815)
+  * Correct ruby2.1's Multi-Arch flag to 'allowed' (Closes: #745360)
+
+ -- Antonio Terceiro <terceiro@debian.org>  Thu, 14 Aug 2014 10:45:29 -0300
+
+ruby2.1 (2.1.2-2) unstable; urgency=medium
+
+  * Support bootstrapping with Ruby 1.8 (which builds with gcc only) if another
+    Ruby is not available.
+
+ -- Antonio Terceiro <terceiro@debian.org>  Thu, 15 May 2014 23:20:49 -0300
+
 ruby2.1 (2.1.2-1bbox1~trusty2) trusty; urgency=medium
 
   * Building for Ubuntu

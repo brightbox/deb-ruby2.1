@@ -590,6 +590,8 @@ is_socket(int fd, VALUE path)
 }
 #endif
 
+static const char closed_stream[] = "closed stream";
+
 void
 rb_eof_error(void)
 {
@@ -616,7 +618,7 @@ rb_io_check_closed(rb_io_t *fptr)
 {
     rb_io_check_initialized(fptr);
     if (fptr->fd < 0) {
-	rb_raise(rb_eIOError, "closed stream");
+	rb_raise(rb_eIOError, closed_stream);
     }
 }
 
@@ -1075,7 +1077,7 @@ int
 rb_io_wait_readable(int f)
 {
     if (f < 0) {
-	rb_raise(rb_eIOError, "closed stream");
+	rb_raise(rb_eIOError, closed_stream);
     }
     switch (errno) {
       case EINTR:
@@ -1101,7 +1103,7 @@ int
 rb_io_wait_writable(int f)
 {
     if (f < 0) {
-	rb_raise(rb_eIOError, "closed stream");
+	rb_raise(rb_eIOError, closed_stream);
     }
     switch (errno) {
       case EINTR:
@@ -1914,10 +1916,10 @@ rb_io_fdatasync(VALUE io)
 static VALUE
 rb_io_fileno(VALUE io)
 {
-    rb_io_t *fptr;
+    rb_io_t *fptr = RFILE(io)->fptr;
     int fd;
 
-    GetOpenFile(io, fptr);
+    rb_io_check_closed(fptr);
     fd = fptr->fd;
     return INT2FIX(fd);
 }
@@ -1969,7 +1971,7 @@ rb_io_inspect(VALUE obj)
     VALUE result;
     static const char closed[] = " (closed)";
 
-    fptr = RFILE(rb_io_taint_check(obj))->fptr;
+    fptr = RFILE(obj)->fptr;
     if (!fptr) return rb_any_to_s(obj);
     result = rb_str_new_cstr("#<");
     rb_str_append(result, rb_class_name(CLASS_OF(obj)));
@@ -2290,10 +2292,7 @@ io_setstrbuf(VALUE *str, long len)
 	VALUE s = StringValue(*str);
 	long clen = RSTRING_LEN(s);
 	if (clen >= len) {
-	    if (clen != len) {
-		rb_str_modify(s);
-		rb_str_set_len(s, len);
-	    }
+	    rb_str_modify(s);
 	    return;
 	}
 	len -= clen;
@@ -2320,23 +2319,27 @@ read_all(rb_io_t *fptr, long siz, VALUE str)
     int cr;
 
     if (NEED_READCONV(fptr)) {
+	int first = !NIL_P(str);
 	SET_BINARY_MODE(fptr);
 	io_setstrbuf(&str,0);
         make_readconv(fptr, 0);
         while (1) {
             VALUE v;
             if (fptr->cbuf.len) {
+		if (first) rb_str_set_len(str, first = 0);
                 io_shift_cbuf(fptr, fptr->cbuf.len, &str);
             }
             v = fill_cbuf(fptr, 0);
             if (v != MORE_CHAR_SUSPENDED && v != MORE_CHAR_FINISHED) {
                 if (fptr->cbuf.len) {
+		    if (first) rb_str_set_len(str, first = 0);
                     io_shift_cbuf(fptr, fptr->cbuf.len, &str);
                 }
                 rb_exc_raise(v);
             }
             if (v == MORE_CHAR_FINISHED) {
                 clear_readconv(fptr);
+		if (first) rb_str_set_len(str, first = 0);
                 return io_enc_str(str, fptr);
             }
         }
@@ -2807,7 +2810,10 @@ io_read(int argc, VALUE *argv, VALUE io)
 
     GetOpenFile(io, fptr);
     rb_io_check_byte_readable(fptr);
-    if (len == 0) return str;
+    if (len == 0) {
+	io_set_read_length(str, 0);
+	return str;
+    }
 
     READ_CHECK(fptr);
 #if defined(RUBY_TEST_CRLF_ENVIRONMENT) || defined(_WIN32)
@@ -4058,7 +4064,7 @@ finish_writeconv(rb_io_t *fptr, int noalloc)
                 }
                 if (rb_io_wait_writable(fptr->fd)) {
                     if (fptr->fd < 0)
-                        return noalloc ? Qtrue : rb_exc_new3(rb_eIOError, rb_str_new_cstr("closed stream"));
+                        return noalloc ? Qtrue : rb_exc_new3(rb_eIOError, rb_str_new_cstr(closed_stream));
                     goto retry;
                 }
                 return noalloc ? Qtrue : INT2NUM(errno);
@@ -4340,13 +4346,31 @@ rb_io_close_m(VALUE io)
 static VALUE
 io_call_close(VALUE io)
 {
-    return rb_funcall(io, rb_intern("close"), 0, 0);
+    rb_check_funcall(io, rb_intern("close"), 0, 0);
+    return io;
+}
+
+static VALUE
+ignore_closed_stream(VALUE io, VALUE exc)
+{
+    enum {mesg_len = sizeof(closed_stream)-1};
+    VALUE mesg = rb_attr_get(exc, rb_intern("mesg"));
+    if (!RB_TYPE_P(mesg, T_STRING) ||
+	RSTRING_LEN(mesg) != mesg_len ||
+	memcmp(RSTRING_PTR(mesg), closed_stream, mesg_len)) {
+	rb_exc_raise(exc);
+    }
+    return io;
 }
 
 static VALUE
 io_close(VALUE io)
 {
-    return rb_rescue(io_call_close, io, 0, 0);
+    VALUE closed = rb_check_funcall(io, rb_intern("closed?"), 0, 0);
+    if (closed != Qundef && RTEST(closed)) return io;
+    rb_rescue2(io_call_close, io, ignore_closed_stream, io,
+	       rb_eIOError, (VALUE)0);
+    return io;
 }
 
 /*
@@ -7270,12 +7294,12 @@ rb_io_stdio_file(rb_io_t *fptr)
  *  	"w+" Read-write, truncates existing file to zero length
  *  	     or creates a new file for reading and writing.
  *
- *  	"a"  Write-only, starts at end of file if file exists,
- *  	     otherwise creates a new file for writing.
+ *  	"a"  Write-only, each write call appends data at end of file.
+ *  	     Creates a new file for writing if file does not exist.
  *
- *  	"a+" Read-write, starts at end of file if file exists,
- *	     otherwise creates a new file for reading and
- *  	     writing.
+ *  	"a+" Read-write, each write call appends data at end of file.
+ *	     Creates a new file for reading and writing if file does
+ *	     not exist.
  *
  *  The following modes must be used separately, and along with one or more of
  *  the modes seen above.
@@ -7515,8 +7539,8 @@ rb_io_s_for_fd(int argc, VALUE *argv, VALUE klass)
 static VALUE
 rb_io_autoclose_p(VALUE io)
 {
-    rb_io_t *fptr;
-    GetOpenFile(io, fptr);
+    rb_io_t *fptr = RFILE(io)->fptr;
+    rb_io_check_closed(fptr);
     return (fptr->mode & FMODE_PREP) ? Qfalse : Qtrue;
 }
 
