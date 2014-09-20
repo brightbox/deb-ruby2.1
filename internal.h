@@ -595,7 +595,9 @@ rb_float_new_inline(double d)
 #define rb_float_new(d)   rb_float_new_inline(d)
 
 /* object.c */
+void rb_obj_copy_ivar(VALUE dest, VALUE obj);
 VALUE rb_obj_equal(VALUE obj1, VALUE obj2);
+VALUE rb_class_search_ancestor(VALUE klass, VALUE super);
 
 struct RBasicRaw {
     VALUE flags;
@@ -765,6 +767,7 @@ void rb_vm_inc_const_missing_count(void);
 void rb_thread_mark(void *th);
 const void **rb_vm_get_insns_address_table(void);
 VALUE rb_sourcefilename(void);
+void rb_vm_pop_cfunc_frame(void);
 
 /* vm_dump.c */
 void rb_vm_bugreport(void);

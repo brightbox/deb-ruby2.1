@@ -78,6 +78,11 @@ class TestSyntax < Test::Unit::TestCase
     end
   end
 
+  def test_do_block_in_cmdarg
+    bug9726 = '[ruby-core:61950] [Bug #9726]'
+    assert_valid_syntax("tap (proc do end)", __FILE__, bug9726)
+  end
+
   def test_keyword_rest
     bug5989 = '[ruby-core:42455]'
     assert_valid_syntax("def kwrest_test(**a) a; end", __FILE__, bug5989)
@@ -395,6 +400,12 @@ eom
     assert_warning(/encountered \\r/, feature8699) do
       eval("\r""__id__\r")
     end
+  end
+
+  def test_error_message_encoding
+    bug10114 = '[ruby-core:64228] [Bug #10114]'
+    code = "# -*- coding: utf-8 -*-\n" "def n \"\u{2208}\"; end"
+    assert_syntax_error(code, /def n "\u{2208}"; end/, bug10114)
   end
 
   private

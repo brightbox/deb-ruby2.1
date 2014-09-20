@@ -121,7 +121,7 @@ static inline void blocking_region_end(rb_thread_t *th, struct rb_blocking_regio
 
 #ifdef __ia64
 #define RB_GC_SAVE_MACHINE_REGISTER_STACK(th)          \
-    do{(th)->machine_register_stack_end = rb_ia64_bsp();}while(0)
+    do{(th)->machine.register_stack_end = rb_ia64_bsp();}while(0)
 #else
 #define RB_GC_SAVE_MACHINE_REGISTER_STACK(th)
 #endif
@@ -129,8 +129,8 @@ static inline void blocking_region_end(rb_thread_t *th, struct rb_blocking_regio
     do {							\
 	FLUSH_REGISTER_WINDOWS;					\
 	RB_GC_SAVE_MACHINE_REGISTER_STACK(th);			\
-	setjmp((th)->machine_regs);				\
-	SET_MACHINE_STACK_END(&(th)->machine_stack_end);	\
+	setjmp((th)->machine.regs);				\
+	SET_MACHINE_STACK_END(&(th)->machine.stack_end);	\
     } while (0)
 
 #define GVL_UNLOCK_BEGIN() do { \
@@ -465,9 +465,9 @@ thread_cleanup_func_before_exec(void *th_ptr)
 {
     rb_thread_t *th = th_ptr;
     th->status = THREAD_KILLED;
-    th->machine_stack_start = th->machine_stack_end = 0;
+    th->machine.stack_start = th->machine.stack_end = 0;
 #ifdef __ia64
-    th->machine_register_stack_start = th->machine_register_stack_end = 0;
+    th->machine.register_stack_start = th->machine.register_stack_end = 0;
 #endif
 }
 
@@ -519,9 +519,9 @@ thread_start_func_2(rb_thread_t *th, VALUE *stack_start, VALUE *register_stack_s
 
     ruby_thread_set_native(th);
 
-    th->machine_stack_start = stack_start;
+    th->machine.stack_start = stack_start;
 #ifdef __ia64
-    th->machine_register_stack_start = register_stack_start;
+    th->machine.register_stack_start = register_stack_start;
 #endif
     thread_debug("thread start: %p\n", (void *)th);
 
@@ -569,6 +569,9 @@ thread_start_func_2(rb_thread_t *th, VALUE *stack_start, VALUE *register_stack_s
 	thread_debug("thread end: %p\n", (void *)th);
 
 	main_th = th->vm->main_thread;
+	if (main_th == th) {
+	    ruby_stop(0);
+	}
 	if (RB_TYPE_P(errinfo, T_OBJECT)) {
 	    /* treat with normal error object */
 	    rb_threadptr_raise(main_th, 1, &errinfo);
@@ -2743,20 +2746,23 @@ rb_thread_inspect(VALUE thread)
     return str;
 }
 
+static VALUE
+threadptr_local_aref(rb_thread_t *th, ID id)
+{
+    st_data_t val;
+
+    if (th->local_storage && st_lookup(th->local_storage, id, &val)) {
+	return (VALUE)val;
+    }
+    return Qnil;
+}
+
 VALUE
 rb_thread_local_aref(VALUE thread, ID id)
 {
     rb_thread_t *th;
-    st_data_t val;
-
     GetThreadPtr(thread, th);
-    if (!th->local_storage) {
-	return Qnil;
-    }
-    if (st_lookup(th->local_storage, id, &val)) {
-	return (VALUE)val;
-    }
-    return Qnil;
+    return threadptr_local_aref(th, id);
 }
 
 /*
@@ -2827,6 +2833,23 @@ rb_thread_aref(VALUE thread, VALUE key)
     return rb_thread_local_aref(thread, id);
 }
 
+static VALUE
+threadptr_local_aset(rb_thread_t *th, ID id, VALUE val)
+{
+    if (NIL_P(val)) {
+	if (!th->local_storage) return Qnil;
+	st_delete_wrap(th->local_storage, id);
+	return Qnil;
+    }
+    else {
+    if (!th->local_storage) {
+	th->local_storage = st_init_numtable();
+    }
+    st_insert(th->local_storage, id, val);
+    return val;
+}
+}
+
 VALUE
 rb_thread_local_aset(VALUE thread, ID id, VALUE val)
 {
@@ -2836,16 +2859,8 @@ rb_thread_local_aset(VALUE thread, ID id, VALUE val)
     if (OBJ_FROZEN(thread)) {
 	rb_error_frozen("thread locals");
     }
-    if (NIL_P(val)) {
-	if (!th->local_storage) return Qnil;
-	st_delete_wrap(th->local_storage, id);
-	return Qnil;
-    }
-    if (!th->local_storage) {
-	th->local_storage = st_init_numtable();
-    }
-    st_insert(th->local_storage, id, val);
-    return val;
+
+    return threadptr_local_aset(th, id, val);
 }
 
 /*
@@ -4775,6 +4790,20 @@ recursive_list_access(void)
     return list;
 }
 
+VALUE
+rb_threadptr_reset_recursive_data(rb_thread_t *th)
+{
+    VALUE old = threadptr_local_aref(th, recursive_key);
+    threadptr_local_aset(th, recursive_key, Qnil);
+    return old;
+}
+
+void
+rb_threadptr_restore_recursive_data(rb_thread_t *th, VALUE old)
+{
+    threadptr_local_aset(th, recursive_key, old);
+}
+
 /*
  * Returns Qtrue iff obj_id (or the pair <obj, paired_obj>) is already
  * in the recursion list.
@@ -5291,13 +5320,12 @@ ruby_kill(rb_pid_t pid, int sig)
 {
     int err;
     rb_thread_t *th = GET_THREAD();
-    rb_vm_t *vm = GET_VM();
 
     /*
      * When target pid is self, many caller assume signal will be
      * delivered immediately and synchronously.
      */
-    if ((sig != 0) && (th == vm->main_thread) && (pid == getpid())) {
+    {
 	GVL_UNLOCK_BEGIN();
 	native_mutex_lock(&th->interrupt_lock);
 	err = kill(pid, sig);
@@ -5305,9 +5333,7 @@ ruby_kill(rb_pid_t pid, int sig)
 	native_mutex_unlock(&th->interrupt_lock);
 	GVL_UNLOCK_END();
     }
-    else {
-	err = kill(pid, sig);
-    }
-    if (err < 0)
+    if (err < 0) {
 	rb_sys_fail(0);
+    }
 }

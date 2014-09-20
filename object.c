@@ -252,6 +252,33 @@ rb_obj_singleton_class(VALUE obj)
     return rb_singleton_class(obj);
 }
 
+void
+rb_obj_copy_ivar(VALUE dest, VALUE obj)
+{
+    if (!(RBASIC(dest)->flags & ROBJECT_EMBED) && ROBJECT_IVPTR(dest)) {
+	xfree(ROBJECT_IVPTR(dest));
+	ROBJECT(dest)->as.heap.ivptr = 0;
+	ROBJECT(dest)->as.heap.numiv = 0;
+	ROBJECT(dest)->as.heap.iv_index_tbl = 0;
+    }
+    if (RBASIC(obj)->flags & ROBJECT_EMBED) {
+	MEMCPY(ROBJECT(dest)->as.ary, ROBJECT(obj)->as.ary, VALUE, ROBJECT_EMBED_LEN_MAX);
+	RBASIC(dest)->flags |= ROBJECT_EMBED;
+    }
+    else {
+	long len = ROBJECT(obj)->as.heap.numiv;
+	VALUE *ptr = 0;
+	if (len > 0) {
+	    ptr = ALLOC_N(VALUE, len);
+	    MEMCPY(ptr, ROBJECT(obj)->as.heap.ivptr, VALUE, len);
+	}
+	ROBJECT(dest)->as.heap.ivptr = ptr;
+	ROBJECT(dest)->as.heap.numiv = len;
+	ROBJECT(dest)->as.heap.iv_index_tbl = ROBJECT(obj)->as.heap.iv_index_tbl;
+	RBASIC(dest)->flags &= ~ROBJECT_EMBED;
+    }
+}
+
 static void
 init_copy(VALUE dest, VALUE obj)
 {
@@ -264,25 +291,7 @@ init_copy(VALUE dest, VALUE obj)
     rb_gc_copy_finalizer(dest, obj);
     switch (TYPE(obj)) {
       case T_OBJECT:
-        if (!(RBASIC(dest)->flags & ROBJECT_EMBED) && ROBJECT_IVPTR(dest)) {
-            xfree(ROBJECT_IVPTR(dest));
-            ROBJECT(dest)->as.heap.ivptr = 0;
-            ROBJECT(dest)->as.heap.numiv = 0;
-            ROBJECT(dest)->as.heap.iv_index_tbl = 0;
-        }
-        if (RBASIC(obj)->flags & ROBJECT_EMBED) {
-            MEMCPY(ROBJECT(dest)->as.ary, ROBJECT(obj)->as.ary, VALUE, ROBJECT_EMBED_LEN_MAX);
-            RBASIC(dest)->flags |= ROBJECT_EMBED;
-        }
-        else {
-            long len = ROBJECT(obj)->as.heap.numiv;
-            VALUE *ptr = ALLOC_N(VALUE, len);
-            MEMCPY(ptr, ROBJECT(obj)->as.heap.ivptr, VALUE, len);
-            ROBJECT(dest)->as.heap.ivptr = ptr;
-            ROBJECT(dest)->as.heap.numiv = len;
-            ROBJECT(dest)->as.heap.iv_index_tbl = ROBJECT(obj)->as.heap.iv_index_tbl;
-            RBASIC(dest)->flags &= ~ROBJECT_EMBED;
-        }
+	rb_obj_copy_ivar(dest, obj);
         break;
       case T_CLASS:
       case T_MODULE:
@@ -584,6 +593,8 @@ class_or_module_required(VALUE c)
     return c;
 }
 
+static VALUE class_search_ancestor(VALUE cl, VALUE c);
+
 /*
  *  call-seq:
  *     obj.instance_of?(class)    -> true or false
@@ -644,15 +655,27 @@ rb_obj_is_kind_of(VALUE obj, VALUE c)
     VALUE cl = CLASS_OF(obj);
 
     c = class_or_module_required(c);
-    c = RCLASS_ORIGIN(c);
-    while (cl) {
-	if (cl == c || RCLASS_M_TBL_WRAPPER(cl) == RCLASS_M_TBL_WRAPPER(c))
-	    return Qtrue;
-	cl = RCLASS_SUPER(cl);
-    }
-    return Qfalse;
+    return class_search_ancestor(cl, RCLASS_ORIGIN(c)) ? Qtrue : Qfalse;
 }
 
+static VALUE
+class_search_ancestor(VALUE cl, VALUE c)
+{
+    while (cl) {
+	if (cl == c || RCLASS_M_TBL_WRAPPER(cl) == RCLASS_M_TBL_WRAPPER(c))
+	    return cl;
+	cl = RCLASS_SUPER(cl);
+    }
+    return 0;
+}
+
+VALUE
+rb_class_search_ancestor(VALUE cl, VALUE c)
+{
+    cl = class_or_module_required(cl);
+    c = class_or_module_required(c);
+    return class_search_ancestor(cl, RCLASS_ORIGIN(c));
+}
 
 /*
  *  call-seq:
@@ -1548,16 +1571,12 @@ rb_class_inherited_p(VALUE mod, VALUE arg)
 	rb_raise(rb_eTypeError, "compared with non class/module");
     }
     arg = RCLASS_ORIGIN(arg);
-    while (mod) {
-	if (RCLASS_M_TBL_WRAPPER(mod) == RCLASS_M_TBL_WRAPPER(arg))
-	    return Qtrue;
-	mod = RCLASS_SUPER(mod);
+    if (class_search_ancestor(mod, arg)) {
+	return Qtrue;
     }
     /* not mod < arg; check if mod > arg */
-    while (arg) {
-	if (RCLASS_M_TBL_WRAPPER(arg) == RCLASS_M_TBL_WRAPPER(start))
-	    return Qfalse;
-	arg = RCLASS_SUPER(arg);
+    if (class_search_ancestor(arg, start)) {
+	return Qfalse;
     }
     return Qnil;
 }

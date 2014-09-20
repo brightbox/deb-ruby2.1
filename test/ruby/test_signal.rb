@@ -255,9 +255,12 @@ EOS
     # that signal will be deliverd synchronously.
     # This ugly workaround was introduced to don't break
     # compatibility against silly example codes.
+    assert_separately([], <<-RUBY)
+    trap(:HUP, "DEFAULT")
     assert_raise(SignalException) {
       Process.kill('HUP', Process.pid)
     }
+    RUBY
     bug8137 = '[ruby-dev:47182] [Bug #8137]'
     assert_nothing_raised(bug8137) {
       Timeout.timeout(1) {
@@ -265,4 +268,15 @@ EOS
       }
     }
   end if Process.respond_to?(:kill) and Signal.list.key?('HUP')
+
+  def test_ignored_interrupt
+    bug9820 = '[ruby-dev:48203] [Bug #9820]'
+    assert_separately(['-', bug9820], <<-'end;') #    begin
+      bug = ARGV.shift
+      trap(:INT, "IGNORE")
+      assert_nothing_raised(SignalException, bug) do
+        Process.kill(:INT, $$)
+      end
+    end;
+  end if Process.respond_to?(:kill)
 end

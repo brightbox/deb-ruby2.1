@@ -542,7 +542,7 @@ typedef struct rb_thread_struct {
     const rb_block_t *passed_block;
 
     /* for bmethod */
-    const rb_method_entry_t *passed_me;
+    const rb_method_entry_t *passed_bmethod_me;
 
     /* for cfunc */
     rb_call_info_t *passed_ci;
@@ -617,15 +617,17 @@ typedef struct rb_thread_struct {
     VALUE (*first_func)(ANYARGS);
 
     /* for GC */
-    VALUE *machine_stack_start;
-    VALUE *machine_stack_end;
-    size_t machine_stack_maxsize;
+    struct {
+	VALUE *stack_start;
+	VALUE *stack_end;
+	size_t stack_maxsize;
 #ifdef __ia64
-    VALUE *machine_register_stack_start;
-    VALUE *machine_register_stack_end;
-    size_t machine_register_stack_maxsize;
+	VALUE *register_stack_start;
+	VALUE *register_stack_end;
+	size_t register_stack_maxsize;
 #endif
-    jmp_buf machine_regs;
+	jmp_buf regs;
+    } machine;
     int mark_stack_len;
 
     /* statistics data for profiler */
@@ -762,15 +764,18 @@ enum vm_special_object_type {
 #define VM_FRAME_MAGIC_IFUNC  0x81
 #define VM_FRAME_MAGIC_EVAL   0x91
 #define VM_FRAME_MAGIC_LAMBDA 0xa1
-#define VM_FRAME_MAGIC_MASK_BITS   8
+#define VM_FRAME_MAGIC_RESCUE 0xb1
+#define VM_FRAME_MAGIC_MASK_BITS 8
 #define VM_FRAME_MAGIC_MASK   (~(~0<<VM_FRAME_MAGIC_MASK_BITS))
 
 #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
 
 /* other frame flag */
-#define VM_FRAME_FLAG_PASSED 0x0100
-#define VM_FRAME_FLAG_FINISH 0x0200
-#define VM_FRAME_TYPE_FINISH_P(cfp) (((cfp)->flag & VM_FRAME_FLAG_FINISH) != 0)
+#define VM_FRAME_FLAG_PASSED  0x0100
+#define VM_FRAME_FLAG_FINISH  0x0200
+#define VM_FRAME_FLAG_BMETHOD 0x0400
+#define VM_FRAME_TYPE_FINISH_P(cfp)  (((cfp)->flag & VM_FRAME_FLAG_FINISH) != 0)
+#define VM_FRAME_TYPE_BMETHOD_P(cfp) (((cfp)->flag & VM_FRAME_FLAG_BMETHOD) != 0)
 
 #define RUBYVM_CFUNC_FRAME_P(cfp) \
   (VM_FRAME_TYPE(cfp) == VM_FRAME_MAGIC_CFUNC)
@@ -882,6 +887,7 @@ VALUE rb_name_err_mesg_new(VALUE obj, VALUE mesg, VALUE recv, VALUE method);
 void rb_vm_stack_to_heap(rb_thread_t *th);
 void ruby_thread_init_stack(rb_thread_t *th);
 int rb_vm_control_frame_id_and_class(const rb_control_frame_t *cfp, ID *idp, VALUE *klassp);
+void rb_vm_rewind_cfp(rb_thread_t *th, rb_control_frame_t *cfp);
 
 void rb_gc_mark_machine_stack(rb_thread_t *th);
 
@@ -1027,6 +1033,9 @@ void rb_threadptr_exec_event_hooks_and_pop_frame(struct rb_trace_arg_struct *tra
 
 #define EXEC_EVENT_HOOK_AND_POP_FRAME(th_, flag_, self_, id_, klass_, data_) \
   EXEC_EVENT_HOOK_ORIG(th_, flag_, self_, id_, klass_, data_, 1)
+
+VALUE rb_threadptr_reset_recursive_data(rb_thread_t *th);
+void rb_threadptr_restore_recursive_data(rb_thread_t *th, VALUE old);
 
 RUBY_SYMBOL_EXPORT_BEGIN
 
