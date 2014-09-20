@@ -1122,6 +1122,8 @@ class TestIO < Test::Unit::TestCase
   def test_inspect
     with_pipe do |r, w|
       assert_match(/^#<IO:fd \d+>$/, r.inspect)
+      r.freeze
+      assert_match(/^#<IO:fd \d+>$/, r.inspect)
     end
   end
 
@@ -1223,6 +1225,14 @@ class TestIO < Test::Unit::TestCase
       t.kill
       t.value
       assert_equal("", s)
+    end
+    with_pipe do |r, w|
+      s = "xxx"
+      t = Thread.new {r.read(2, s)}
+      Thread.pass until t.stop?
+      t.kill
+      t.value
+      assert_equal("xxx", s)
     end
   end
 
@@ -2743,6 +2753,21 @@ End
     assert_equal(2, $stderr.fileno)
   end
 
+  def test_frozen_fileno
+    bug9865 = '[ruby-dev:48241] [Bug #9865]'
+    with_pipe do |r,w|
+      fd = r.fileno
+      assert_equal(fd, r.freeze.fileno, bug9865)
+    end
+  end
+
+  def test_frozen_autoclose
+    with_pipe do |r,w|
+      fd = r.fileno
+      assert_equal(true, r.freeze.autoclose?)
+    end
+  end
+
   def test_sysread_locktmp
     bug6099 = '[ruby-dev:45297]'
     buf = " " * 100
@@ -2790,25 +2815,24 @@ End
 
   def assert_buffer_not_raise_shared_string_error
     bug6764 = '[ruby-core:46586]'
+    bug9847 = '[ruby-core:62643] [Bug #9847]'
     size = 28
     data = [*"a".."z", *"A".."Z"].shuffle.join("")
     t = Tempfile.new("test_io")
     t.write(data)
     t.close
-    w = Tempfile.new("test_io")
+    w = []
     assert_nothing_raised(RuntimeError, bug6764) do
+      buf = ''
       File.open(t.path, "r") do |r|
-        buf = ''
         while yield(r, size, buf)
-          w << buf
+          w << buf.dup
         end
       end
     end
-    w.close
-    assert_equal(data, w.open.read, bug6764)
+    assert_equal(data, w.join(""), bug9847)
   ensure
     t.close!
-    w.close!
   end
 
   def test_read_buffer_not_raise_shared_string_error
@@ -2970,5 +2994,14 @@ End
     assert_nothing_raised(RuntimeError, bug8669) { str.clear }
   ensure
     t.kill
+  end
+
+  def test_exception_at_close
+    bug10153 = '[ruby-core:64463] [Bug #10153] exception in close at the end of block'
+    assert_raise(Errno::EBADF, bug10153) do
+      IO.pipe do |r, w|
+        assert_nothing_raised {IO.open(w.fileno) {}}
+      end
+    end
   end
 end

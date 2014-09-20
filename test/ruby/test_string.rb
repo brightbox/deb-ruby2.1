@@ -1179,6 +1179,11 @@ class TestString < Test::Unit::TestCase
     assert_equal(S("Bar"), S("FooBar").slice(S("Bar")))
     assert_nil(S("FooBar").slice(S("xyzzy")))
     assert_nil(S("FooBar").slice(S("plugh")))
+
+    bug9882 = '[ruby-core:62842] [Bug #9882]'
+    substr = S("\u{30c6 30b9 30c8 2019}#{bug9882}").slice(4..-1)
+    assert_equal(S(bug9882).hash, substr.hash, bug9882)
+    assert_predicate(substr, :ascii_only?, bug9882)
   end
 
   def test_slice!
@@ -2218,6 +2223,17 @@ class TestString < Test::Unit::TestCase
 
       assert_equal("foo", "" =~ //)
     RUBY
+  end
+
+  def test_LSHIFT_neary_long_max
+    return unless @cls == String
+    assert_ruby_status([], <<-'end;', '[ruby-core:61886] [Bug #9709]', timeout: 20)
+      begin
+        a = "a" * 0x4000_0000
+        a << "a" * 0x1_0000
+      rescue NoMemoryError
+      end
+    end;
   end
 end
 

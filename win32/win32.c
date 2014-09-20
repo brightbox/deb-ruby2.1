@@ -1197,8 +1197,8 @@ is_batch(const char *cmd)
 }
 
 static UINT filecp(void);
-static WCHAR *mbstr_to_wstr(UINT, const char *, int, long *);
-static char *wstr_to_mbstr(UINT, const WCHAR *, int, long *);
+#define mbstr_to_wstr rb_w32_mbstr_to_wstr
+#define wstr_to_mbstr rb_w32_wstr_to_mbstr
 #define acp_to_wstr(str, plen) mbstr_to_wstr(CP_ACP, str, -1, plen)
 #define wstr_to_acp(str, plen) wstr_to_mbstr(CP_ACP, str, -1, plen)
 #define filecp_to_wstr(str, plen) mbstr_to_wstr(filecp(), str, -1, plen)
@@ -1952,8 +1952,8 @@ filecp(void)
 }
 
 /* License: Ruby's */
-static char *
-wstr_to_mbstr(UINT cp, const WCHAR *wstr, int clen, long *plen)
+char *
+rb_w32_wstr_to_mbstr(UINT cp, const WCHAR *wstr, int clen, long *plen)
 {
     char *ptr;
     int len = WideCharToMultiByte(cp, 0, wstr, clen, NULL, 0, NULL, NULL);
@@ -1968,8 +1968,8 @@ wstr_to_mbstr(UINT cp, const WCHAR *wstr, int clen, long *plen)
 }
 
 /* License: Ruby's */
-static WCHAR *
-mbstr_to_wstr(UINT cp, const char *str, int clen, long *plen)
+WCHAR *
+rb_w32_mbstr_to_wstr(UINT cp, const char *str, int clen, long *plen)
 {
     WCHAR *ptr;
     int len = MultiByteToWideChar(cp, 0, str, clen, NULL, 0);
@@ -3017,6 +3017,7 @@ rb_w32_accept(int s, struct sockaddr *addr, int *addrlen)
 	if (fd != -1) {
 	    r = accept(TO_SOCKET(s), addr, addrlen);
 	    if (r != INVALID_SOCKET) {
+		SetHandleInformation((HANDLE)r, HANDLE_FLAG_INHERIT, 0);
 		MTHREAD_ONLY(EnterCriticalSection(&(_pioinfo(fd)->lock)));
 		_set_osfhnd(fd, r);
 		MTHREAD_ONLY(LeaveCriticalSection(&_pioinfo(fd)->lock));
@@ -3557,6 +3558,8 @@ open_ifs_socket(int af, int type, int protocol)
 		}
 		if (out == INVALID_SOCKET)
 		    out = WSASocket(af, type, protocol, NULL, 0, 0);
+		if (out != INVALID_SOCKET)
+		    SetHandleInformation((HANDLE)out, HANDLE_FLAG_INHERIT, 0);
 	    }
 
 	    free(proto_buffers);
@@ -3790,6 +3793,7 @@ socketpair_internal(int af, int type, int protocol, SOCKET *sv)
 	    r = accept(svr, addr, &len);
 	    if (r == INVALID_SOCKET)
 		break;
+	    SetHandleInformation((HANDLE)r, HANDLE_FLAG_INHERIT, 0);
 
 	    ret = 0;
 	} while (0);
@@ -6956,6 +6960,19 @@ rb_w32_inet_ntop(int af, const void *addr, char *numaddr, size_t numaddr_len)
 	snprintf(numaddr, numaddr_len, "%s", inet_ntoa(in));
     }
     return numaddr;
+}
+
+/* License: Ruby's */
+int WSAAPI
+rb_w32_inet_pton(int af, const char *src, void *dst)
+{
+    typedef int (WSAAPI inet_pton_t)(int, const char*, void *);
+    inet_pton_t *pInetPton;
+    pInetPton = (inet_pton_t *)get_proc_address("ws2_32", "inet_pton", NULL);
+    if (pInetPton) {
+	return pInetPton(af, src, dst);
+    }
+    return 0;
 }
 
 /* License: Ruby's */

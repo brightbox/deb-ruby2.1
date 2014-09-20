@@ -4,6 +4,12 @@ require 'tmpdir'
 require_relative '../ruby/envutil'
 
 class TestConditionVariable < Test::Unit::TestCase
+  def test_initialized
+    assert_raise(TypeError) {
+      ConditionVariable.allocate.wait(nil)
+    }
+  end
+
   def test_condvar_signal_and_wait
     mutex = Mutex.new
     condvar = ConditionVariable.new
@@ -187,5 +193,20 @@ INPUT
     condvar = ConditionVariable.new
 
     assert_nothing_raised(Exception) { mutex.synchronize {condvar.broadcast} }
+  end
+
+  (DumpableCV = ConditionVariable.dup).class_eval {remove_method :marshal_dump}
+
+  def test_dump
+    bug9674 = '[ruby-core:61677] [Bug #9674]'
+    condvar = ConditionVariable.new
+    assert_raise_with_message(TypeError, /#{ConditionVariable}/, bug9674) do
+      Marshal.dump(condvar)
+    end
+
+    condvar = DumpableCV.new
+    assert_raise_with_message(TypeError, /internal Array/, bug9674) do
+      Marshal.dump(condvar)
+    end
   end
 end
