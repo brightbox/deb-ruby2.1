@@ -22,8 +22,8 @@ Build-Depends: autotools-dev,
                ruby | ruby-interpreter | ruby1.8,
                rubygems-integration (>= 1.6),
                systemtap-sdt-dev [linux-any],
-               tcl-dev (<< 8.6) | tcl8.5-dev,
-               tk-dev (<< 8.6) | tk8.5-dev,
+               tcl8.5-dev,
+               tk8.5-dev,
                zlib1g-dev
 Standards-Version: 3.9.5
 Homepage: http://www.ruby-lang.org/
