@@ -2,7 +2,7 @@
 
   error.c -
 
-  $Author: ko1 $
+  $Author: nagachika $
   created at: Mon Aug  9 16:11:34 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -1740,14 +1740,18 @@ syserr_eqq(VALUE self, VALUE exc)
  *    * LoadError
  *    * NotImplementedError
  *    * SyntaxError
+ *  * SecurityError
  *  * SignalException
  *    * Interrupt
  *  * StandardError -- default for +rescue+
  *    * ArgumentError
- *    * IndexError
- *      * StopIteration
+ *    * EncodingError
+ *    * FiberError
  *    * IOError
  *      * EOFError
+ *    * IndexError
+ *      * KeyError
+ *      * StopIteration
  *    * LocalJumpError
  *    * NameError
  *      * NoMethodError
@@ -1755,14 +1759,13 @@ syserr_eqq(VALUE self, VALUE exc)
  *      * FloatDomainError
  *    * RegexpError
  *    * RuntimeError -- default for +raise+
- *    * SecurityError
  *    * SystemCallError
  *      * Errno::*
- *    * SystemStackError
  *    * ThreadError
  *    * TypeError
  *    * ZeroDivisionError
  *  * SystemExit
+ *  * SystemStackError
  *  * fatal -- impossible to rescue
  */
 

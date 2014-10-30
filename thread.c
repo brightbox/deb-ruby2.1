@@ -2,7 +2,7 @@
 
   thread.c -
 
-  $Author: nobu $
+  $Author: nagachika $
 
   Copyright (C) 2004-2007 Koichi Sasada
 

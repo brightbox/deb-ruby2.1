@@ -2,7 +2,7 @@
 
   iseq.c -
 
-  $Author: naruse $
+  $Author: nagachika $
   created at: 2006-07-11(Tue) 09:00:03 +0900
 
   Copyright (C) 2006 Koichi Sasada

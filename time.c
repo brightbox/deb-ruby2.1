@@ -2,7 +2,7 @@
 
   time.c -
 
-  $Author: akr $
+  $Author: nagachika $
   created at: Tue Dec 28 14:31:59 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

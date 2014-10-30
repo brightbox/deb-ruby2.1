@@ -2,7 +2,7 @@
 
   vm_eval.c -
 
-  $Author: ko1 $
+  $Author: nagachika $
   created at: Sat May 24 16:02:32 JST 2008
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -1211,7 +1211,7 @@ eval_string_with_cref(VALUE self, VALUE src, VALUE scope, NODE *const cref_arg, 
 	    absolute_path = file;
 	}
 
-	if (scope != Qnil) {
+	if (!NIL_P(scope)) {
 	    bind = Check_TypedStruct(scope, &ruby_binding_data_type);
 	    {
 		envval = bind->env;
@@ -1261,6 +1261,7 @@ eval_string_with_cref(VALUE self, VALUE src, VALUE scope, NODE *const cref_arg, 
 	    COPY_CREF(cref, orig_cref);
 	}
 	vm_set_eval_stack(th, iseqval, cref, base_block);
+	th->cfp->klass = CLASS_OF(base_block->self);
 	RB_GC_GUARD(crefval);
 
 	if (0) {		/* for debug */

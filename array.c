@@ -2,7 +2,7 @@
 
   array.c -
 
-  $Author: naruse $
+  $Author: nagachika $
   created at: Fri Aug  6 09:46:12 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -1585,6 +1585,7 @@ rb_ary_splice(VALUE ary, long beg, long len, VALUE rpl)
 	    MEMMOVE(RARRAY_PTR(ary) + beg, RARRAY_CONST_PTR(rpl), VALUE, rlen);
 	}
     }
+    RB_GC_GUARD(rpl);
 }
 
 void
@@ -3948,6 +3949,7 @@ ary_recycle_hash(VALUE hash)
 	RHASH(hash)->ntbl = 0;
 	st_free_table(tbl);
     }
+    RB_GC_GUARD(hash);
 }
 
 /*
@@ -3971,7 +3973,7 @@ static VALUE
 rb_ary_diff(VALUE ary1, VALUE ary2)
 {
     VALUE ary3;
-    volatile VALUE hash;
+    VALUE hash;
     long i;
 
     hash = ary_make_hash(to_ary(ary2));

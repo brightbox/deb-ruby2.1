@@ -3,7 +3,7 @@
 
   thread_win32.c -
 
-  $Author: usa $
+  $Author: nagachika $
 
   Copyright (C) 2004-2007 Koichi Sasada
 

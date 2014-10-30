@@ -2,7 +2,7 @@
 
   encoding.c -
 
-  $Author: naruse $
+  $Author: nagachika $
   created at: Thu May 24 17:23:27 JST 2007
 
   Copyright (C) 2007 Yukihiro Matsumoto

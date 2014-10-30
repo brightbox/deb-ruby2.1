@@ -1,5 +1,5 @@
 /*
- * $Id: ossl.c 45778 2014-05-01 15:23:08Z nagachika $
+ * $Id: ossl.c 46525 2014-06-23 16:03:42Z nagachika $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
  * All rights reserved.
