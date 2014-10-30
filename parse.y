@@ -2,7 +2,7 @@
 
   parse.y -
 
-  $Author: naruse $
+  $Author: nagachika $
   created at: Fri May 28 18:02:42 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -6547,7 +6547,10 @@ parser_here_document(struct parser_params *parser, NODE *here)
 	    if (pend < lex_pend) rb_str_cat(str, "\n", 1);
 	    lex_goto_eol(parser);
 	    if (nextc() == -1) {
-		if (str) dispose_string(str);
+		if (str) {
+		    dispose_string(str);
+		    str = 0;
+		}
 		goto error;
 	    }
 	} while (!whole_match_p(eos, len, indent));
@@ -8195,7 +8198,7 @@ parser_yylex(struct parser_params *parser)
 			    return keyword_do_block;
 			return keyword_do;
 		    }
-		    if (IS_lex_state_for(state, (EXPR_BEG | EXPR_VALUE)))
+		    if (IS_lex_state_for(state, (EXPR_BEG | EXPR_VALUE | EXPR_LABELARG)))
 			return kw->id[0];
 		    else {
 			if (kw->id[0] != kw->id[1])

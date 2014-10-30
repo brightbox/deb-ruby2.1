@@ -666,8 +666,7 @@ module RbInstall
         @gemspec ||= begin
           spec = Gem::Specification.load(src) || raise("invalid spec in #{src}")
           file_collector = FileCollector.new(File.dirname(src))
-          spec.executables = spec.executables.sort
-          spec.files = file_collector.collect.sort
+          spec.files = file_collector.collect
           spec
         end
       end
@@ -688,8 +687,8 @@ Gem::Specification.new do |s|
   s.name = #{name.dump}
   s.version = #{version.dump}
   s.summary = "This #{name} is bundled with Ruby"
-  s.executables = #{execs.sort.inspect}
-  s.files = #{files.sort.inspect}
+  s.executables = #{execs.inspect}
+  s.files = #{files.inspect}
 end
         GEMSPEC
       end

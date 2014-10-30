@@ -3,7 +3,6 @@
 Gem::Specification.new do |s|
   s.name = "test-unit"
   s.version = "#{RUBY_VERSION}.0"
-  s.date = RUBY_RELEASE_DATE
   s.homepage = "http://www.ruby-lang.org"
   s.author = "Shota Fukumori"
   s.email = "sorah@tubusu.net"

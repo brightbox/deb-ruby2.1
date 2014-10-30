@@ -2,7 +2,7 @@
 
   io.c -
 
-  $Author: naruse $
+  $Author: nagachika $
   created at: Fri Oct 15 18:08:59 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto

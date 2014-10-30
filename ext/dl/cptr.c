@@ -1,5 +1,5 @@
 /* -*- C -*-
- * $Id: cptr.c 45820 2014-05-04 17:32:44Z nagachika $
+ * $Id: cptr.c 47036 2014-08-02 15:25:17Z nagachika $
  */
 
 #include <ruby/ruby.h>

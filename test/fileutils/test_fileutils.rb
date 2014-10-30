@@ -1,4 +1,4 @@
-# $Id: test_fileutils.rb 42559 2013-08-15 07:32:07Z usa $
+# $Id: test_fileutils.rb 47953 2014-10-15 14:51:58Z nagachika $
 
 require 'fileutils'
 require_relative 'fileasserts'
@@ -420,6 +420,12 @@ class TestFileUtils
     assert_raise(Errno::ELOOP) {
       mv 'tmp/symlink', 'tmp/symlink'
     }
+    # unexist symlink
+    File.symlink 'xxx', 'tmp/src'
+    assert_nothing_raised {
+      mv 'tmp/src', 'tmp/dest'
+    }
+    assert_equal true, File.symlink?('tmp/dest')
   end if have_symlink?
 
   def test_mv_pathname

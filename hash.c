@@ -2,7 +2,7 @@
 
   hash.c -
 
-  $Author: naruse $
+  $Author: nagachika $
   created at: Mon Nov 22 18:51:18 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
