@@ -1,3 +1,50 @@
+Thu Nov 13 22:32:34 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rexml/document.rb: add REXML::Document#document.
+	  reported by Tomas Hoger <thoger@redhat.com> and patched by nahi.
+
+Thu Nov  6 22:57:43 2014  Naohisa Goto  <ngotogenome@gmail.com>
+
+	* bignum.c (absint_numwords_generic): set an array element after
+	  definition of a variable to fix compile error with older version
+	  of fcc (Fujitsu C Compiler) 5.6 on Solaris 10 on Sparc.
+	  [Bug #10350] [ruby-dev:48608]
+
+Thu Nov  6 22:36:55 2014  Naohisa Goto  <ngotogenome@gmail.com>
+
+	* compile.c (compile_data_alloc): add padding when strict alignment
+	  is required for memory access. Currently, the padding is enabled
+	  only when the CPU is 32-bit SPARC and the compiler is GCC.
+	  [Bug #9681] [ruby-core:61715]
+
+	* compile.c (STRICT_ALIGNMENT): defined if strict alignment is required
+
+	* compile.c (ALIGNMENT_SIZE, ALIGNMENT_SIZE_MASK, PADDING_SIZE_MAX):
+	  new macros for alignemnt word size, bit mask, max size of padding.
+
+	* compile.c (calc_padding): new function to calculate padding size.
+
+Wed Nov  5 00:18:22 2014  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* configure.in (__builtin_setjmp): disable with gcc/clang earlier
+	  than 4.3 on Mac OS X.  [ruby-core:65174] [Bug #10272]
+
+Wed Nov  5 00:01:04 2014  Tanaka Akira  <akr@fsij.org>
+
+	* bignum.c (bary_mul_balance_with_mulfunc): Fix free work area
+	  location.
+	  [ruby-dev:48723] [Bug #10464]
+	  [ruby-core:66044] [Bug #10465]
+	  Reported by Kohji Nishihama.
+
+Tue Oct 28 22:30:21 2014  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* configure.in: remove apple-gcc4.2 from CC candidates.
+
+火 10 28 22:19:44 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* version.h (RUBY_VERSION): bump RUBY_VERSION to 2.1.5.
+
 Mon Oct 27 20:20:14 2014  NAKAMURA Usaku  <usa@ruby-lang.org>
 
 	* lib/rexml/entity.rb: keep the entity size within the limitation.
