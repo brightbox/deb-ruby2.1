@@ -1,3 +1,396 @@
+Mon Apr 13 22:17:59 2015  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* ext/openssl/lib/openssl/ssl.rb: stricter hostname verification
+	  following RFC 6125. with the patch provided by Tony Arcieri and
+	  Hiroshi Nakamura [ruby-core:61545] [Bug #9644]
+	* test/openssl/test_ssl.rb: add tests for above.
+
+Mon Apr 13 17:09:06 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* win32/win32.c (different_device_p): compare by volume serial
+	  numbers, not by path names.  [ruby-core:68162] [Bug #10865]
+
+Mon Apr 13 17:09:06 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* win32/win32.c (wrename): return EXDEV if moving a directory to
+	  another drive, since MoveFileExW does not set proper error code.
+	  [ruby-core:68162] [Bug #10865]
+
+Mon Apr 13 17:02:25 2015  Scott Francis  <scott.francis@shopify.com>
+
+	* thread_pthread.c (reserve_stack): fix intermittent SIGBUS on
+	  Linux, by reserving the stack virtual address space at process
+	  start up so that it will not clash with the heap space.
+	  [Fix GH-822]
+
+Mon Apr 13 16:52:14 2015  Koichi Sasada  <ko1@atdot.net>
+
+	* class.c (rb_prepend_module): need a WB for klass -> origin.
+
+Mon Apr 13 16:48:14 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_eval.c (vm_call_super): search next super class from the
+	  original class, to get rid of infinite recursion with
+	  prepending.  a patch by Seiei Higa <hanachin AT gmail.com> at
+	  [ruby-core:68434].  [ruby-core:68093] [Bug #10847]
+
+Mon Apr 13 16:39:57 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (arg): fix segfault by null caused by syntax error.
+	  [ruby-core:68851] [Bug #10957]
+
+Tue Mar 31 00:49:23 2015  Naohisa Goto  <ngotogenome@gmail.com>
+
+	* gc.c (wmap_final_func): fix memory size shortage when realloc wmap.
+	  Fix SEGV during finalize of WeakRef on Solaris (though the SEGV
+	  could occur on all OS/platforms). [ruby-dev:48779] [Bug #10646]
+
+Tue Mar 31 00:38:14 2015  Seiei Higa  <hanachin@gmail.com>
+
+	* vm_method.c (rb_method_entry): if no super class, no original
+	  method entry.  [ruby-core:67389] [Bug #10707]
+
+Tue Mar 31 00:34:39 2015  Vit Ondruch  <vondruch@redhat.com>
+
+	* configure.in (RUBY_SETJMP_TYPE): Remove superfluous semicolon
+	  which causes a syntax error with autoconf 2.63.
+	  [ruby-core:67429] [Bug #10716]
+
+Tue Mar 31 00:32:04 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* test/fiddle/test_handle.rb (test_NEXT): use -test-/dln/empty
+	  which is always a shared object and is not used by others.
+	  [ruby-dev:48629] [Bug #10384]
+
+Tue Mar 31 00:18:12 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (primary): empty parentheses at cmdarg can be null.
+	  [ruby-core:68477] [Bug #10957]
+
+Mon Mar 30 23:30:57 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/io/console/console.c (console_dev): id_console is not a
+	  constant name, use rb_const_remove() to get rid of NameError.
+
+Sun Mar 22 04:15:39 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/thread/thread.c (Init_thread): ConditionVariable and Queue
+	  are not able to copy.  [ruby-core:59961] [Bug #9440]
+
+Wed Mar 18 02:42:37 2015  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* win32/win32.c (w32_spawn): `v2` is used not only for `shell` but also
+	  `cmd`, so must not free before using `cmd`.
+	  [ruby-core:66648] [Bug #10563]
+
+Wed Mar 18 02:40:18 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* win32/win32.c (constat_reset): do nothing on non-standard
+	  console emulators.  [ruby-core:66471] [Bug #10546]
+
+Wed Mar 18 02:03:02 2015  Kazuki Tsujimoto  <kazuki@callcc.net>
+
+	* vm_insnhelper.c (rb_vm_rewrite_cref_stack): copy nd_refinements
+	  of original crefs. It fixes segmentation fault when calling
+	  refined method in duplicate module. [ruby-dev:48878] [Bug #10885]
+
+	* vm_core.h, class.c: change accordingly.
+
+	* test/ruby/test_refinement.rb: add a test for above.
+
+Wed Mar 18 01:58:18 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/sdbm/_sdbm.c: include ruby/ruby.h for PRIdPTRDIFF when a
+	  macro `DEBUG` is defined.  based on the patch by Owen Rodley in
+	  [ruby-core:67987]. [Bug #10825]
+
+Wed Mar 18 01:45:12 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/mkmf.rb (try_cppflags, try_cflags, try_ldflags): get rid of
+	  interference by modifying global variables in have_devel? method.
+	  [ruby-core:67962] [Bug #10821]
+
+Wed Mar 18 00:58:43 2015  Shugo Maeda  <shugo@ruby-lang.org>
+
+	* class.c (method_entry_i, class_instance_method_list,
+	  rb_obj_singleton_methods): should not include methods of
+	  superclasses if recur is false. [ruby-dev:48854] [Bug #10826]
+
+Wed Mar 18 00:58:43 2015  Shugo Maeda  <shugo@ruby-lang.org>
+
+	* vm_method.c (remove_method): When remove refined
+	  method, raise a NameError if the method is not
+	  defined in refined class.
+	
+	  But if the method is defined in refined class,
+	  it should keep refined method and remove original
+	  method.
+	  
+	  Patch by Seiei Higa. [ruby-core:67722] [Bug #10765]
+
+Wed Mar 18 00:32:08 2015  Seiei Higa  <hanachin@gmail.com>
+
+	* vm_method.c (check_definition): Module#public_method_defined?,
+	  Module#private_method_defined?, Module#protected_method_defined?
+	  should not use refinements. [ruby-core:67656] [Bug #10753]
+
+Tue Mar 10 02:40:11 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* thread.c: Improve documentation for Thread#value
+	  [Bug #10694][ruby-core:67324][ci skip]
+
+Tue Mar 10 02:37:55 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* string.c: [DOC] Add missing documentation around String#chomp.
+	  Patch by @stderr [ci skip][fix GH-780]
+
+Mon Mar  9 22:30:50 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* spec/default.mspec: use default configuration file name.
+	  https://github.com/ruby/rubyspec/commit/cc69f337b06362e5607ffa3e3ad40ef7494960cf
+
+Mon Mar  9 22:30:50 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* spec/default.mspec: remove specific version number.
+	  https://github.com/ruby/rubyspec/commit/7a909e925c1baa9c700bd44af9241aef6e596714
+
+Mon Mar  9 22:27:47 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* common.mk: use ruby organization for rubyspec.
+
+Mon Mar  9 21:52:41 2015  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* lib/uri/generic.rb (URI::Generic.build):
+	  use hostname= to detect and wrap IPv6 hosts.
+	  Build is accepting URI components and users may not expect
+	  that a host component needs to be wrapped with square brackets
+	  since it's not providing a URI.
+	  Note: initialize with arg_check => true does not wrap IPv6 hosts.
+	  by Joe Rafaniello <jrafanie@redhat.com>
+	  https://github.com/ruby/ruby/pull/765 fix GH-765
+
+	* test/uri/test_generic.rb: Add more tests
+
+Tue Mar  3 02:42:27 2015  Eric Wong  <e@80x24.org>
+
+	* ext/io/wait/wait.c (io_nread): wrap return value with INT2FIX
+	  Thanks to Yura Sokolov <funny.falcon@gmail.com>
+	  [ruby-core:68369] [Bug#10923]
+	* test/io/wait/test_io_wait.rb (test_nread_buffered):
+	  fix broken test
+
+Sun Mar  1 02:30:23 2015  Seiei Higa  <hanachin@gmail.com>
+
+	* vm_method.c (rb_alias): raise a NameError when creating alias to
+	  a refined method if the original method of the refined method is
+	  not defined.  [ruby-core:67523] [Bug #10731]
+
+Sun Mar  1 01:17:24 2015  Seiei Higa  <hanachin@gmail.com>
+
+	* vm_method.c (rb_export_method): bail out if the original method
+	  is undefined when the method is refined.
+	  [ruby-core:67387] [Bug #10706]
+
+Sun Mar  1 01:14:59 2015  Eric Wong  <e@80x24.org>
+
+	* lib/resolv.rb: consider ENETUNREACH as ResolvTimeout
+	  [ruby-core:67411] [Bug #10712]
+
+Sun Mar  1 01:01:21 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* lib/net/http.rb (Net::HTTP#send_request): there is no response body
+	  with HEAD request. Patch by @rodrigosaito [fix GH-520]
+
+Sun Mar  1 01:01:21 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* test/net/http/test_http.rb (_test_send_request__HEAD): Added
+	  failing test for send_request with HEAD method.
+
+Sun Mar  1 00:58:30 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* ext/zlib/zlib.c: fix document of method signatures.
+	  [Bug #10668][ruby-core:67186][ci skip]
+
+Sat Feb 28 02:13:17 2015  Tanaka Akira  <akr@fsij.org>
+
+	* lib/resolv.rb (Resolv::DNS::Name#==): Compare an array of Label:Str
+	  objects.  Label#Str#== is case-insensitive.
+
+Sat Feb 28 02:13:17 2015  Ben Miller  <bmiller@rackspace.com>
+
+	* lib/resolv.rb (Resolv::DNS::Name#==): DNS is case-insensitive, so the
+	  comparison should be case-insensitive as well.
+	  [ruby-core:66498] [Bug #10550]
+
+Sat Feb 28 02:13:17 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/resolv.rb (Resolv::DNS::Name): names with different dots
+	  should be different.
+
+Thu Feb 19 19:14:34 2015  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* lib/net/http/response.rb (Net::HTTPResponse): require one or more
+	  spaces [Bug #10591].
+	  by leriksen <leif.eriksen.au@gmail.com>
+	  https://github.com/ruby/ruby/pull/782 fix GH-782
+	  NOTE: graph.facebook.com returns without SP Reason-Phrase.
+
+Thu Feb 19 19:10:53 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* ext/tk/lib/tkextlib/tcllib/plotchart.rb: fix to invoke correct function
+	  of tcllib. Patch by @zalt50 [fix GH-787]
+
+Wed Feb 18 00:27:57 2015  Eric Hodel  <drbrain@segment7.net>
+
+	* lib/net/http.rb:  Do not attempt SSL session resumption when the
+	  session is expired.  [Bug #10533]
+
+Wed Feb 18 00:20:36 2015  Eric Wong  <e@80x24.org>
+
+	* vm_eval.c (rb_yield_splat): add missing GC guard
+	  [Bug #10509]
+
+Wed Feb 18 00:18:12 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/rdoc/text.rb (expand_tabs): get rid of infinite loop with
+	  CR.  should check if substitution occurred too.
+	  [ruby-dev:48813] [Bug #10732]
+
+Tue Feb 17 22:59:31 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/resolv.rb (Resolv::DNS::Resource#==, #hash): elements
+	  returned by Kernel#instance_variables are Symbols now.
+	  [ruby-core:68128] [Bug #10857]
+
+Sun Feb 15 07:29:12 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/socket/getaddrinfo.c (get_addr): reject too long hostname to
+	  get rid of GHOST vulnerability on very old platforms.
+
+	* ext/socket/raddrinfo.c (make_hostent_internal): ditto, paranoic
+	  check for the canonical name.
+
+Mon Feb  2 22:57:30 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/etc/etc.c (etc_getlogin): set login name encoding properly.
+	  [ruby-core:66163] [Bug #10493]
+
+Mon Feb  2 22:47:35 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* proc.c (method_proc): the receiver of binding from method should
+	  be same as the receiver of the method.
+	  [ruby-core:65917] [Bug #10432]
+
+Mon Feb  2 22:43:42 2015  Aaron Patterson <aaron@tenderlovemaking.com>
+
+	* lib/resolv.rb: fall back if canonicalization fails.
+	  Thanks Vit Ondruch for the patch!  [ruby-core:65836]
+
+	* test/resolv/test_dns.rb: test for patch
+
+Mon Feb  2 22:38:53 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* configure.in (rb_cv_binary_elf): get rid of -e option of cat
+	  which is not available on BusyBox, use tr instead.
+	  [ruby-core:64824] [Bug #10210]
+
+Thu Jan 22 20:40:36 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/openssl/ossl_cipher.c (ossl_cipher_update_long): update huge
+	  data gradually not to exceed INT_MAX.  workaround of OpenSSL API
+	  limitation.  [ruby-core:67043] [Bug #10633]
+
+Thu Jan 22 01:14:12 2015  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* signal.c (ruby_signal): since SIGKILL is not supported by MSVCRT,
+	  should be treated before calling signal(3).
+	  [Bug #10615]
+
+Thu Jan 22 01:02:16 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* thread.c (exec_recursive): use the same last method name as
+	  recursive_push in the error message when recursive_pop failed.
+	  [ruby-core:66742] [Bug #10579]
+
+Thu Jan 22 01:02:16 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* eval.c (rb_frame_last_func): return the most recent frame method
+	  name.
+
+	* thread.c (recursive_list_access): use the last method name,
+	  instead of the current method name which can be unset in some
+	  cases, not to use a symbol by the invalid ID.
+	  [ruby-core:66742] [Bug #10579]
+
+Thu Jan 22 00:54:00 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (symbol_list): fix the node type of literal symbol list
+	  with no interpolation.  [ruby-core:66343]
+
+Thu Jan 22 00:49:52 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* object.c: [DOC] Revise documentation by Marcus Stollsteimer at
+	  [ruby-core:66368].  [Bug #10526]
+
+	  * #inspect: be more specific about generated string, remove
+	    obsolete example.
+	  * #nil?: use code examples instead of different call-seq's.
+	  * #tap: clarify what is yielded.
+	  * Integer(): be more specific about to_int and to_i, remove
+	    reference to Ruby 1.8.
+	  * Array(): fix error.
+	  * Class: fix variable name style and indentation in example.
+	  * improve consistency, fix typos and formatting.
+
+Thu Jan 22 00:49:52 2015  Benoit Daloze  <eregontp@gmail.com>
+
+	* object.c (Module#const_defined?): [DOC] Revise the documentation.
+	  Patch by Xavier Noria.
+	  [Fixes GH-754] https://github.com/ruby/ruby/pull/754
+
+Thu Jan 22 00:49:52 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* object.c: fix document of Kernel.Stirng by @suzukaze
+	  [fix GH-743][ci skip]
+
+Thu Jan 22 00:25:15 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* load.c (rb_f_load): path name needs to be transcoded to OS path
+	  encoding.  [ruby-list:49994]
+
+Wed Jan 21 04:36:27 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* configure.in (NET_LUID): include winsock2.h instead of windows.h.
+	  patch by Jon Forums in [ruby-core:67125].  [Bug #10640]
+
+Wed Jan 21 04:36:27 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* configure.in (NET_LUID): include also ifdef.h as a workaround of
+	  a bug in mingw-w64 header.  [ruby-core:67103] [Bug #10640]
+
+Wed Jan  7 22:34:52 2015  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* tool/config_files.rb: use config.guess in gcc repo.
+
+Tue Jan  6 00:04:38 2015  SHIBATA Hiroshi  <shibata.hiroshi@gmail.com>
+
+	* test/ruby/test_io.rb: added timeout for AIX environment.
+	  [ruby-core:62983][Bug #9917]
+
+Mon Jan  5 23:58:50 2015  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* test/ruby/test_string.rb(test_LSHIFT_neary_long_max):
+	  increase timeout for Arch Linux CI environment.
+
+Wed Dec 31 00:00:09 2014  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* lib/net/http.rb (Net::HTTP.proxy_uri): use initializer instead
+	  of parser to handle IPv6 address. [Bug #9129]
+
+Tue Dec 30 23:46:26 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/rubygems/*: upgrade to RubyGems 2.2.3. [Backport #10515]
+
 Thu Nov 13 22:32:34 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
 
 	* lib/rexml/document.rb: add REXML::Document#document.
@@ -41,7 +434,7 @@ Tue Oct 28 22:30:21 2014  NARUSE, Yui  <naruse@ruby-lang.org>
 
 	* configure.in: remove apple-gcc4.2 from CC candidates.
 
-火 10 28 22:19:44 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+Tue Oct 28 22:19:44 2014  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
 
 	* version.h (RUBY_VERSION): bump RUBY_VERSION to 2.1.5.
 
