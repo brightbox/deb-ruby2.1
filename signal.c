@@ -601,6 +601,17 @@ posix_signal(int signum, sighandler_t handler)
     return ruby_signal(signum, handler);
 }
 
+#elif defined _WIN32
+static inline sighandler_t
+ruby_signal(int signum, sighandler_t handler)
+{
+    if (signum == SIGKILL) {
+	errno = EINVAL;
+	return SIG_ERR;
+    }
+    return signal(signum, handler);
+}
+
 #else /* !POSIX_SIGNAL */
 #define ruby_signal(sig,handler) (/* rb_trap_accept_nativethreads[(sig)] = 0,*/ signal((sig),(handler)))
 #if 0 /* def HAVE_NATIVETHREAD */
@@ -769,7 +780,8 @@ sigbus(int sig SIGINFO_ARG)
  * and it's delivered as SIGBUS instead of SIGSEGV to userland. It's crazy
  * wrong IMHO. but anyway we have to care it. Sigh.
  */
-#if defined __APPLE__
+    /* Seems Linux also delivers SIGBUS. */
+#if defined __APPLE__ || defined __linux__
     CHECK_STACK_OVERFLOW();
 #endif
     rb_bug("Bus Error" MESSAGE_FAULT_ADDRESS);
