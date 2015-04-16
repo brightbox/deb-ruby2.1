@@ -543,11 +543,15 @@ init_env(void)
 	if (!GetEnvironmentVariableW(L"USERNAME", env, numberof(env)) &&
 	    !GetUserNameW(env, (len = numberof(env), &len))) {
 	    NTLoginName = "<Unknown>";
-	    return;
 	}
-	set_env_val(L"USER");
+	else {
+	    set_env_val(L"USER");
+	    NTLoginName = rb_w32_wstr_to_mbstr(CP_UTF8, env, -1, NULL);
+	}
     }
-    NTLoginName = strdup(rb_w32_getenv("USER"));
+    else {
+	NTLoginName = rb_w32_wstr_to_mbstr(CP_UTF8, env, -1, NULL);
+    }
 
     if (!GetEnvironmentVariableW(TMPDIR, env, numberof(env)) &&
 	!GetEnvironmentVariableW(L"TMP", env, numberof(env)) &&
@@ -1316,9 +1320,9 @@ w32_spawn(int mode, const char *cmd, const char *prog, UINT cp)
     }
 
     if (!e && shell && !(wshell = mbstr_to_wstr(cp, shell, -1, NULL))) e = E2BIG;
-    if (v2) ALLOCV_END(v2);
     if (cmd_sep) *cmd_sep = sep;
     if (!e && cmd && !(wcmd = mbstr_to_wstr(cp, cmd, -1, NULL))) e = E2BIG;
+    if (v2) ALLOCV_END(v2);
     if (v) ALLOCV_END(v);
 
     if (!e) {
@@ -4669,6 +4673,31 @@ rb_w32_getenv(const char *name)
     return w32_getenv(name, CP_ACP);
 }
 
+/* License: Ruby's */
+static DWORD
+get_volume_serial_number(const WCHAR *path)
+{
+    const DWORD share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+    const DWORD creation = OPEN_EXISTING;
+    const DWORD flags = FILE_FLAG_BACKUP_SEMANTICS;
+    BY_HANDLE_FILE_INFORMATION st = {0};
+    HANDLE h = CreateFileW(path, 0, share_mode, NULL, creation, flags, NULL);
+    BOOL ret;
+
+    if (h == INVALID_HANDLE_VALUE) return 0;
+    ret = GetFileInformationByHandle(h, &st);
+    CloseHandle(h);
+    if (!ret) return 0;
+    return st.dwVolumeSerialNumber;
+}
+
+/* License: Ruby's */
+static int
+different_device_p(const WCHAR *oldpath, const WCHAR *newpath)
+{
+    return get_volume_serial_number(oldpath) != get_volume_serial_number(newpath);
+}
+
 /* License: Artistic or GPL */
 static int
 wrename(const WCHAR *oldpath, const WCHAR *newpath)
@@ -4692,8 +4721,14 @@ wrename(const WCHAR *oldpath, const WCHAR *newpath)
 	if (!MoveFileExW(oldpath, newpath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
 	    res = -1;
 
-	if (res)
-	    errno = map_errno(GetLastError());
+	if (res) {
+	    DWORD e = GetLastError();
+	    if ((e == ERROR_ACCESS_DENIED) && (oldatts & FILE_ATTRIBUTE_DIRECTORY) &&
+		different_device_p(oldpath, newpath))
+		errno = EXDEV;
+	    else
+		errno = map_errno(e);
+	}
 	else
 	    SetFileAttributesW(newpath, oldatts);
     });
@@ -5920,7 +5955,7 @@ constat_reset(HANDLE h)
 {
     st_data_t data;
     struct constat *p;
-    if (!conlist) return;
+    if (!conlist || conlist == conlist_disabled) return;
     if (!st_lookup(conlist, (st_data_t)h, &data)) return;
     p = (struct constat *)data;
     p->vt100.state = constat_init;

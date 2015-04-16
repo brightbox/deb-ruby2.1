@@ -2,7 +2,7 @@
 
   parse.y -
 
-  $Author: nagachika $
+  $Author: usa $
   created at: Fri May 28 18:02:42 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -2046,8 +2046,8 @@ arg		: lhs '=' arg
 			value_expr($1);
 			value_expr($3);
 			$$ = NEW_DOT2($1, $3);
-			if (nd_type($1) == NODE_LIT && FIXNUM_P($1->nd_lit) &&
-			    nd_type($3) == NODE_LIT && FIXNUM_P($3->nd_lit)) {
+			if ($1 && nd_type($1) == NODE_LIT && FIXNUM_P($1->nd_lit) &&
+			    $3 && nd_type($3) == NODE_LIT && FIXNUM_P($3->nd_lit)) {
 			    deferred_nodes = list_append(deferred_nodes, $$);
 			}
 		    /*%
@@ -2060,8 +2060,8 @@ arg		: lhs '=' arg
 			value_expr($1);
 			value_expr($3);
 			$$ = NEW_DOT3($1, $3);
-			if (nd_type($1) == NODE_LIT && FIXNUM_P($1->nd_lit) &&
-			    nd_type($3) == NODE_LIT && FIXNUM_P($3->nd_lit)) {
+			if ($1 && nd_type($1) == NODE_LIT && FIXNUM_P($1->nd_lit) &&
+			    $3 && nd_type($3) == NODE_LIT && FIXNUM_P($3->nd_lit)) {
 			    deferred_nodes = list_append(deferred_nodes, $$);
 			}
 		    /*%
@@ -4033,7 +4033,13 @@ symbol_list	: /* none */
 		    {
 		    /*%%%*/
 			$2 = evstr2dstr($2);
-			nd_set_type($2, NODE_DSYM);
+			if (nd_type($2) == NODE_DSTR) {
+			    nd_set_type($2, NODE_DSYM);
+			}
+			else {
+			    nd_set_type($2, NODE_LIT);
+			    $2->nd_lit = rb_str_intern($2->nd_lit);
+			}
 			$$ = list_append($1, $2);
 		    /*%
 			$$ = dispatch2(symbols_add, $1, $2);

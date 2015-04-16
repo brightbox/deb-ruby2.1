@@ -1,4 +1,10 @@
-ruby2.1 (2.1.5-1bbox1~preicse1) precise; urgency=high
+ruby2.1 (2.1.6-1bbox1~precise2) precise; urgency=medium
+
+  * New upstream release
+
+ -- John Leach <john@brightbox.co.uk>  Tue, 14 Apr 2015 17:42:59 +0100
+
+ruby2.1 (2.1.5-1bbox1~precise1) precise; urgency=high
 
   * New upstream release
   * Fixes CVE-2014-8090

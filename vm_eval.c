@@ -2,7 +2,7 @@
 
   vm_eval.c -
 
-  $Author: nagachika $
+  $Author: usa $
   created at: Sat May 24 16:02:32 JST 2008
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -260,7 +260,8 @@ vm_call_super(rb_thread_t *th, int argc, const VALUE *argv)
 	rb_bug("vm_call_super: should not be reached");
     }
 
-    klass = RCLASS_SUPER(cfp->klass);
+    klass = RCLASS_ORIGIN(cfp->klass);
+    klass = RCLASS_SUPER(klass);
     id = cfp->me->def->original_id;
     me = rb_method_entry(klass, id, &klass);
     if (!me) {
@@ -986,6 +987,7 @@ rb_yield_splat(VALUE values)
         rb_raise(rb_eArgError, "not an array");
     }
     v = rb_yield_0(RARRAY_LENINT(tmp), RARRAY_CONST_PTR(tmp));
+    RB_GC_GUARD(tmp);
     return v;
 }
 
