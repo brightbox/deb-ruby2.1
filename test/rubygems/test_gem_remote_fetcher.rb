@@ -163,6 +163,21 @@ gems:
   end
 
   def test_api_endpoint
+    uri = URI.parse "http://example.com/foo"
+    target = MiniTest::Mock.new
+    target.expect :target, "gems.example.com"
+
+    dns = MiniTest::Mock.new
+    dns.expect :getresource, target, [String, Object]
+
+    fetch = Gem::RemoteFetcher.new nil, dns
+    assert_equal URI.parse("http://gems.example.com/foo"), fetch.api_endpoint(uri)
+
+    target.verify
+    dns.verify
+  end
+
+  def test_api_endpoint_ignores_trans_domain_values
     uri = URI.parse "http://gems.example.com/foo"
     target = MiniTest::Mock.new
     target.expect :target, "blah.com"
@@ -171,7 +186,37 @@ gems:
     dns.expect :getresource, target, [String, Object]
 
     fetch = Gem::RemoteFetcher.new nil, dns
-    assert_equal URI.parse("http://blah.com/foo"), fetch.api_endpoint(uri)
+    assert_equal URI.parse("http://gems.example.com/foo"), fetch.api_endpoint(uri)
+
+    target.verify
+    dns.verify
+  end
+
+  def test_api_endpoint_ignores_trans_domain_values_that_starts_with_original
+    uri = URI.parse "http://example.com/foo"
+    target = MiniTest::Mock.new
+    target.expect :target, "example.combadguy.com"
+
+    dns = MiniTest::Mock.new
+    dns.expect :getresource, target, [String, Object]
+
+    fetch = Gem::RemoteFetcher.new nil, dns
+    assert_equal URI.parse("http://example.com/foo"), fetch.api_endpoint(uri)
+
+    target.verify
+    dns.verify
+  end
+
+  def test_api_endpoint_ignores_trans_domain_values_that_end_with_original
+    uri = URI.parse "http://example.com/foo"
+    target = MiniTest::Mock.new
+    target.expect :target, "badexample.com"
+
+    dns = MiniTest::Mock.new
+    dns.expect :getresource, target, [String, Object]
+
+    fetch = Gem::RemoteFetcher.new nil, dns
+    assert_equal URI.parse("http://example.com/foo"), fetch.api_endpoint(uri)
 
     target.verify
     dns.verify
@@ -744,7 +789,7 @@ gems:
       server.mount_proc("/insecure_redirect") { |req, res|
         res.set_redirect(WEBrick::HTTPStatus::MovedPermanently, req.query['to'])
       }
-      server.ssl_context.tmp_dh_callback = proc { OpenSSL::PKey::DH.new 128 }
+      server.ssl_context.tmp_dh_callback = proc {|_, _, k| OpenSSL::PKey::DH.new(k) }
       t = Thread.new do
         begin
           server.start

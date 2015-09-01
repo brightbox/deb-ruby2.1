@@ -222,8 +222,8 @@ For detail, see the MSDN[http://msdn.microsoft.com/library/en-us/sysinfo/base/pr
         "long RegEnumKeyExW(void *, long, void *, void *, void *, void *, void *, void *)",
         "long RegQueryValueExW(void *, void *, void *, void *, void *, void *)",
         "long RegSetValueExW(void *, void *, long, long, void *, long)",
-        "long RegDeleteValue(void *, void *)",
-        "long RegDeleteKey(void *, void *)",
+        "long RegDeleteValueW(void *, void *)",
+        "long RegDeleteKeyW(void *, void *)",
         "long RegFlushKey(void *)",
         "long RegCloseKey(void *)",
         "long RegQueryInfoKey(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *)",
@@ -315,7 +315,7 @@ For detail, see the MSDN[http://msdn.microsoft.com/library/en-us/sysinfo/base/pr
         case type
         when REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ
           data = data.encode(WCHAR)
-          size ||= data.size + 1
+          size ||= data.bytesize + WCHAR_SIZE
         end
         check RegSetValueExW.call(hkey, make_wstr(name), 0, type, data, size)
       end
