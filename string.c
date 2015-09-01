@@ -2,7 +2,7 @@
 
   string.c -
 
-  $Author: nagachika $
+  $Author: usa $
   created at: Mon Aug  9 17:12:58 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -4088,6 +4088,9 @@ rb_str_sub_bang(int argc, VALUE *argv, VALUE str)
  *  double-quoted string, both back-references must be preceded by an
  *  additional backslash. However, within +replacement+ the special match
  *  variables, such as <code>&$</code>, will not refer to the current match.
+ *  If +replacement+ is a String that looks like a pattern's capture group but
+ *  is actaully not a pattern capture group e.g. <code>"\\'"</code>, then it
+ *  will have to be preceded by two backslashes like so <code>"\\\\'"</code>.
  *
  *  If the second argument is a Hash, and the matched text is one of its keys,
  *  the corresponding value is the replacement string.
@@ -4541,13 +4544,14 @@ rb_str_reverse(VALUE str)
     rb_encoding *enc;
     VALUE rev;
     char *s, *e, *p;
-    int single = 1;
+    int cr;
 
     if (RSTRING_LEN(str) <= 1) return rb_str_dup(str);
     enc = STR_ENC_GET(str);
     rev = rb_str_new5(str, 0, RSTRING_LEN(str));
     s = RSTRING_PTR(str); e = RSTRING_END(str);
     p = RSTRING_END(rev);
+    cr = ENC_CODERANGE(str);
 
     if (RSTRING_LEN(str) > 1) {
 	if (single_byte_optimizable(str)) {
@@ -4555,21 +4559,22 @@ rb_str_reverse(VALUE str)
 		*--p = *s++;
 	    }
 	}
-	else if (ENC_CODERANGE(str) == ENC_CODERANGE_VALID) {
+	else if (cr == ENC_CODERANGE_VALID) {
 	    while (s < e) {
 		int clen = rb_enc_fast_mbclen(s, e, enc);
 
-		if (clen > 1 || (*s & 0x80)) single = 0;
 		p -= clen;
 		memcpy(p, s, clen);
 		s += clen;
 	    }
 	}
 	else {
+	    cr = rb_enc_asciicompat(enc) ?
+		ENC_CODERANGE_7BIT : ENC_CODERANGE_VALID;
 	    while (s < e) {
 		int clen = rb_enc_mbclen(s, e, enc);
 
-		if (clen > 1 || (*s & 0x80)) single = 0;
+		if (clen > 1 || (*s & 0x80)) cr = ENC_CODERANGE_UNKNOWN;
 		p -= clen;
 		memcpy(p, s, clen);
 		s += clen;
@@ -4578,15 +4583,8 @@ rb_str_reverse(VALUE str)
     }
     STR_SET_LEN(rev, RSTRING_LEN(str));
     OBJ_INFECT(rev, str);
-    if (ENC_CODERANGE(str) == ENC_CODERANGE_UNKNOWN) {
-	if (single) {
-	    ENC_CODERANGE_SET(str, ENC_CODERANGE_7BIT);
-	}
-	else {
-	    ENC_CODERANGE_SET(str, ENC_CODERANGE_VALID);
-	}
-    }
-    rb_enc_cr_str_copy_for_substr(rev, str);
+    str_enc_copy(rev, str);
+    ENC_CODERANGE_SET(rev, cr);
 
     return rev;
 }
@@ -6215,15 +6213,10 @@ rb_str_split_m(int argc, VALUE *argv, VALUE str)
     }
 
     enc = STR_ENC_GET(str);
-    if (NIL_P(spat)) {
-	if (!NIL_P(rb_fs)) {
-	    spat = rb_fs;
-	    goto fs_set;
-	}
+    if (NIL_P(spat) && NIL_P(spat = rb_fs)) {
 	split_type = awk;
     }
     else {
-      fs_set:
 	if (RB_TYPE_P(spat, T_STRING)) {
 	    rb_encoding *enc2 = STR_ENC_GET(spat);
 

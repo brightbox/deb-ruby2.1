@@ -1,3 +1,403 @@
+Tue Aug 18 21:40:43 2015  SHIBATA Hiroshi  <hsbt@ruby-lang.org>
+
+	* lib/rubygems.rb: bump version to 2.4.5.1. this version fixed
+	  CVE-2015-3900.
+
+	* lib/rubygems/remote_fetcher.rb: ditto.
+
+	* test/rubygems/test_gem_remote_fetcher.rb: added testcase for CVE-2015-3900
+
+Mon Aug 17 23:27:45 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/win32/lib/win32/registry.rb (API#SetValue): data size should
+	  be in bytes, not in chars.  [ruby-core:70365] [Bug #11439]
+
+Mon Aug 17 23:27:45 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/win32/lib/win32/registry.rb (API#SetValue): add terminator
+	  size, not 1 byte.  [ruby-core:70365] [Bug #11439]
+
+Mon Aug 17 17:57:12 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* re.c (rb_memsearch): should match only char boundaries in wide
+	  character encodings.  [ruby-core:70220] [Bug #11413]
+
+Mon Aug 17 17:54:33 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* transcode.c (rb_econv_set_replacement): target encoding name can
+	  be empty now.  [ruby-core:69841] [Bug #11324]
+
+Mon Aug 17 17:52:11 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* hash.c (rb_any_hash): fix Float hash.  rb_dbl_hash() returns a
+	  Fixnum, but not a long.  [Bug #9381]
+
+Mon Aug 17 17:43:56 2015  Eric Wong  <e@80x24.org>
+
+	* io.c (rb_io_oflags_modestr): handle O_TRUNC correctly
+	* test/ruby/test_io.rb (test_reopen_stdio): new test
+	  Patch-by: cremno phobia <cremno@mail.ru>
+	  [ruby-core:69779] [Bug #11319]
+
+Mon Aug 17 17:42:18 2015  Benoit Daloze  <eregontp@gmail.com>
+
+	* lib/net/ftp.rb (makeport): close the TCPServer
+	  when sending the port fails.
+
+	* test/net/ftp/test_ftp.rb: test for above.
+
+Mon Aug 17 17:38:15 2015  Kazuki Tsujimoto  <kazuki@callcc.net>
+
+	* lib/net/http/response.rb (Net::HTTPResponse::Inflater#finish):
+	  fix a bug that empty gzipped response body causes Zlib::BufError.
+	  [ruby-core:68846] [Bug #11058]
+
+	* test/net/http/test_httpresponse.rb: tests for the above.
+
+Mon Aug 17 17:38:15 2015  Kazuki Tsujimoto  <kazuki@callcc.net>
+
+	* lib/net/http/response.rb (Net::HTTPResponse#inflater):
+	  fix TypeError. An exception object might be nil.
+	  [ruby-core:68846] [Bug #11058]
+
+Mon Aug 17 17:38:15 2015  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* lib/net/http/response.rb (Net::HTTPResponse.each_response_header):
+	  raise first exception even if inflate_body_io.finish raises error.
+	  when begin block raises error, finish usually raises error too.
+
+Mon Aug 17 17:16:22 2015  Aaron Patterson <tenderlove@ruby-lang.org>
+
+	* .travis.yml: update libssl before running tests. 
+	  Thanks to Chris Sinjakli <chris@sinjakli.co.uk> for figuring out the
+	  travis settings!
+
+Mon Aug 17 17:16:22 2015  Aaron Patterson <tenderlove@ruby-lang.org>
+
+	* ext/openssl/lib/openssl/ssl.rb (module OpenSSL): raise a more
+	  helpful exception when verifying the peer connection and an
+	  anonymous cipher has been selected. [ruby-core:68330] [Bug #10910]
+	  Thanks to Chris Sinjakli <chris@sinjakli.co.uk> for the patch.
+
+	* test/openssl/test_ssl.rb (class OpenSSL): test for change
+
+Mon Aug 17 17:12:46 2015  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* win32/win32.c (waitpid): return immediately if interrupted.
+	  reported by <takkanm AT gmail.com> [ruby-dev:49176] [Bug #11340]
+
+Mon Aug 17 17:09:02 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (lambda_body): pop cmdarg stack for lookahead
+	  token.  [ruby-core:70067] [Bug #11380]
+
+Mon Aug 17 17:04:57 2015  Jeremy Evans  <merch-redmine@jeremyevans.net>
+
+	* test/openssl/test_ssl.rb: Fix LocalJumpErrors being raised
+	  in OpenSSL tests. [ruby-core:70020][Bug #11368]
+
+Mon Aug 17 16:51:45 2015  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* lib/timeout.rb (ExitException): leave Timeout::ExitException as an
+	  alias of Timeout::Error for backward compatibility in stable branch.
+	  [ruby-dev:49179] [Bug #11344]
+
+Mon Aug 17 16:51:45 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/timeout.rb (ExitException): removed internal exception class
+	  and use Timeout::Error instead, as using throw/catch to isolate
+	  each timeouts now.  [ruby-dev:49179] [Bug #11344]
+
+Mon Aug 17 16:49:00 2015  Kazuhiro NISHIYAMA  <zn@mbf.nifty.com>
+
+	* test/net/http/test_httpresponse.rb
+	(HTTPResponseTest#test_read_body_content_encoding_deflate_uppercase):
+	fix a failure without zlib.
+
+Mon Aug 17 16:49:00 2015  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* lib/net/http/response.rb (inflater): CONTENT_ENCODING can be upper
+	  case. [ruby-core:69670] [Bug #11285] patched by Andy Chu
+
+Mon Aug 17 16:46:28 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm.c (m_core_hash_merge_ptr): copy the arguments to the machine
+	  stack before rewinding the control frame pointer and leaving the
+	  arguments outside valid region of the value stack.
+	  [ruby-core:69969] [Bug #11352]
+
+	* vm.c (REWIND_CFP): keep the arguments region inside the valid
+	  value stack.  [ruby-core:69969] [Bug #11352]
+
+Mon Aug 17 16:44:01 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* string.c (rb_str_reverse): reversed string is not a substring,
+	  and should not set coderange of the original string.
+	  [ruby-dev:49189] [Bug #11387]
+
+Mon Aug 17 16:24:10 2015  Tanaka Akira  <akr@fsij.org>
+
+	* lib/time.rb (strptime): Support %s.%N.
+	  [ruby-core:68301] [Bug #10904] Patch by Sadayuki Furuhashi.
+
+Mon Aug 17 16:22:28 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* transcode.c (load_transcoder_entry): fix transcoder loading race
+	  condition, by waiting in require.  [ruby-dev:49106] [Bug #11277]
+
+Mon Aug 17 16:18:13 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* array.c (ary_ensure_room_for_push): check if array size will
+	  exceed maximum size to get rid of buffer overflow.
+	  [ruby-dev:49043] [Bug #11235]
+
+	* array.c (ary_ensure_room_for_unshift, rb_ary_splice): ditto.
+
+Mon Aug 17 16:14:38 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/win32/lib/win32/registry.rb (Win32::Registry::API): use wide
+	  versions of RegDeleteValue and RegDeleteKey.
+	  [ruby-core:67958] [Bug #10820]
+
+Tue Jul  7 13:39:46 2015  SHIBATA Hiroshi  <hsbt@ruby-lang.org>
+
+	* ext/zlib/zlib.c: Fix indentation for rdoc.
+	  [Bug #11221][ruby-core:69465]
+
+Tue Jul  7 13:37:34 2015  SHIBATA Hiroshi  <hsbt@ruby-lang.org>
+
+	* ext/bigdecimal/bigdecimal.gemspec: Fix require paths for released gem.
+	  [fix GH-929] Patch by @voxik
+	* ext/io/console/io-console.gemspec: ditto.
+
+Fri Jul  3 21:54:46 2015  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* test/ruby/test_require.rb (TestRequire#test_loading_fifo_threading):
+	  fix previous commit.  [Bug #11060]
+
+Fri Jul  3 19:28:51 2015  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* test/ruby/test_require.rb (TestRequire#test_loading_fifo_threading):
+	  ignore Errno::ENOENT on unlinking.  [Bug #11060]
+
+Fri Jul  3 18:40:48 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/mkmf.rb (pkg_config): split --libs if --libs-only-l option
+	  is not available.  patch in [ruby-core:69428] by Hans Mackowiak.
+	  [ruby-core:69421] [Bug #11201]
+
+Fri Jul  3 18:32:37 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* compile.c (iseq_compile_each): out of range NTH_REF is always
+	  nil.
+
+	* parse.y (parse_numvar): check overflow of NTH_REF and range.
+	  [ruby-core:69393] [Bug #11192]
+
+	* util.c (ruby_scan_digits): make public and add length parameter.
+
+Fri Jul  3 17:53:43 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_eval.c (rb_method_call_status): resolve refined method entry
+	  to check if undefined.  [ruby-core:69064] [Bug #11117]
+
+Fri Jul  3 17:53:43 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* vm_eval.c (rb_method_call_status): undefined refined method is
+	  not callable unless using.  [ruby-core:69064] [Bug #11117]
+
+Fri Jul  3 17:44:27 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* file.c (rb_file_load_ok): try opening file without gvl not to
+	  lock entire process.  [Bug #11060]
+
+Tue Jun 30 11:56:24 2015  Eric Wong  <e@80x24.org>
+
+	* numeric.c (bit_coerce): use original value for error message
+	  [ruby-core:67405] [Bug #10711]
+	* test/ruby/test_numeric.rb (test_coerce): check error message
+
+Mon Jun 29 13:22:14 2015  Shota Fukumori  <her@sorah.jp>
+
+	* ext/objspace/objspace_dump.c(dump_object): Return empty JSON object when
+	  passed object is a special const, instead of SEGV.
+	  Based patch by Kohei Suzuki (eagletmt). [ruby-core:69692] [Bug #11291]
+
+	* test/objspace/test_objspace.rb(test_dump_special_consts): Test for above fix.
+
+
+Wed Jun 17 11:39:15 2015  Koichi Sasada  <ko1@atdot.net>
+
+	* vm_insnhelper.c (lep_svar_set): add WBs.
+
+Tue Jun  9 16:29:49 2015  Eric Wong  <e@80x24.org>
+
+	* ext/socket/ancdata.c: use RB_GC_GUARD instead of volatile
+	  [ruby-core:69419] [Feature #11198]
+
+Tue Jun  9 16:26:48 2015  Eric Wong  <e@80x24.org>
+
+	* ext/openssl/ossl_asn1.c (ossl_asn1_traverse, ossl_asn1_decode,
+	  ossl_asn1_decode_all): use RB_GC_GUARD instead of volatile
+	  [ruby-core:69371] [Bug #11185]
+
+Tue Jun  9 16:24:25 2015  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* win32/win32.c (setup_overlapped): seek to the file end only when
+	  writing (mode:a), not reading (mode:a+, read).
+
+Tue Jun  9 16:15:31 2015  Aaron Patterson <tenderlove@ruby-lang.org>
+
+	* load.c (loaded_feature_path): stop returning false negatives for
+	  filenames which are trailing substrings of file extensions.  For
+	  example, 'b', which a trailing substring of ".rb" should not return
+	  false. [Bug #11155][ruby-core:69206]
+
+	* test/ruby/test_autoload.rb: test for fix
+
+Fri May 29 14:03:33 2015  Matt Hoyle  <matt@deployable.co>
+
+	* ext/bigdecimal/bigdecimal.c (VpSetPTR): fix a typo, 'expoennt'
+	  to 'exponent'.  [ruby-core:67980] [Bug #10823] [Fix GH-825]
+
+Fri May 29 14:00:16 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* win32/file.c (rb_file_expand_path_internal): neither the drive
+	  of base directory nor the current drive are involved in the
+	  result if different than the drive of path.
+	  [ruby-core:68130] [Bug #10858]
+
+Fri May 29 14:00:16 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* win32/file.c (rb_file_expand_path_internal): do not make invalid
+	  (or ADS) path if the path has a drive letter, the result also
+	  should have be under it.  [ruby-core:68130] [Bug #10858]
+
+Fri May 29 13:41:44 2015  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* marshal.c (r_symreal): register the symbol name first so that
+	  r_symlink always returns valid names. [Bug #10991]
+
+Thu May 28 09:51:28 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* hash.c (rb_any_hash): use same hash values with Float#hash so
+	  that -0.0 and +0.0 will be identical.
+	  [ruby-core:68541] [Bug #10979]
+
+Thu May 21 14:15:10 2015  Eric Wong  <e@80x24.org>
+
+	* ext/socket/ancdata.c (bsock_recvmsg_internal): GC guard
+	  [Bug #11123]
+
+Thu May 21 14:11:50 2015  Shugo Maeda  <shugo@ruby-lang.org>
+
+	* lib/net/imap.rb (body_ext_mpart): should work even if body-fld-dsp
+	  is omitted.  [ruby-core:69093] [Bug #11128]
+
+Thu May 21 14:08:15 2015  SHIBATA Hiroshi  <hsbt@ruby-lang.org>
+
+	* string.c: added documentation for character sequence \' with String#sub
+	  [Bug #11132][ruby-core:69121][fix GH-900][ci skip] Patch by @shishir127
+
+Thu May 21 14:04:06 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* range.c (linear_object_p, range_include): test if covered for
+	  linear objects.  [ruby-core:69052] [Bug #11113]
+
+Thu May 21 14:01:40 2015  SHIBATA Hiroshi  <hsbt@ruby-lang.org>
+
+	* rational.c: Added documentation for rational literal.
+	  [Bug #11075][fix GH-885][ci skip] Patch by @shishir127
+
+Thu May 21 13:57:47 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/socket/ipsocket.c (init_inetsock_internal): preserve errno
+	  before other library calls and use rb_syserr_fail.
+	  [ruby-core:68531] [Bug #10975]
+
+Thu May 21 13:32:52 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/-test-/printf/printf.c (uint_to_str): renamed to get rid of
+	  conflict on cygwin.  [ruby-core:68877] [Bug #11065]
+
+Thu May 21 13:28:03 2015  Koichi Sasada  <ko1@atdot.net>
+
+	* vm.c (vm_exec): check other events when RETURN is thrown.
+	  [Bug #10724]
+
+	* test/ruby/test_settracefunc.rb: add a test.
+
+Thu May 21 13:23:44 2015  Masahiro Tomita  <tommy@tmtm.org>
+
+	* ext/socket/raddrinfo.c (addrinfo_mload): fix memory leak of
+	  addrinfo.  [ruby-dev:48923] [Bug #11051]
+
+Thu May 21 13:19:52 2015  Kenta Murata  <mrkn@cookpad.com>
+
+	* bigdecimal: conform to ruby's license.  [ruby-core:68466] [Bug #10952]
+
+Thu May 21 09:49:01 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* gc.c (id2ref): prohibit from accessing internal objects.
+	  [ruby-core:68348] [Bug #10918]
+
+Thu May 21 09:46:58 2015  Rei Odaira  <Rei.Odaira@gmail.com>
+
+	* ext/pty/pty.c: AIX supports autopush.
+	  Patch by Perry Smith [ruby-core:58539] [Bug #9144]
+
+Wed May 20 17:34:43 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* iseq.c (rb_iseq_compile_with_option): check source type, must be
+	  an IO or a String.  [ruby-core:69219] [Bug #11159]
+
+Wed May 13 14:32:13 2015  Tanaka Akira  <akr@fsij.org>
+
+	* lib/resolv.rb (Resolv::DNS::Label::Str#==): Check class equality.
+	  (Resolv::DNS::Name#initialize): Normalize labels as
+	  Resolv::DNS::Label::Str objects.
+
+Tue May 12 16:11:55 2015  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* ext/tk/extconf.rb: support Tcl/Tk8.6.
+
+	* ext/tk/tcltklib.c, ext/tk/lib/tk.rb: get rid of SEGV with Tcl/Tk8.6.
+	  [Backport #10401]
+
+Mon May 11 11:09:08 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* dln.c (dln_load): check if a different libruby is loaded by the
+	  extension library, and then bail out to get rid of very frequent
+	  reported stale bug reports.
+
+	* dln.c (dln_load): raise fatal error on OSX not other extension
+	  libraries to refer different libruby.
+
+Mon May 11 10:59:53 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* parse.y (lambda): push and reset cmdarg_stack in lambda body.
+	  [ruby-core:69017] [Bug #11107]
+
+Tue Apr 28 14:15:49 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/fileutils.rb (FileUtils#mv): show the exact target path in
+	  the error message instead of the destination parent directory
+	  name.  patched by Joao Britto <jabcalves AT gmail.com> at
+	  [ruby-core:68706].  [Bug #11021]
+
+Tue Apr 28 14:14:16 2015  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* thread_pthread.c (reserve_stack): keep sp safe zone to get rid
+	  of crash by -fstack-check.  [ruby-core:68740] [Bug #11030]
+
+Fri Apr 24 17:27:31 2015  Koichi Sasada  <ko1@atdot.net>
+
+	* test/fiddle/test_handle.rb: fix syntax.
+
+Tue Apr 14 16:02:07 2015  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* version.h (RUBY_VERSION): bump RUBY_VERSION to 2.1.7.
+
 Mon Apr 13 22:17:59 2015  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
 
 	* ext/openssl/lib/openssl/ssl.rb: stricter hostname verification

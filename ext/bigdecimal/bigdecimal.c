@@ -4,13 +4,6 @@
  *
  * Copyright(C) 2002 by Shigeo Kobayashi(shigeo@tinyforest.gr.jp)
  *
- * You may distribute under the terms of either the GNU General Public
- * License or the Artistic License, as specified in the README file
- * of this BigDecimal distribution.
- *
- *  NOTE: Change log in this source removed to reduce source code size.
- *        See rev. 1.25 if needed.
- *
  */
 
 /* #define BIGDECIMAL_DEBUG 1 */
@@ -4393,7 +4386,7 @@ VpSetPTR(Real *a, Real *b, Real *c, size_t *a_pos, size_t *b_pos, size_t *c_pos,
 
     size_t const round_limit = (VpGetPrecLimit() + BASE_FIG - 1) / BASE_FIG;
 
-    assert(a->exponent >= b->expoennt);
+    assert(a->exponent >= b->exponent);
 
     c->frac[0] = 0;
     *av = *bv = 0;

@@ -2,7 +2,7 @@
 
   numeric.c -
 
-  $Author: nagachika $
+  $Author: usa $
   created at: Fri Aug 13 18:33:09 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -236,9 +236,14 @@ NORETURN(static void coerce_failed(VALUE x, VALUE y));
 static void
 coerce_failed(VALUE x, VALUE y)
 {
+    if (SPECIAL_CONST_P(y) || BUILTIN_TYPE(y) == T_FLOAT) {
+	y = rb_inspect(y);
+    }
+    else {
+	y = rb_obj_class(y);
+    }
     rb_raise(rb_eTypeError, "%"PRIsVALUE" can't be coerced into %"PRIsVALUE,
-	     (rb_special_const_p(y)? rb_inspect(y) : rb_obj_class(y)),
-	     rb_obj_class(x));
+	     y, rb_obj_class(x));
 }
 
 static VALUE
@@ -1110,10 +1115,14 @@ flo_eq(VALUE x, VALUE y)
 static VALUE
 flo_hash(VALUE num)
 {
-    double d;
+    return rb_dbl_hash(RFLOAT_VALUE(num));
+}
+
+VALUE
+rb_dbl_hash(double d)
+{
     st_index_t hash;
 
-    d = RFLOAT_VALUE(num);
     /* normalize -0.0 to 0.0 */
     if (d == 0.0) d = 0.0;
     hash = rb_memhash(&d, sizeof(d));
@@ -3295,11 +3304,12 @@ static int
 bit_coerce(VALUE *x, VALUE *y, int err)
 {
     if (!FIXNUM_P(*y) && !RB_TYPE_P(*y, T_BIGNUM)) {
+	VALUE orig = *x;
 	do_coerce(x, y, err);
 	if (!FIXNUM_P(*x) && !RB_TYPE_P(*x, T_BIGNUM)
 	    && !FIXNUM_P(*y) && !RB_TYPE_P(*y, T_BIGNUM)) {
 	    if (!err) return FALSE;
-	    coerce_failed(*x, *y);
+	    coerce_failed(orig, *y);
 	}
     }
     return TRUE;

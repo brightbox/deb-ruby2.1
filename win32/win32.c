@@ -4265,7 +4265,9 @@ waitpid(rb_pid_t pid, int *stat_loc, int options)
 
 	while (!(pid = poll_child_status(child, stat_loc))) {
 	    /* wait... */
-	    if (rb_w32_wait_events_blocking(&child->hProcess, 1, timeout) != WAIT_OBJECT_0) {
+	    int ret = rb_w32_wait_events_blocking(&child->hProcess, 1, timeout);
+	    if (ret == WAIT_OBJECT_0 + 1) return -1; /* maybe EINTR */
+	    if (ret != WAIT_OBJECT_0) {
 		/* still active */
 		if (options & WNOHANG) {
 		    pid = 0;
@@ -6274,12 +6276,16 @@ rb_w32_close(int fd)
 }
 
 static int
-setup_overlapped(OVERLAPPED *ol, int fd)
+setup_overlapped(OVERLAPPED *ol, int fd, int iswrite)
 {
     memset(ol, 0, sizeof(*ol));
     if (!(_osfile(fd) & (FDEV | FPIPE))) {
 	LONG high = 0;
-	DWORD method = _osfile(fd) & FAPPEND ? FILE_END : FILE_CURRENT;
+	/* On mode:a, it can write only FILE_END.
+	 * On mode:a+, though it can write only FILE_END,
+	 * it can read from everywhere.
+	 */
+	DWORD method = ((_osfile(fd) & FAPPEND) && iswrite) ? FILE_END : FILE_CURRENT;
 	DWORD low = SetFilePointer((HANDLE)_osfhnd(fd), 0, &high, method);
 #ifndef INVALID_SET_FILE_POINTER
 #define INVALID_SET_FILE_POINTER ((DWORD)-1)
@@ -6376,7 +6382,7 @@ rb_w32_read(int fd, void *buf, size_t size)
 
     /* if have cancel_io, use Overlapped I/O */
     if (cancel_io) {
-	if (setup_overlapped(&ol, fd)) {
+	if (setup_overlapped(&ol, fd, FALSE)) {
 	    MTHREAD_ONLY(LeaveCriticalSection(&_pioinfo(fd)->lock));
 	    return -1;
 	}
@@ -6494,7 +6500,7 @@ rb_w32_write(int fd, const void *buf, size_t size)
 
     /* if have cancel_io, use Overlapped I/O */
     if (cancel_io) {
-	if (setup_overlapped(&ol, fd)) {
+	if (setup_overlapped(&ol, fd, TRUE)) {
 	    MTHREAD_ONLY(LeaveCriticalSection(&_pioinfo(fd)->lock));
 	    return -1;
 	}

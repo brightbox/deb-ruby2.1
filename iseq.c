@@ -2,7 +2,7 @@
 
   iseq.c -
 
-  $Author: nagachika $
+  $Author: usa $
   created at: 2006-07-11(Tue) 09:00:03 +0900
 
   Copyright (C) 2006 Koichi Sasada
@@ -610,6 +610,7 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE absolute_path, VALUE li
 	if (RB_TYPE_P((src), T_FILE))
 	    node = rb_parser_compile_file_path(parser, file, src, ln);
 	else {
+	    StringValue(src);
 	    node = rb_parser_compile_string_path(parser, file, src, ln);
 
 	    if (!node) {
