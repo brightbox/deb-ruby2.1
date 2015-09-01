@@ -529,6 +529,7 @@ double ruby_float_mod(double x, double y);
 int rb_num_negative_p(VALUE);
 VALUE rb_int_succ(VALUE num);
 VALUE rb_int_pred(VALUE num);
+VALUE rb_dbl_hash(double d);
 
 #if USE_FLONUM
 #define RUBY_BIT_ROTL(v, n) (((v) << (n)) | ((v) >> ((sizeof(v) * 8) - n)))
@@ -866,6 +867,7 @@ VALUE rb_gcd_gmp(VALUE x, VALUE y);
 
 /* util.c */
 extern const signed char ruby_digit36_to_number_table[];
+extern unsigned long ruby_scan_digits(const char *str, ssize_t len, int base, size_t *retlen, int *overflow);
 
 /* variable.c */
 void rb_gc_mark_global_tbl(void);

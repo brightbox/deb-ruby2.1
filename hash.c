@@ -2,7 +2,7 @@
 
   hash.c -
 
-  $Author: nagachika $
+  $Author: usa $
   created at: Mon Nov 22 18:51:18 JST 1993
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -133,10 +133,19 @@ rb_any_hash(VALUE a)
 
     if (SPECIAL_CONST_P(a)) {
 	if (a == Qundef) return 0;
+	if (FLONUM_P(a)) {
+	    /* prevent pathological behavior: [Bug #10761] */
+	    goto flt;
+	}
 	hnum = rb_objid_hash((st_index_t)a);
     }
     else if (BUILTIN_TYPE(a) == T_STRING) {
 	hnum = rb_str_hash(a);
+    }
+    else if (BUILTIN_TYPE(a) == T_FLOAT) {
+      flt:
+	hval = rb_dbl_hash(rb_float_value(a));
+	hnum = FIX2LONG(hval);
     }
     else {
         hval = rb_hash(a);
