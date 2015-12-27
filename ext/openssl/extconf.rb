@@ -12,7 +12,7 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: extconf.rb 43451 2013-10-28 06:32:24Z nobu $
+  $Id: extconf.rb 52642 2015-11-18 11:34:19Z usa $
 =end
 
 require "mkmf"
@@ -103,6 +103,9 @@ have_func("OPENSSL_cleanse")
 have_func("SSLv2_method")
 have_func("SSLv2_server_method")
 have_func("SSLv2_client_method")
+have_func("SSLv3_method")
+have_func("SSLv3_server_method")
+have_func("SSLv3_client_method")
 have_func("TLSv1_1_method")
 have_func("TLSv1_1_server_method")
 have_func("TLSv1_1_client_method")

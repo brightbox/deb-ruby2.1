@@ -2,17 +2,17 @@
 
   bubblebabble.c - BubbleBabble encoding support
 
-  $Author: zzak $
+  $Author: usa $
   created at: Fri Oct 13 18:31:42 JST 2006
 
   Copyright (C) 2006 Akinori MUSHA
 
-  $Id: bubblebabble.c 43754 2013-11-21 07:53:39Z zzak $
+  $Id: bubblebabble.c 52797 2015-11-30 12:08:16Z usa $
 
 ************************************************/
 
-#include "ruby.h"
-#include "digest.h"
+#include <ruby/ruby.h>
+#include "../digest.h"
 
 static ID id_digest;
 

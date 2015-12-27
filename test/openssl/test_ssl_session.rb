@@ -273,7 +273,7 @@ __EOS__
 
   def test_ctx_client_session_cb
     called = {}
-    ctx = OpenSSL::SSL::SSLContext.new("SSLv3")
+    ctx = OpenSSL::SSL::SSLContext.new
     ctx.session_cache_mode = OpenSSL::SSL::SSLContext::SESSION_CACHE_CLIENT
 
     ctx.session_new_cb = lambda { |ary|
@@ -307,6 +307,7 @@ __EOS__
 
     ctx_proc = Proc.new { |ctx, ssl|
       ctx.session_cache_mode = OpenSSL::SSL::SSLContext::SESSION_CACHE_SERVER
+      ctx.options = OpenSSL::SSL::OP_NO_TICKET
       last_server_session = nil
 
       # get_cb is called whenever a client proposed to resume a session but
@@ -345,7 +346,7 @@ __EOS__
       last_client_session = nil
       3.times do
         sock = TCPSocket.new("127.0.0.1", port)
-        ssl = OpenSSL::SSL::SSLSocket.new(sock, OpenSSL::SSL::SSLContext.new("SSLv3"))
+        ssl = OpenSSL::SSL::SSLSocket.new(sock, OpenSSL::SSL::SSLContext.new())
         ssl.sync_close = true
         ssl.session = last_client_session if last_client_session
         ssl.connect

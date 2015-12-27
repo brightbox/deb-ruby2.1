@@ -738,15 +738,12 @@ defined
 	const rb_method_entry_t *me = rb_method_entry(klass, SYM2ID(obj), 0);
 
 	if (me) {
-	    if (!(me->flag & NOEX_PRIVATE)) {
-		if (!((me->flag & NOEX_PROTECTED) &&
-		      !rb_obj_is_kind_of(GET_SELF(),
-					 rb_class_real(klass)))) {
-		    expr_type = DEFINED_METHOD;
-		}
+	    if (!(me->flag & NOEX_PRIVATE) &&
+		!((me->flag & NOEX_PROTECTED) && !rb_obj_is_kind_of(GET_SELF(), rb_class_real(klass)))) {
+		expr_type = DEFINED_METHOD;
 	    }
 	}
-	{
+	else {
 	    VALUE args[2];
 	    VALUE r;
 
@@ -1278,7 +1275,7 @@ opt_case_dispatch
     switch(TYPE(key)) {
       case T_FLOAT: {
 	double ival;
-	if (modf(RFLOAT_VALUE(key), &ival) == 0.0) {
+	if (modf(RFLOAT_VALUE(key), &ival) == 0.0 && !isinf(ival)) {
 	    key = FIXABLE(ival) ? LONG2FIX((long)ival) : rb_dbl2big(ival);
 	}
       }
@@ -1289,6 +1286,7 @@ opt_case_dispatch
 	if (BASIC_OP_UNREDEFINED_P(BOP_EQQ,
 				   SYMBOL_REDEFINED_OP_FLAG |
 				   FIXNUM_REDEFINED_OP_FLAG |
+				   FLOAT_REDEFINED_OP_FLAG |
 				   BIGNUM_REDEFINED_OP_FLAG |
 				   STRING_REDEFINED_OP_FLAG)) {
 	    st_data_t val;

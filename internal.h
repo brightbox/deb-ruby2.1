@@ -599,6 +599,7 @@ rb_float_new_inline(double d)
 void rb_obj_copy_ivar(VALUE dest, VALUE obj);
 VALUE rb_obj_equal(VALUE obj1, VALUE obj2);
 VALUE rb_class_search_ancestor(VALUE klass, VALUE super);
+NORETURN(void rb_undefined_alloc(VALUE klass));
 
 struct RBasicRaw {
     VALUE flags;
@@ -630,6 +631,7 @@ void rb_gc_mark_symbols(int full_mark);
 VALUE rb_proc_location(VALUE self);
 st_index_t rb_hash_proc(st_index_t hash, VALUE proc);
 int rb_block_arity(void);
+VALUE rb_block_clear_env_self(VALUE proc);
 
 /* process.c */
 #define RB_MAX_GROUPS (65536)

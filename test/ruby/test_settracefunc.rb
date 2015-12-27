@@ -509,7 +509,6 @@ class TestSetTraceFunc < Test::Unit::TestCase
      [:return,  16, "xyzzy", xyzzy.class, :bar,             xyzzy,       :XYZZY_bar, xyzzy],
      [:return,  12, "xyzzy", xyzzy.class, :foo,             xyzzy,       :XYZZY_foo, xyzzy],
      [:line,    20, "xyzzy", TestSetTraceFunc, method,      self,        :outer, :nothing],
-     [:line,    20, "xyzzy", TestSetTraceFunc, method,      self,        :outer, :nothing],
      [:c_call,  20, "xyzzy", Kernel,      :raise,           self,        :outer, :nothing],
      [:c_call,  20, "xyzzy", Exception,   :exception,       RuntimeError, :outer, :nothing],
      [:c_call,  20, "xyzzy", Exception,   :initialize,      raised_exc,  :outer, :nothing],
@@ -565,14 +564,17 @@ class TestSetTraceFunc < Test::Unit::TestCase
   def test_tracepoint
     events1, answer_events = *trace_by_tracepoint(:line, :class, :end, :call, :return, :c_call, :c_return, :raise)
 
-    mesg = events1.map{|e|
-      if false
-        p [:event, e[0]]
-        p [:line_file, e[1], e[2]]
-        p [:id, e[4]]
+    ms = [events1, answer_events].map{|evs|
+      evs.map{|e|
+        "#{e[0]} - #{e[2]}:#{e[1]} id; #{e[4]}"
+      }
+    }
+
+    mesg = ms[0].zip(ms[1]).map{|a, b|
+      if a != b
+        "#{a} <-> #{b}"
       end
-      "#{e[0]} - #{e[2]}:#{e[1]} id: #{e[4]}"
-    }.join("\n")
+    }.compact.join("\n")
     answer_events.zip(events1){|answer, event|
       assert_equal answer, event, mesg
     }
@@ -1184,6 +1186,74 @@ class TestSetTraceFunc < Test::Unit::TestCase
     end
   end
 
+  class C11492
+    define_method(:foo_return){
+      return true
+    }
+    define_method(:foo_break){
+      break true
+    }
+  end
+
+  def test_define_method_on_return
+    # return
+    events = []
+    obj = C11492.new
+    TracePoint.new(:call, :return){|tp|
+      next unless target_thread?
+      events << [tp.event, tp.method_id]
+    }.enable{
+      obj.foo_return
+    }
+    assert_equal([[:call, :foo_return], [:return, :foo_return]], events, 'Bug #11492')
+
+    # break
+    events = []
+    obj = C11492.new
+    TracePoint.new(:call, :return){|tp|
+      next unless target_thread?
+      events << [tp.event, tp.method_id]
+    }.enable{
+      obj.foo_break
+    }
+    assert_equal([[:call, :foo_break], [:return, :foo_break]], events, 'Bug #11492')
+
+    # set_trace_func
+    # return
+    events = []
+    begin
+      set_trace_func(lambda{|event, file, lineno, mid, binding, klass|
+        next unless target_thread?
+        case event
+        when 'call', 'return'
+          events << [event, mid]
+        end
+      })
+      obj.foo_return
+      set_trace_func(nil)
+
+      assert_equal([['call', :foo_return], ['return', :foo_return]], events, 'Bug #11492')
+    ensure
+    end
+
+    # break
+    events = []
+    begin
+      set_trace_func(lambda{|event, file, lineno, mid, binding, klass|
+        next unless target_thread?
+        case event
+        when 'call', 'return'
+          events << [event, mid]
+        end
+      })
+      obj.foo_break
+      set_trace_func(nil)
+
+      assert_equal([['call', :foo_break], ['return', :foo_break]], events, 'Bug #11492')
+    ensure
+    end
+  end
+
   def test_recursive
     assert_ruby_status [], %q{
       stack = []
@@ -1347,6 +1417,20 @@ class TestSetTraceFunc < Test::Unit::TestCase
         redo
       }
     end
+  end
+
+  def test_no_duplicate_line_events
+    lines = []
+    dummy = []
+
+    TracePoint.new(:line){|tp|
+      next unless target_thread?
+      lines << tp.lineno
+    }.enable{
+      dummy << (1) + (2)
+      dummy << (1) + (2)
+    }
+    assert_equal [__LINE__ - 3, __LINE__ - 2], lines, 'Bug #10449'
   end
 
   class Bug10724
