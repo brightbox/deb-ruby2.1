@@ -1117,15 +1117,12 @@ INSN_ENTRY(defined){
 	const rb_method_entry_t *me = rb_method_entry(klass, SYM2ID(obj), 0);
 
 	if (me) {
-	    if (!(me->flag & NOEX_PRIVATE)) {
-		if (!((me->flag & NOEX_PROTECTED) &&
-		      !rb_obj_is_kind_of(GET_SELF(),
-					 rb_class_real(klass)))) {
-		    expr_type = DEFINED_METHOD;
-		}
+	    if (!(me->flag & NOEX_PRIVATE) &&
+		!((me->flag & NOEX_PROTECTED) && !rb_obj_is_kind_of(GET_SELF(), rb_class_real(klass)))) {
+		expr_type = DEFINED_METHOD;
 	    }
 	}
-	{
+	else {
 	    VALUE args[2];
 	    VALUE r;
 
@@ -1172,7 +1169,7 @@ INSN_ENTRY(defined){
 	}
     }
 
-#line 1176 "vm.inc"
+#line 1173 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_defined
@@ -1197,7 +1194,7 @@ INSN_ENTRY(checkmatch){
   COLLECT_USAGE_INSN(BIN(checkmatch));
   COLLECT_USAGE_OPERAND(BIN(checkmatch), 0, flag);
 {
-#line 813 "insns.def"
+#line 810 "insns.def"
     enum vm_check_match_type checkmatch_type =
       (enum vm_check_match_type)(flag & VM_CHECKMATCH_TYPE_MASK);
     result = Qfalse;
@@ -1217,7 +1214,7 @@ INSN_ENTRY(checkmatch){
 	}
     }
 
-#line 1221 "vm.inc"
+#line 1218 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(result);
 #undef CURRENT_INSN_checkmatch
@@ -1239,7 +1236,7 @@ INSN_ENTRY(trace){
   COLLECT_USAGE_INSN(BIN(trace));
   COLLECT_USAGE_OPERAND(BIN(trace), 0, nf);
 {
-#line 844 "insns.def"
+#line 841 "insns.def"
     rb_event_flag_t flag = (rb_event_flag_t)nf;
 
     if (RUBY_DTRACE_METHOD_ENTRY_ENABLED() ||
@@ -1266,7 +1263,7 @@ INSN_ENTRY(trace){
     EXEC_EVENT_HOOK(th, flag, GET_SELF(), 0, 0 /* id and klass are resolved at callee */,
 		    (flag & (RUBY_EVENT_RETURN | RUBY_EVENT_B_RETURN)) ? TOPN(0) : Qundef);
 
-#line 1270 "vm.inc"
+#line 1267 "vm.inc"
 #undef CURRENT_INSN_trace
 #undef INSN_IS_SC
 #undef INSN_LABEL
@@ -1293,7 +1290,7 @@ INSN_ENTRY(defineclass){
   COLLECT_USAGE_OPERAND(BIN(defineclass), 1, class_iseq);
   COLLECT_USAGE_OPERAND(BIN(defineclass), 2, flags);
 {
-#line 890 "insns.def"
+#line 887 "insns.def"
     VALUE klass;
     rb_vm_defineclass_type_t type = VM_DEFINECLASS_TYPE(flags);
 
@@ -1382,7 +1379,7 @@ INSN_ENTRY(defineclass){
     RESTORE_REGS();
     NEXT_INSN();
 
-#line 1386 "vm.inc"
+#line 1383 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_defineclass
@@ -1405,14 +1402,14 @@ INSN_ENTRY(send){
   COLLECT_USAGE_INSN(BIN(send));
   COLLECT_USAGE_OPERAND(BIN(send), 0, ci);
 {
-#line 995 "insns.def"
+#line 992 "insns.def"
     ci->argc = ci->orig_argc;
     ci->blockptr = 0;
     vm_caller_setup_args(th, reg_cfp, ci);
     vm_search_method(ci, ci->recv = TOPN(ci->argc));
     CALL_METHOD(ci);
 
-#line 1416 "vm.inc"
+#line 1413 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_send
@@ -1435,7 +1432,7 @@ INSN_ENTRY(opt_str_freeze){
   COLLECT_USAGE_INSN(BIN(opt_str_freeze));
   COLLECT_USAGE_OPERAND(BIN(opt_str_freeze), 0, str);
 {
-#line 1008 "insns.def"
+#line 1005 "insns.def"
     if (BASIC_OP_UNREDEFINED_P(BOP_FREEZE, STRING_REDEFINED_OP_FLAG)) {
 	val = str;
     }
@@ -1443,7 +1440,7 @@ INSN_ENTRY(opt_str_freeze){
 	val = rb_funcall(rb_str_resurrect(str), idFreeze, 0);
     }
 
-#line 1447 "vm.inc"
+#line 1444 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_str_freeze
@@ -1466,11 +1463,11 @@ INSN_ENTRY(opt_send_simple){
   COLLECT_USAGE_INSN(BIN(opt_send_simple));
   COLLECT_USAGE_OPERAND(BIN(opt_send_simple), 0, ci);
 {
-#line 1027 "insns.def"
+#line 1024 "insns.def"
     vm_search_method(ci, ci->recv = TOPN(ci->argc));
     CALL_METHOD(ci);
 
-#line 1474 "vm.inc"
+#line 1471 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_send_simple
@@ -1493,7 +1490,7 @@ INSN_ENTRY(invokesuper){
   COLLECT_USAGE_INSN(BIN(invokesuper));
   COLLECT_USAGE_OPERAND(BIN(invokesuper), 0, ci);
 {
-#line 1042 "insns.def"
+#line 1039 "insns.def"
     ci->argc = ci->orig_argc;
     ci->blockptr = !(ci->flag & VM_CALL_ARGS_BLOCKARG) ? GET_BLOCK_PTR() : 0;
 
@@ -1504,7 +1501,7 @@ INSN_ENTRY(invokesuper){
     vm_search_super_method(th, GET_CFP(), ci);
     CALL_METHOD(ci);
 
-#line 1508 "vm.inc"
+#line 1505 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_invokesuper
@@ -1527,7 +1524,7 @@ INSN_ENTRY(invokeblock){
   COLLECT_USAGE_INSN(BIN(invokeblock));
   COLLECT_USAGE_OPERAND(BIN(invokeblock), 0, ci);
 {
-#line 1064 "insns.def"
+#line 1061 "insns.def"
     ci->argc = ci->orig_argc;
     ci->blockptr = 0;
     ci->recv = GET_SELF();
@@ -1537,7 +1534,7 @@ INSN_ENTRY(invokeblock){
 	NEXT_INSN();
     }
 
-#line 1541 "vm.inc"
+#line 1538 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_invokeblock
@@ -1559,7 +1556,7 @@ INSN_ENTRY(leave){
   #define LABEL_IS_SC(lab) LABEL_##lab##_##t
   COLLECT_USAGE_INSN(BIN(leave));
 {
-#line 1085 "insns.def"
+#line 1082 "insns.def"
     if (OPT_CHECKED_RUN) {
 	if (reg_cfp->sp != vm_base_ptr(reg_cfp)) {
 	    rb_bug("Stack consistency error (sp: %"PRIdPTRDIFF", bp: %"PRIdPTRDIFF")",
@@ -1584,7 +1581,7 @@ INSN_ENTRY(leave){
 	RESTORE_REGS();
     }
 
-#line 1588 "vm.inc"
+#line 1585 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_leave
@@ -1608,13 +1605,13 @@ INSN_ENTRY(throw){
   COLLECT_USAGE_INSN(BIN(throw));
   COLLECT_USAGE_OPERAND(BIN(throw), 0, throw_state);
 {
-#line 1125 "insns.def"
+#line 1122 "insns.def"
     RUBY_VM_CHECK_INTS(th);
     val = vm_throw(th, GET_CFP(), throw_state, throwobj);
     THROW_EXCEPTION(val);
     /* unreachable */
 
-#line 1618 "vm.inc"
+#line 1615 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_throw
@@ -1636,11 +1633,11 @@ INSN_ENTRY(jump){
   COLLECT_USAGE_INSN(BIN(jump));
   COLLECT_USAGE_OPERAND(BIN(jump), 0, dst);
 {
-#line 1146 "insns.def"
+#line 1143 "insns.def"
     RUBY_VM_CHECK_INTS(th);
     JUMP(dst);
 
-#line 1644 "vm.inc"
+#line 1641 "vm.inc"
 #undef CURRENT_INSN_jump
 #undef INSN_IS_SC
 #undef INSN_LABEL
@@ -1661,13 +1658,13 @@ INSN_ENTRY(branchif){
   COLLECT_USAGE_INSN(BIN(branchif));
   COLLECT_USAGE_OPERAND(BIN(branchif), 0, dst);
 {
-#line 1161 "insns.def"
+#line 1158 "insns.def"
     if (RTEST(val)) {
 	RUBY_VM_CHECK_INTS(th);
 	JUMP(dst);
     }
 
-#line 1671 "vm.inc"
+#line 1668 "vm.inc"
 #undef CURRENT_INSN_branchif
 #undef INSN_IS_SC
 #undef INSN_LABEL
@@ -1688,13 +1685,13 @@ INSN_ENTRY(branchunless){
   COLLECT_USAGE_INSN(BIN(branchunless));
   COLLECT_USAGE_OPERAND(BIN(branchunless), 0, dst);
 {
-#line 1178 "insns.def"
+#line 1175 "insns.def"
     if (!RTEST(val)) {
 	RUBY_VM_CHECK_INTS(th);
 	JUMP(dst);
     }
 
-#line 1698 "vm.inc"
+#line 1695 "vm.inc"
 #undef CURRENT_INSN_branchunless
 #undef INSN_IS_SC
 #undef INSN_LABEL
@@ -1717,7 +1714,7 @@ INSN_ENTRY(getinlinecache){
   COLLECT_USAGE_OPERAND(BIN(getinlinecache), 0, dst);
   COLLECT_USAGE_OPERAND(BIN(getinlinecache), 1, ic);
 {
-#line 1200 "insns.def"
+#line 1197 "insns.def"
     if (ic->ic_serial == GET_GLOBAL_CONSTANT_STATE()) {
 	val = ic->ic_value.value;
 	JUMP(dst);
@@ -1727,7 +1724,7 @@ INSN_ENTRY(getinlinecache){
 	val = Qnil;
     }
 
-#line 1731 "vm.inc"
+#line 1728 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_getinlinecache
@@ -1750,7 +1747,7 @@ INSN_ENTRY(setinlinecache){
   COLLECT_USAGE_INSN(BIN(setinlinecache));
   COLLECT_USAGE_OPERAND(BIN(setinlinecache), 0, ic);
 {
-#line 1221 "insns.def"
+#line 1218 "insns.def"
     if (ic->ic_value.value == Qundef) {
 	rb_iseq_add_mark_object(GET_ISEQ(), val);
     }
@@ -1758,7 +1755,7 @@ INSN_ENTRY(setinlinecache){
     ic->ic_serial = GET_GLOBAL_CONSTANT_STATE() - ruby_vm_const_missing_count;
     ruby_vm_const_missing_count = 0;
 
-#line 1762 "vm.inc"
+#line 1759 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_setinlinecache
@@ -1783,7 +1780,7 @@ INSN_ENTRY(once){
   COLLECT_USAGE_OPERAND(BIN(once), 0, iseq);
   COLLECT_USAGE_OPERAND(BIN(once), 1, ic);
 {
-#line 1240 "insns.def"
+#line 1237 "insns.def"
     union iseq_inline_storage_entry *is = (union iseq_inline_storage_entry *)ic;
 
   retry:
@@ -1810,7 +1807,7 @@ INSN_ENTRY(once){
 	val = is->once.value;
     }
 
-#line 1814 "vm.inc"
+#line 1811 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_once
@@ -1835,11 +1832,11 @@ INSN_ENTRY(opt_case_dispatch){
   COLLECT_USAGE_OPERAND(BIN(opt_case_dispatch), 0, hash);
   COLLECT_USAGE_OPERAND(BIN(opt_case_dispatch), 1, else_offset);
 {
-#line 1278 "insns.def"
+#line 1275 "insns.def"
     switch(TYPE(key)) {
       case T_FLOAT: {
 	double ival;
-	if (modf(RFLOAT_VALUE(key), &ival) == 0.0) {
+	if (modf(RFLOAT_VALUE(key), &ival) == 0.0 && !isinf(ival)) {
 	    key = FIXABLE(ival) ? LONG2FIX((long)ival) : rb_dbl2big(ival);
 	}
       }
@@ -1850,6 +1847,7 @@ INSN_ENTRY(opt_case_dispatch){
 	if (BASIC_OP_UNREDEFINED_P(BOP_EQQ,
 				   SYMBOL_REDEFINED_OP_FLAG |
 				   FIXNUM_REDEFINED_OP_FLAG |
+				   FLOAT_REDEFINED_OP_FLAG |
 				   BIGNUM_REDEFINED_OP_FLAG |
 				   STRING_REDEFINED_OP_FLAG)) {
 	    st_data_t val;
@@ -1865,7 +1863,7 @@ INSN_ENTRY(opt_case_dispatch){
 	break;
     }
 
-#line 1869 "vm.inc"
+#line 1867 "vm.inc"
 #undef CURRENT_INSN_opt_case_dispatch
 #undef INSN_IS_SC
 #undef INSN_LABEL
@@ -1888,7 +1886,7 @@ INSN_ENTRY(opt_plus){
   COLLECT_USAGE_INSN(BIN(opt_plus));
   COLLECT_USAGE_OPERAND(BIN(opt_plus), 0, ci);
 {
-#line 1321 "insns.def"
+#line 1319 "insns.def"
     if (FIXNUM_2_P(recv, obj) &&
 	BASIC_OP_UNREDEFINED_P(BOP_PLUS,FIXNUM_REDEFINED_OP_FLAG)) {
 	/* fixnum + fixnum */
@@ -1940,7 +1938,7 @@ INSN_ENTRY(opt_plus){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 1944 "vm.inc"
+#line 1942 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_plus
@@ -1965,7 +1963,7 @@ INSN_ENTRY(opt_minus){
   COLLECT_USAGE_INSN(BIN(opt_minus));
   COLLECT_USAGE_OPERAND(BIN(opt_minus), 0, ci);
 {
-#line 1384 "insns.def"
+#line 1382 "insns.def"
     if (FIXNUM_2_P(recv, obj) &&
 	BASIC_OP_UNREDEFINED_P(BOP_MINUS, FIXNUM_REDEFINED_OP_FLAG)) {
 	long a, b, c;
@@ -2002,7 +2000,7 @@ INSN_ENTRY(opt_minus){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2006 "vm.inc"
+#line 2004 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_minus
@@ -2027,7 +2025,7 @@ INSN_ENTRY(opt_mult){
   COLLECT_USAGE_INSN(BIN(opt_mult));
   COLLECT_USAGE_OPERAND(BIN(opt_mult), 0, ci);
 {
-#line 1432 "insns.def"
+#line 1430 "insns.def"
     if (FIXNUM_2_P(recv, obj) &&
 	BASIC_OP_UNREDEFINED_P(BOP_MULT, FIXNUM_REDEFINED_OP_FLAG)) {
 	long a, b;
@@ -2066,7 +2064,7 @@ INSN_ENTRY(opt_mult){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2070 "vm.inc"
+#line 2068 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_mult
@@ -2091,7 +2089,7 @@ INSN_ENTRY(opt_div){
   COLLECT_USAGE_INSN(BIN(opt_div));
   COLLECT_USAGE_OPERAND(BIN(opt_div), 0, ci);
 {
-#line 1482 "insns.def"
+#line 1480 "insns.def"
     if (FIXNUM_2_P(recv, obj) &&
 	BASIC_OP_UNREDEFINED_P(BOP_DIV, FIXNUM_REDEFINED_OP_FLAG)) {
 	long x, y, div;
@@ -2143,7 +2141,7 @@ INSN_ENTRY(opt_div){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2147 "vm.inc"
+#line 2145 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_div
@@ -2168,7 +2166,7 @@ INSN_ENTRY(opt_mod){
   COLLECT_USAGE_INSN(BIN(opt_mod));
   COLLECT_USAGE_OPERAND(BIN(opt_mod), 0, ci);
 {
-#line 1545 "insns.def"
+#line 1543 "insns.def"
     if (FIXNUM_2_P(recv, obj) &&
 	BASIC_OP_UNREDEFINED_P(BOP_MOD, FIXNUM_REDEFINED_OP_FLAG )) {
 	long x, y;
@@ -2223,7 +2221,7 @@ INSN_ENTRY(opt_mod){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2227 "vm.inc"
+#line 2225 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_mod
@@ -2248,7 +2246,7 @@ INSN_ENTRY(opt_eq){
   COLLECT_USAGE_INSN(BIN(opt_eq));
   COLLECT_USAGE_OPERAND(BIN(opt_eq), 0, ci);
 {
-#line 1611 "insns.def"
+#line 1609 "insns.def"
     val = opt_eq_func(recv, obj, ci);
 
     if (val == Qundef) {
@@ -2258,7 +2256,7 @@ INSN_ENTRY(opt_eq){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2262 "vm.inc"
+#line 2260 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_eq
@@ -2285,7 +2283,7 @@ INSN_ENTRY(opt_neq){
   COLLECT_USAGE_OPERAND(BIN(opt_neq), 0, ci);
   COLLECT_USAGE_OPERAND(BIN(opt_neq), 1, ci_eq);
 {
-#line 1632 "insns.def"
+#line 1630 "insns.def"
     extern VALUE rb_obj_not_equal(VALUE obj1, VALUE obj2);
     vm_search_method(ci, recv);
     val = Qundef;
@@ -2305,7 +2303,7 @@ INSN_ENTRY(opt_neq){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2309 "vm.inc"
+#line 2307 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_neq
@@ -2330,7 +2328,7 @@ INSN_ENTRY(opt_lt){
   COLLECT_USAGE_INSN(BIN(opt_lt));
   COLLECT_USAGE_OPERAND(BIN(opt_lt), 0, ci);
 {
-#line 1663 "insns.def"
+#line 1661 "insns.def"
     if (FIXNUM_2_P(recv, obj) &&
 	BASIC_OP_UNREDEFINED_P(BOP_LT, FIXNUM_REDEFINED_OP_FLAG)) {
 	SIGNED_VALUE a = recv, b = obj;
@@ -2363,7 +2361,7 @@ INSN_ENTRY(opt_lt){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2367 "vm.inc"
+#line 2365 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_lt
@@ -2388,7 +2386,7 @@ INSN_ENTRY(opt_le){
   COLLECT_USAGE_INSN(BIN(opt_le));
   COLLECT_USAGE_OPERAND(BIN(opt_le), 0, ci);
 {
-#line 1707 "insns.def"
+#line 1705 "insns.def"
     if (FIXNUM_2_P(recv, obj) &&
 	BASIC_OP_UNREDEFINED_P(BOP_LE, FIXNUM_REDEFINED_OP_FLAG)) {
 	SIGNED_VALUE a = recv, b = obj;
@@ -2412,7 +2410,7 @@ INSN_ENTRY(opt_le){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2416 "vm.inc"
+#line 2414 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_le
@@ -2437,7 +2435,7 @@ INSN_ENTRY(opt_gt){
   COLLECT_USAGE_INSN(BIN(opt_gt));
   COLLECT_USAGE_OPERAND(BIN(opt_gt), 0, ci);
 {
-#line 1742 "insns.def"
+#line 1740 "insns.def"
     if (FIXNUM_2_P(recv, obj) &&
 	BASIC_OP_UNREDEFINED_P(BOP_GT, FIXNUM_REDEFINED_OP_FLAG)) {
 	SIGNED_VALUE a = recv, b = obj;
@@ -2470,7 +2468,7 @@ INSN_ENTRY(opt_gt){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2474 "vm.inc"
+#line 2472 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_gt
@@ -2495,7 +2493,7 @@ INSN_ENTRY(opt_ge){
   COLLECT_USAGE_INSN(BIN(opt_ge));
   COLLECT_USAGE_OPERAND(BIN(opt_ge), 0, ci);
 {
-#line 1786 "insns.def"
+#line 1784 "insns.def"
     if (FIXNUM_2_P(recv, obj) &&
 	BASIC_OP_UNREDEFINED_P(BOP_GE, FIXNUM_REDEFINED_OP_FLAG)) {
 	SIGNED_VALUE a = recv, b = obj;
@@ -2518,7 +2516,7 @@ INSN_ENTRY(opt_ge){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2522 "vm.inc"
+#line 2520 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_ge
@@ -2543,7 +2541,7 @@ INSN_ENTRY(opt_ltlt){
   COLLECT_USAGE_INSN(BIN(opt_ltlt));
   COLLECT_USAGE_OPERAND(BIN(opt_ltlt), 0, ci);
 {
-#line 1820 "insns.def"
+#line 1818 "insns.def"
     if (!SPECIAL_CONST_P(recv)) {
 	if (RBASIC_CLASS(recv) == rb_cString &&
 	    BASIC_OP_UNREDEFINED_P(BOP_LTLT, STRING_REDEFINED_OP_FLAG)) {
@@ -2564,7 +2562,7 @@ INSN_ENTRY(opt_ltlt){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2568 "vm.inc"
+#line 2566 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_ltlt
@@ -2589,7 +2587,7 @@ INSN_ENTRY(opt_aref){
   COLLECT_USAGE_INSN(BIN(opt_aref));
   COLLECT_USAGE_OPERAND(BIN(opt_aref), 0, ci);
 {
-#line 1852 "insns.def"
+#line 1850 "insns.def"
     if (!SPECIAL_CONST_P(recv)) {
 	if (RBASIC_CLASS(recv) == rb_cArray && BASIC_OP_UNREDEFINED_P(BOP_AREF, ARRAY_REDEFINED_OP_FLAG) && FIXNUM_P(obj)) {
 	    val = rb_ary_entry(recv, FIX2LONG(obj));
@@ -2608,7 +2606,7 @@ INSN_ENTRY(opt_aref){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2612 "vm.inc"
+#line 2610 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_aref
@@ -2634,7 +2632,7 @@ INSN_ENTRY(opt_aset){
   COLLECT_USAGE_INSN(BIN(opt_aset));
   COLLECT_USAGE_OPERAND(BIN(opt_aset), 0, ci);
 {
-#line 1882 "insns.def"
+#line 1880 "insns.def"
     if (!SPECIAL_CONST_P(recv)) {
 	if (RBASIC_CLASS(recv) == rb_cArray && BASIC_OP_UNREDEFINED_P(BOP_ASET, ARRAY_REDEFINED_OP_FLAG) && FIXNUM_P(obj)) {
 	    rb_ary_store(recv, FIX2LONG(obj), set);
@@ -2656,7 +2654,7 @@ INSN_ENTRY(opt_aset){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2660 "vm.inc"
+#line 2658 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_aset
@@ -2680,7 +2678,7 @@ INSN_ENTRY(opt_length){
   COLLECT_USAGE_INSN(BIN(opt_length));
   COLLECT_USAGE_OPERAND(BIN(opt_length), 0, ci);
 {
-#line 1915 "insns.def"
+#line 1913 "insns.def"
     if (!SPECIAL_CONST_P(recv)) {
 	if (RBASIC_CLASS(recv) == rb_cString &&
 	    BASIC_OP_UNREDEFINED_P(BOP_LENGTH, STRING_REDEFINED_OP_FLAG)) {
@@ -2704,7 +2702,7 @@ INSN_ENTRY(opt_length){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2708 "vm.inc"
+#line 2706 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_length
@@ -2728,7 +2726,7 @@ INSN_ENTRY(opt_size){
   COLLECT_USAGE_INSN(BIN(opt_size));
   COLLECT_USAGE_OPERAND(BIN(opt_size), 0, ci);
 {
-#line 1950 "insns.def"
+#line 1948 "insns.def"
     if (!SPECIAL_CONST_P(recv)) {
 	if (RBASIC_CLASS(recv) == rb_cString &&
 	    BASIC_OP_UNREDEFINED_P(BOP_SIZE, STRING_REDEFINED_OP_FLAG)) {
@@ -2752,7 +2750,7 @@ INSN_ENTRY(opt_size){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2756 "vm.inc"
+#line 2754 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_size
@@ -2776,7 +2774,7 @@ INSN_ENTRY(opt_empty_p){
   COLLECT_USAGE_INSN(BIN(opt_empty_p));
   COLLECT_USAGE_OPERAND(BIN(opt_empty_p), 0, ci);
 {
-#line 1985 "insns.def"
+#line 1983 "insns.def"
     if (!SPECIAL_CONST_P(recv)) {
 	if (RBASIC_CLASS(recv) == rb_cString &&
 	    BASIC_OP_UNREDEFINED_P(BOP_EMPTY_P, STRING_REDEFINED_OP_FLAG)) {
@@ -2803,7 +2801,7 @@ INSN_ENTRY(opt_empty_p){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2807 "vm.inc"
+#line 2805 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_empty_p
@@ -2827,7 +2825,7 @@ INSN_ENTRY(opt_succ){
   COLLECT_USAGE_INSN(BIN(opt_succ));
   COLLECT_USAGE_OPERAND(BIN(opt_succ), 0, ci);
 {
-#line 2023 "insns.def"
+#line 2021 "insns.def"
     if (SPECIAL_CONST_P(recv)) {
 	if (FIXNUM_P(recv) &&
 	    BASIC_OP_UNREDEFINED_P(BOP_SUCC, FIXNUM_REDEFINED_OP_FLAG)) {
@@ -2863,7 +2861,7 @@ INSN_ENTRY(opt_succ){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2867 "vm.inc"
+#line 2865 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_succ
@@ -2887,7 +2885,7 @@ INSN_ENTRY(opt_not){
   COLLECT_USAGE_INSN(BIN(opt_not));
   COLLECT_USAGE_OPERAND(BIN(opt_not), 0, ci);
 {
-#line 2070 "insns.def"
+#line 2068 "insns.def"
     extern VALUE rb_obj_not(VALUE obj);
     vm_search_method(ci, recv);
 
@@ -2899,7 +2897,7 @@ INSN_ENTRY(opt_not){
 	CALL_SIMPLE_METHOD(recv);
     }
 
-#line 2903 "vm.inc"
+#line 2901 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_not
@@ -2923,14 +2921,14 @@ INSN_ENTRY(opt_regexpmatch1){
   COLLECT_USAGE_INSN(BIN(opt_regexpmatch1));
   COLLECT_USAGE_OPERAND(BIN(opt_regexpmatch1), 0, r);
 {
-#line 2094 "insns.def"
+#line 2092 "insns.def"
     if (BASIC_OP_UNREDEFINED_P(BOP_MATCH, REGEXP_REDEFINED_OP_FLAG)) {
 	val = rb_reg_match(r, obj);
     } else {
 	val = rb_funcall(r, idEqTilde, 1, obj);
     }
 
-#line 2934 "vm.inc"
+#line 2932 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_regexpmatch1
@@ -2955,7 +2953,7 @@ INSN_ENTRY(opt_regexpmatch2){
   COLLECT_USAGE_INSN(BIN(opt_regexpmatch2));
   COLLECT_USAGE_OPERAND(BIN(opt_regexpmatch2), 0, ci);
 {
-#line 2112 "insns.def"
+#line 2110 "insns.def"
     if (RB_TYPE_P(obj2, T_STRING) &&
 	BASIC_OP_UNREDEFINED_P(BOP_MATCH, STRING_REDEFINED_OP_FLAG)) {
 	val = rb_reg_match(obj1, obj2);
@@ -2966,7 +2964,7 @@ INSN_ENTRY(opt_regexpmatch2){
 	CALL_SIMPLE_METHOD(obj2);
     }
 
-#line 2970 "vm.inc"
+#line 2968 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef CURRENT_INSN_opt_regexpmatch2
@@ -2988,7 +2986,7 @@ INSN_ENTRY(opt_call_c_function){
   COLLECT_USAGE_INSN(BIN(opt_call_c_function));
   COLLECT_USAGE_OPERAND(BIN(opt_call_c_function), 0, funcptr);
 {
-#line 2134 "insns.def"
+#line 2132 "insns.def"
     reg_cfp = (funcptr)(th, reg_cfp);
 
     if (reg_cfp == 0) {
@@ -3000,7 +2998,7 @@ INSN_ENTRY(opt_call_c_function){
     RESTORE_REGS();
     NEXT_INSN();
 
-#line 3004 "vm.inc"
+#line 3002 "vm.inc"
 #undef CURRENT_INSN_opt_call_c_function
 #undef INSN_IS_SC
 #undef INSN_LABEL
@@ -3020,10 +3018,10 @@ INSN_ENTRY(bitblt){
   #define LABEL_IS_SC(lab) LABEL_##lab##_##t
   COLLECT_USAGE_INSN(BIN(bitblt));
 {
-#line 2157 "insns.def"
+#line 2155 "insns.def"
     ret = rb_str_new2("a bit of bacon, lettuce and tomato");
 
-#line 3027 "vm.inc"
+#line 3025 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(ret);
 #undef CURRENT_INSN_bitblt
@@ -3045,10 +3043,10 @@ INSN_ENTRY(answer){
   #define LABEL_IS_SC(lab) LABEL_##lab##_##t
   COLLECT_USAGE_INSN(BIN(answer));
 {
-#line 2171 "insns.def"
+#line 2169 "insns.def"
     ret = INT2FIX(42);
 
-#line 3052 "vm.inc"
+#line 3050 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(ret);
 #undef CURRENT_INSN_answer
@@ -3081,7 +3079,7 @@ INSN_ENTRY(getlocal_OP__WC__0){
     }
     val = *(ep - idx);
 
-#line 3085 "vm.inc"
+#line 3083 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef level
@@ -3115,7 +3113,7 @@ INSN_ENTRY(getlocal_OP__WC__1){
     }
     val = *(ep - idx);
 
-#line 3119 "vm.inc"
+#line 3117 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef level
@@ -3149,7 +3147,7 @@ INSN_ENTRY(setlocal_OP__WC__0){
     }
     *(ep - idx) = val;
 
-#line 3153 "vm.inc"
+#line 3151 "vm.inc"
 #undef level
 #undef CURRENT_INSN_setlocal_OP__WC__0
 #undef INSN_IS_SC
@@ -3181,7 +3179,7 @@ INSN_ENTRY(setlocal_OP__WC__1){
     }
     *(ep - idx) = val;
 
-#line 3185 "vm.inc"
+#line 3183 "vm.inc"
 #undef level
 #undef CURRENT_INSN_setlocal_OP__WC__1
 #undef INSN_IS_SC
@@ -3205,7 +3203,7 @@ INSN_ENTRY(putobject_OP_INT2FIX_O_0_C_){
 #line 297 "insns.def"
     /* */
 
-#line 3209 "vm.inc"
+#line 3207 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef val
@@ -3231,7 +3229,7 @@ INSN_ENTRY(putobject_OP_INT2FIX_O_1_C_){
 #line 297 "insns.def"
     /* */
 
-#line 3235 "vm.inc"
+#line 3233 "vm.inc"
   CHECK_VM_STACK_OVERFLOW_FOR_INSN(REG_CFP, 1);
   PUSH(val);
 #undef val

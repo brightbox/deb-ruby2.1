@@ -19505,7 +19505,7 @@ esac
 $as_echo "$as_me: WARNING: \"Don't know how to find pthread library on your system -- thread support disabled\"" >&2;}
     fi
     for ac_func in sched_yield pthread_attr_setinheritsched \
-	pthread_getattr_np pthread_attr_get_np pthread_attr_getstack\
+	pthread_attr_get_np pthread_attr_getstack\
 	pthread_get_stackaddr_np pthread_get_stacksize_np \
 	thr_stksegment pthread_stackseg_np pthread_getthrds_np \
 	pthread_cond_init pthread_condattr_setclock pthread_condattr_init \
@@ -19521,6 +19521,22 @@ _ACEOF
 fi
 done
 
+    case "$target_os" in #(
+  aix*) :
+    ac_cv_func_pthread_getattr_np=no ;; #(
+  *) :
+    for ac_func in pthread_getattr_np
+do :
+  ac_fn_c_check_func "$LINENO" "pthread_getattr_np" "ac_cv_func_pthread_getattr_np"
+if test "x$ac_cv_func_pthread_getattr_np" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_PTHREAD_GETATTR_NP 1
+_ACEOF
+
+fi
+done
+ ;;
+esac
     if test "${host_os}" = "nacl"; then
       ac_cv_func_pthread_attr_init=no
     else
@@ -20154,6 +20170,18 @@ _ACEOF
   LIBS="-lexecinfo $LIBS"
 
 fi
+
+	for ac_header in libunwind.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "libunwind.h" "ac_cv_header_libunwind_h" "$ac_includes_default"
+if test "x$ac_cv_header_libunwind_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBUNWIND_H 1
+_ACEOF
+
+fi
+
+done
 
     fi ;; #(
   *-freebsd*|x86_64-netbsd*) :

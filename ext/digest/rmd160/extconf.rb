@@ -1,11 +1,10 @@
 # -*- coding: us-ascii -*-
 # $RoughId: extconf.rb,v 1.3 2001/08/14 19:54:51 knu Exp $
-# $Id: extconf.rb 37878 2012-11-27 00:58:52Z nobu $
+# $Id: extconf.rb 52797 2015-11-30 12:08:16Z usa $
 
 require "mkmf"
 
 $defs << "-DNDEBUG" << "-DHAVE_CONFIG_H"
-$INCFLAGS << " -I$(srcdir)/.."
 
 $objs = [ "rmd160init.#{$OBJEXT}" ]
 
