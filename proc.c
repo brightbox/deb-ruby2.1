@@ -2,7 +2,7 @@
 
   proc.c - Proc, Binding, Env
 
-  $Author: nagachika $
+  $Author: usa $
   created at: Wed Jan 17 12:13:14 2007
 
   Copyright (C) 2004-2007 Koichi Sasada
@@ -634,6 +634,17 @@ VALUE
 rb_block_lambda(void)
 {
     return proc_new(rb_cProc, TRUE);
+}
+
+VALUE
+rb_block_clear_env_self(VALUE proc)
+{
+    rb_proc_t *po;
+    rb_env_t *env;
+    GetProcPtr(proc, po);
+    GetEnvPtr(po->envval, env);
+    env->env[0] = Qnil;
+    return proc;
 }
 
 VALUE

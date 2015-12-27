@@ -2,7 +2,7 @@
 
   vm_dump.c -
 
-  $Author: nagachika $
+  $Author: usa $
 
   Copyright (C) 2004-2007 Koichi Sasada
 
@@ -435,7 +435,7 @@ rb_vmdebug_thread_dump_state(VALUE self)
 # if HAVE_LIBUNWIND
 #  undef backtrace
 #  define backtrace unw_backtrace
-# elif defined(__APPLE__) && defined(__x86_64__)
+# elif defined(__APPLE__) && defined(__x86_64__) && defined(HAVE_LIBUNWIND_H)
 #  define UNW_LOCAL_ONLY
 #  include <libunwind.h>
 #  undef backtrace

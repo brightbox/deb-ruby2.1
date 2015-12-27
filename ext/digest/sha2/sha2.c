@@ -31,10 +31,10 @@
  *
  * $OrigId: sha2.c,v 1.1 2001/11/08 00:01:51 adg Exp adg $
  * $RoughId: sha2.c,v 1.3 2002/02/26 22:03:36 knu Exp $
- * $Id: sha2.c 40033 2013-04-01 09:39:19Z nobu $
+ * $Id: sha2.c 52797 2015-11-30 12:08:16Z usa $
  */
 
-#include "defs.h"
+#include "../defs.h"
 #include <string.h>	/* memcpy()/memset() or bcopy()/bzero() */
 #include <assert.h>	/* assert() */
 #include "sha2.h"
