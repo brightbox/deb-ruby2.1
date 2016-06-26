@@ -1,7 +1,7 @@
 #
 #   irb.rb - irb main module
 #       $Release Version: 0.9.6 $
-#       $Revision: 42045 $
+#       $Revision: 54263 $
 #       by Keiju ISHITSUKA(keiju@ruby-lang.org)
 #
 # --
@@ -337,7 +337,7 @@ STDOUT.sync = true
 #   # quit irb
 #   irb(main):010:0> exit
 module IRB
-  @RCS_ID='-$Id: irb.rb 42045 2013-07-18 13:50:32Z zzak $-'
+  @RCS_ID='-$Id: irb.rb 54263 2016-03-25 08:22:04Z usa $-'
 
   # An exception raised by IRB.irb_abort
   class Abort < Exception;end
@@ -526,7 +526,7 @@ module IRB
             print messages.join("\n"), "\n"
             unless lasts.empty?
               printf "... %d levels...\n", levels if levels > 0
-              print lasts.join("\n")
+              print lasts.join("\n"), "\n"
             end
             print "Maybe IRB bug!\n" if irb_bug
           end

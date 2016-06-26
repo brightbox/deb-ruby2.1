@@ -11,7 +11,7 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: ssl.rb 51608 2015-08-17 08:30:08Z usa $
+  $Id: ssl.rb 54272 2016-03-25 09:06:16Z usa $
 =end
 
 require "openssl/buffering"
@@ -305,8 +305,12 @@ module OpenSSL
           ssl.sync_close = true
           ssl.accept if @start_immediately
           ssl
-        rescue SSLError => ex
-          sock.close
+        rescue Exception => ex
+          if ssl
+            ssl.close
+          else
+            sock.close
+          end
           raise ex
         end
       end

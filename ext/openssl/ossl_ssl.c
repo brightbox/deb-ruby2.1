@@ -1,5 +1,5 @@
 /*
- * $Id: ossl_ssl.c 52642 2015-11-18 11:34:19Z usa $
+ * $Id: ossl_ssl.c 54397 2016-03-29 12:17:03Z usa $
  * 'OpenSSL for Ruby' project
  * Copyright (C) 2000-2002  GOTOU Yuuzou <gotoyuzo@notwork.org>
  * Copyright (C) 2001-2002  Michal Rokos <m.rokos@sh.cvut.cz>
@@ -572,7 +572,7 @@ ssl_renegotiation_cb(const SSL *ssl)
     (void) rb_funcall(cb, rb_intern("call"), 1, ssl_obj);
 }
 
-#ifdef HAVE_OPENSSL_NPN_NEGOTIATED
+#if defined(HAVE_SSL_CTX_SET_NEXT_PROTO_SELECT_CB) || defined(HAVE_SSL_CTX_SET_ALPN_SELECT_CB)
 static VALUE
 ssl_npn_encode_protocol_i(VALUE cur, VALUE encoded)
 {
@@ -594,18 +594,6 @@ ssl_npn_encode_protocols(VALUE sslctx, VALUE protocols)
     rb_iterate(rb_each, protocols, ssl_npn_encode_protocol_i, encoded);
     StringValueCStr(encoded);
     rb_iv_set(sslctx, "@_protocols", encoded);
-}
-
-static int
-ssl_npn_advertise_cb(SSL *ssl, const unsigned char **out, unsigned int *outlen, void *arg)
-{
-    VALUE sslctx_obj = (VALUE) arg;
-    VALUE protocols = rb_iv_get(sslctx_obj, "@_protocols");
-
-    *out = (const unsigned char *) RSTRING_PTR(protocols);
-    *outlen = RSTRING_LENINT(protocols);
-
-    return SSL_TLSEXT_ERR_OK;
 }
 
 static int
@@ -640,6 +628,19 @@ ssl_npn_select_cb_common(VALUE cb, const unsigned char **out, unsigned char *out
     return SSL_TLSEXT_ERR_OK;
 }
 
+#ifdef HAVE_SSL_CTX_SET_NEXT_PROTO_SELECT_CB
+static int
+ssl_npn_advertise_cb(SSL *ssl, const unsigned char **out, unsigned int *outlen, void *arg)
+{
+    VALUE sslctx_obj = (VALUE) arg;
+    VALUE protocols = rb_iv_get(sslctx_obj, "@_protocols");
+
+    *out = (const unsigned char *) RSTRING_PTR(protocols);
+    *outlen = RSTRING_LENINT(protocols);
+
+    return SSL_TLSEXT_ERR_OK;
+}
+
 static int
 ssl_npn_select_cb(SSL *s, unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen, void *arg)
 {
@@ -651,6 +652,7 @@ ssl_npn_select_cb(SSL *s, unsigned char **out, unsigned char *outlen, const unsi
     return ssl_npn_select_cb_common(cb, (const unsigned char **)out, outlen, in, inlen);
 }
 #endif
+#endif /* HAVE_SSL_CTX_SET_NEXT_PROTO_SELECT_CB || HAVE_SSL_CTX_SET_ALPN_SELECT_CB */
 
 /* This function may serve as the entry point to support further
  * callbacks. */
@@ -671,8 +673,8 @@ ssl_info_cb(const SSL *ssl, int where, int val)
  *    ctx.setup => nil # thereafter
  *
  * This method is called automatically when a new SSLSocket is created.
- * Normally you do not need to call this method (unless you are writing an
- * extension in C).
+ * However, it is not thread-safe and must be called before creating
+ * SSLSocket objects in a multi-threaded program.
  */
 static VALUE
 ossl_sslctx_setup(VALUE self)
@@ -783,7 +785,7 @@ ossl_sslctx_setup(VALUE self)
 	SSL_CTX_set_options(ctx, SSL_OP_ALL);
     }
 
-#ifdef HAVE_OPENSSL_NPN_NEGOTIATED
+#ifdef HAVE_SSL_CTX_SET_NEXT_PROTO_SELECT_CB
     val = rb_iv_get(self, "@npn_protocols");
     if (!NIL_P(val)) {
 	ssl_npn_encode_protocols(self, val);
@@ -1583,18 +1585,22 @@ static VALUE
 ossl_ssl_close(VALUE self)
 {
     SSL *ssl;
+    VALUE io;
 
-    ossl_ssl_data_get_struct(self, ssl);
+    /* ossl_ssl_data_get_struct() is not usable here because it may return
+     * from this function; */
 
-    if (ssl) {
-	VALUE io = ossl_ssl_get_io(self);
-	if (!RTEST(rb_funcall(io, rb_intern("closed?"), 0))) {
-	    ossl_ssl_shutdown(ssl);
-	    SSL_free(ssl);
-	    DATA_PTR(self) = NULL;
-	    if (RTEST(ossl_ssl_get_sync_close(self)))
-		rb_funcall(io, rb_intern("close"), 0);
-	}
+    Data_Get_Struct(self, SSL, ssl);
+
+    io = ossl_ssl_get_io(self);
+    if (!RTEST(rb_funcall(io, rb_intern("closed?"), 0))) {
+        if (ssl) {
+            ossl_ssl_shutdown(ssl);
+            SSL_free(ssl);
+        }
+        DATA_PTR(self) = NULL;
+        if (RTEST(ossl_ssl_get_sync_close(self)))
+            rb_funcall(io, rb_intern("close"), 0);
     }
 
     return Qnil;
@@ -1844,7 +1850,7 @@ ossl_ssl_get_client_ca_list(VALUE self)
     return ossl_x509name_sk2ary(ca);
 }
 
-# ifdef HAVE_OPENSSL_NPN_NEGOTIATED
+# ifdef HAVE_SSL_CTX_SET_NEXT_PROTO_SELECT_CB
 /*
  * call-seq:
  *    ssl.npn_protocol => String
@@ -2086,7 +2092,7 @@ Init_ossl_ssl()
      *   end
      */
     rb_attr(cSSLContext, rb_intern("renegotiation_cb"), 1, 1, Qfalse);
-#ifdef HAVE_OPENSSL_NPN_NEGOTIATED
+#ifdef HAVE_SSL_CTX_SET_NEXT_PROTO_SELECT_CB
     /*
      * An Enumerable of Strings. Each String represents a protocol to be
      * advertised as the list of supported protocols for Next Protocol
@@ -2230,7 +2236,7 @@ Init_ossl_ssl()
     rb_define_method(cSSLSocket, "session=",    ossl_ssl_set_session, 1);
     rb_define_method(cSSLSocket, "verify_result", ossl_ssl_get_verify_result, 0);
     rb_define_method(cSSLSocket, "client_ca", ossl_ssl_get_client_ca_list, 0);
-# ifdef HAVE_OPENSSL_NPN_NEGOTIATED
+# ifdef HAVE_SSL_CTX_SET_NEXT_PROTO_SELECT_CB
     rb_define_method(cSSLSocket, "npn_protocol", ossl_ssl_npn_protocol, 0);
 # endif
 #endif
