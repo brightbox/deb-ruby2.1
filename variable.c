@@ -2,7 +2,7 @@
 
   variable.c -
 
-  $Author: nagachika $
+  $Author: usa $
   created at: Tue Apr 19 23:55:15 JST 1994
 
   Copyright (C) 1993-2007 Yukihiro Matsumoto
@@ -2057,6 +2057,9 @@ rb_const_list(void *data)
  *  <i>mod</i>. This includes the names of constants in any included
  *  modules (example at start of section), unless the <i>inherit</i>
  *  parameter is set to <code>false</code>.
+ *
+ *  The implementation makes no guarantees about the order in which the
+ *  constants are yielded.
  *
  *    IO.constants.include?(:SYNC)        #=> true
  *    IO.constants(false).include?(:SYNC) #=> false

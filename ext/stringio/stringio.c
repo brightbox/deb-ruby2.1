@@ -2,7 +2,7 @@
 
   stringio.c -
 
-  $Author: nagachika $
+  $Author: usa $
   $RoughId: stringio.c,v 1.13 2002/03/14 03:24:18 nobu Exp $
   created at: Tue Feb 19 04:10:38 JST 2002
 
@@ -497,7 +497,17 @@ strio_set_lineno(VALUE self, VALUE lineno)
     return lineno;
 }
 
-#define strio_binmode strio_self
+static VALUE
+strio_binmode(VALUE self)
+{
+    struct StringIO *ptr = StringIO(self);
+    rb_encoding *enc = rb_ascii8bit_encoding();
+
+    if (WRITABLE(self)) {
+	rb_enc_associate(ptr->string, enc);
+    }
+    return self;
+}
 
 #define strio_fcntl strio_unimpl
 

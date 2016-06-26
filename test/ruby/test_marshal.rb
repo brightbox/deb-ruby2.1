@@ -1,5 +1,6 @@
 require 'test/unit'
 require 'tempfile'
+require_relative 'envutil'
 require_relative 'marshaltestlib'
 
 class TestMarshal < Test::Unit::TestCase
@@ -605,5 +606,29 @@ class TestMarshal < Test::Unit::TestCase
     assert_nothing_raised(ArgumentError, '[Bug #7722]') do
       Marshal.dump(TestForRespondToFalse.new)
     end
+  end
+
+  def test_marshal_honor_post_proc_value_for_link
+    str = 'x' # for link
+    obj = [str, str]
+    assert_equal(['X', 'X'], Marshal.load(Marshal.dump(obj), ->(v) { v == str ? v.upcase : v }))
+  end
+
+  def test_marshal_load_extended_class_crash
+    crash = "\x04\be:\x0F\x00omparableo:\vObject\x00"
+
+    opt = %w[--disable=gems]
+    assert_ruby_status(opt, "Marshal.load(#{crash.dump})")
+  end
+
+  def test_marshal_load_r_prepare_reference_crash
+    crash = "\x04\bI/\x05\x00\x06:\x06E{\x06@\x05T"
+
+    opt = %w[--disable=gems]
+    assert_separately(opt, <<-RUBY)
+      assert_raise_with_message(ArgumentError, /bad link/) do
+        Marshal.load(#{crash.dump})
+      end
+    RUBY
   end
 end

@@ -12,7 +12,7 @@
   (See the file 'LICENCE'.)
 
 = Version
-  $Id: extconf.rb 52642 2015-11-18 11:34:19Z usa $
+  $Id: extconf.rb 54397 2016-03-29 12:17:03Z usa $
 =end
 
 require "mkmf"
@@ -112,7 +112,7 @@ have_func("TLSv1_1_client_method")
 have_func("TLSv1_2_method")
 have_func("TLSv1_2_server_method")
 have_func("TLSv1_2_client_method")
-have_macro("OPENSSL_NPN_NEGOTIATED", ['openssl/ssl.h']) && $defs.push("-DHAVE_OPENSSL_NPN_NEGOTIATED")
+have_func("SSL_CTX_set_next_proto_select_cb")
 unless have_func("SSL_set_tlsext_host_name", ['openssl/ssl.h'])
   have_macro("SSL_set_tlsext_host_name", ['openssl/ssl.h']) && $defs.push("-DHAVE_SSL_SET_TLSEXT_HOST_NAME")
 end
