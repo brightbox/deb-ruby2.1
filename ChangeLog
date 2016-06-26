@@ -1,3 +1,324 @@
+Wed Mar 30 18:45:26 2016  Kimura Wataru  <kimuraw@i.nifty.jp>
+
+	* test/ruby/test_io.rb: handled rlimit value same as r52277
+	  [Bug #11852][ruby-dev:49446]
+
+Tue Mar 29 21:10:10 2016  Kazuki Yamaguchi  <k@rhe.jp>
+
+	* ext/openssl/extconf.rb: check SSL_CTX_set_next_proto_select_cb
+	  function rather than OPENSSL_NPN_NEGOTIATED macro. it exists
+	  even if it is disabled by OpenSSL configuration.
+	  [ruby-core:74384] [Bug #12182]
+
+	* ext/openssl/ossl_ssl.c: update #ifdef(s) as above.
+
+	* test/openssl/test_ssl.rb: skip NPN tests if NPN is disabled.
+
+Tue Mar 29 21:09:02 2016  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* lib/uri/http.rb (URI::HTTP#initialize): [DOC] fix example,
+	  missing mandatory arguments.  [ruby-core:74540] [Bug #12215]
+
+Tue Mar 29 21:07:30 2016  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* thread_pthread.c (reserve_stack): fix reserving position where
+	  the stack growing bottom to top. [Bug #12118]
+
+Fri Mar 25 18:42:46 2016  Koichi ITO  <koic.ito@gmail.com>
+
+	* variable.c: Added documentation about order of `Module#constants`
+	  [ci skip][Bug #12121][ruby-dev:49505][fix GH-1301]
+
+Fri Mar 25 18:41:14 2016  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* string.c (enc_succ_alnum_char): try to skip an invalid character
+	  gap between GREEK CAPITAL RHO and SIGMA.
+	  [ruby-core:74478] [Bug #12204]
+
+Fri Mar 25 18:38:42 2016  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* enc/trans/JIS: update Unicode's notice. [Bug #11844]
+
+Fri Mar 25 18:36:04 2016  Eric Wong  <e@80x24.org>
+
+	* ext/openssl/ossl_ssl.c (ossl_sslctx_setup): document as MT-unsafe
+	  [ruby-core:73803] [Bug #12069]
+
+Fri Mar 25 18:35:08 2016  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* ext/tk/lib/tkextlib/tcllib/tablelist_tile.rb: fix method name typo.
+	  [ruby-core:72513] [Bug #11893] The patch provided by Akira Matsuda.
+
+
+Fri Mar 25 18:34:20 2016  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* ext/tk/lib/tkextlib/tcllib/toolbar.rb: fix method name typo.
+	  [ruby-core:72511] [Bug #11891] The patch provided by Akira Matsuda.
+
+
+Fri Mar 25 18:33:34 2016  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* ext/tk/lib/tkextlib/blt/tree.rb: fix method name typo.
+	  [ruby-core:72510] [Bug #11890] The patch provided by Akira Matsuda.
+
+
+Fri Mar 25 18:32:44 2016  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
+
+	* ext/tk/lib/tk/menubar.rb: fix a typo in font name. [ruby-core:72505]
+	  [Bug #11886] The patch provided by Akira Matsuda.
+
+	* ext/tk/sample/*.rb: ditto.
+
+Fri Mar 25 18:30:55 2016  Anthony Dmitriyev  <antstorm@gmail.com>
+
+	* net/ftp.rb: add NullSocket#closed? to fix closing not opened
+	  connection.  [Fix GH-1232]
+
+Fri Mar 25 18:24:04 2016  Victor Nawothnig  <Victor.Nawothnig@gmail.com>
+
+	* parse.y (parse_numvar): NTH_REF must be less than a half of
+	  INT_MAX, as it is left-shifted to be ORed with back-ref flag.
+	  [ruby-core:74444] [Bug#12192] [Fix GH-1296]
+
+Fri Mar 25 18:18:29 2016  Eric Hodel  <drbrain@segment7.net>
+
+	* marshal.c (r_object0):  raise ArgumentError when linking to undefined
+	  object.
+
+Fri Mar 25 18:18:29 2016  Eric Hodel  <drbrain@segment7.net>
+
+	* marshal.c (r_object0): Fix Marshal crash for corrupt extended object.
+
+Fri Mar 25 18:07:48 2016  Yutaka Kanemoto  <kanemoto@ruby-lang.org>
+
+	* cont.c (rb_fiber_struct): keep context.uc_stack.ss_sp and context.uc_stack.ss_size
+	  for later use. Patch by Rei Odaira. [ruby-core:62945] [Bug #9905]
+
+Fri Mar 25 17:52:46 2016  Tanaka Akira  <akr@fsij.org>
+
+	* test/openssl/utils.rb (start_server, server_loop): Use a
+	  pipe to stop server instead of shutdown/close a listening socket.
+
+Fri Mar 25 17:52:46 2016  Tanaka Akira  <akr@fsij.org>
+
+	* test/ruby/envutil.rb (assert_join_threads): New assertion to
+	  join multiple threads without exceptions.
+
+Fri Mar 25 17:52:46 2016  Tanaka Akira  <akr@fsij.org>
+
+	* ext/openssl/lib/openssl/ssl.rb (SSLServer#accept): Close a socket
+	  if any exception occur. 
+
+Fri Mar 25 17:52:46 2016  Tanaka Akira  <akr@fsij.org>
+
+	* ext/openssl/ossl_ssl.c (ossl_ssl_close): Fix sync_close to work
+	  when SSL is not started.
+	  This fix the fd leak by test_https_proxy_authentication in
+	  test/net/http/test_https_proxy.rb.
+
+Fri Mar 25 17:52:46 2016  Tanaka Akira  <akr@fsij.org>
+
+	* test/openssl: Join threads.
+
+Fri Mar 25 17:47:06 2016  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* insns.def (opt_mod): show its method name on ZeroDivisionError.
+	  [Bug #12158]
+
+Fri Mar 25 17:45:36 2016  Rei Odaira  <Rei.Odaira@gmail.com>
+
+	* test/ruby/test_process.rb (TestProcess#test_setsid): AIX
+	  does not allow Process::getsid(pid) when pid is in a
+	  different session.
+
+Fri Mar 25 17:42:34 2016  Rei Odaira  <Rei.Odaira@gmail.com>
+
+	* test/ruby/test_process.rb (test_execopts_gid): Skip a test
+	  that is known to fail on AIX. AIX allows setgid to
+	  a supplementary group, but Ruby does not allow the "-e"
+	  option when setgid'ed, so the test does not work as intended.
+
+Fri Mar 25 17:36:24 2016  Rei Odaira  <Rei.Odaira@gmail.com>
+
+	* test/rinda/test_rinda.rb (test_make_socket_ipv4_multicast):
+	  The fifth argument to getsockopt(2) should be modified to
+	  indicate the actual size of the value on return,
+	  but not in AIX. This is a know bug. Skip related tests.
+	* test/rinda/test_rinda.rb (test_ring_server_ipv4_multicast):
+	  ditto.
+	* test/rinda/test_rinda.rb (test_make_socket_unicast): ditto.
+	* test/socket/test_basicsocket.rb (test_getsockopt): ditto.
+	* test/socket/test_sockopt.rb (test_bool): ditto.
+
+Fri Mar 25 17:35:06 2016  Rei Odaira  <Rei.Odaira@gmail.com>
+
+	* test/zlib/test_zlib.rb (test_adler32_combine, test_crc32_combine):
+	  Skip two tests on AIX because zconf.h in zlib does not correctly
+	  recognize _LARGE_FILES in AIX. The problem was already reported
+	  to zlib, and skip these tests until it is fixed.
+
+Fri Mar 25 17:33:52 2016  Rei Odaira  <Rei.Odaira@gmail.com>
+
+	* test/socket/test_addrinfo.rb (test_ipv6_address_predicates):
+	  IN6_IS_ADDR_V4COMPAT and IN6_IS_ADDR_V4MAPPED are broken
+	  on AIX, so skip related tests.
+
+Fri Mar 25 17:32:34 2016  Rei Odaira  <Rei.Odaira@gmail.com>
+
+	* test/gdbm/test_gdbm.rb (TestGDBM#test_s_open_lock): skip
+	  this test on AIX. The issue is the same as on Solaris.
+	  [ruby-dev:47631]
+
+Fri Mar 25 17:28:13 2016  Rei Odaira  <Rei.Odaira@gmail.com>
+
+	* thread_pthread.c (getstack): __pi_stacksize returned by
+	  pthread_getthrds_np() is wrong on AIX. Use
+	  __pi_stackend - __pi_stackaddr instead.
+
+Fri Mar 25 17:21:51 2016  Alex Boyd  <alex@opengroove.org>
+
+	* lib/irb.rb: avoid to needless truncation when using back_trace_limit option.
+	  [fix GH-1205][ruby-core:72773][Bug #11969]
+
+Fri Mar 25 17:18:59 2016  Naohisa Goto  <ngotogenome@gmail.com>
+
+	* enc/windows_1250.c: Should not use C++ style comments (C99 feature).
+	  [Bug #11843]
+
+Fri Mar 25 17:15:19 2016  Martin Duerst  <duerst@it.aoyama.ac.jp>
+
+	* enc/iso_8859_2.c, enc/windows_1250.c: separate Windows-1250
+	  from ISO-8859-2 to fix 0x80..0x9e range (from Kimihito Matsui)
+
+Fri Mar 25 17:15:19 2016  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* enc/windows_1252.c: separate from ISO-8859-1 to fix 0x80..0x9e
+	  range.  [ruby-core:64049] [Bug #10097]
+
+Fri Mar 25 17:15:19 2016  Martin Duerst  <duerst@it.aoyama.ac.jp>
+
+	* enc/iso_8859_13.c: Added three missing lower/upper-case
+	  character pairs (from Kimihito Matsui)
+
+Fri Mar 25 17:15:19 2016  Martin Duerst  <duerst@it.aoyama.ac.jp>
+
+	* enc/iso_8859_4.c: Added missing lower/upper-case character
+	  pair (U+014A and U+014B, LATIN CAPITAL/SMALL LETTER ENG)
+	  (from Kimihito Matsui)
+
+Fri Mar 25 16:53:41 2016  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* string.c (rb_str_scrub): the result should be infected by the
+	  original string.
+
+Fri Mar 25 16:53:41 2016  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* transcode.c (rb_econv_substr_append, econv_primitive_convert):
+	  the result should be infected by the original string.
+
+Fri Mar 25 16:53:41 2016  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* include/ruby/ruby.h: add raw FL macros, which assume always the
+	  argument object is not a special constant.
+
+	* internal.h (STR_EMBED_P, STR_SHARED_P): valid only for T_STRING.
+
+	* string.c: deal with taint flags directly across String instances.
+
+Thu Feb 25 20:03:32 2016  Naotoshi Seo  <sonots@gmail.com>
+
+	* lib/logger.rb: Remove block from Logger.add as it's not needed
+	  patch provided by Daniel Lobato Garcia [fix GH-1240] [Bug #12054]
+
+Thu Feb 25 19:58:48 2016  Zachary Scott  <zzak@ruby-lang.org>
+
+	* re.c: Remove deprecated kcode argument from Regexp.new and compile
+	  patch provided by Dylan Pulliam [Bug #11495]
+
+Thu Feb 25 19:49:31 2016  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/socket/socket.c (sock_gethostname): support unlimited size
+	  hostname.
+
+Thu Feb 25 19:28:19 2016  Kouhei Sutou  <kou@cozmixng.org>
+
+	* lib/xmlrpc/client.rb: Support SSL options in async methods of
+	  XMLRPC::Client.
+	  [Bug #11489]
+	  Reported by Aleksandar Kostadinov. Thanks!!!
+
+Thu Feb 25 19:25:25 2016  NARUSE, Yui  <naruse@ruby-lang.org>
+
+	* marshal.c (r_object0): honor Marshal.load post proc
+	  value for TYPE_LINK.  by Hiroshi Nakamura <nahi@ruby-lang.org>
+	  https://github.com/ruby/ruby/pull/1204 fix GH-1204
+
+Thu Feb 25 18:59:27 2016  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* ext/socket/option.c (sockopt_bool): relax boolean size to be one
+	  too not only sizeof(int).  Winsock getsockopt() returns a single
+	  byte as a boolean socket option.  [ruby-core:72730] [Bug #11958]
+
+Thu Feb 25 18:36:26 2016  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* process.c (rb_execarg_parent_start1): need to convert the encoding to
+	  ospath's one.
+
+Thu Feb 25 18:36:26 2016  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* process.c: use rb_w32_uchdir() instead of plain chdir() on Windows.
+	  reported by naruse via twitter.
+
+	* process.c (rb_execarg_addopt): need to convert the encoding to
+	  ospath's one.
+
+Thu Feb 25 18:21:55 2016  Eric Wong  <e@80x24.org>
+
+	* ext/stringio/stringio.c (strio_binmode): implement to set encoding
+	* test/stringio/test_stringio.rb (test_binmode): new test
+	  [ruby-core:72699] [Bug #11945]
+
+Thu Feb 25 18:12:00 2016  Eric Wong  <e@80x24.org>
+
+	* io.c (io_getpartial): remove unused kwarg from template
+	* test/ruby/test_io.rb (test_readpartial_bad_args): new
+	  [Bug #11885]
+
+Thu Feb 25 17:51:35 2016  Tadashi Saito  <tad.a.digger@gmail.com>
+
+	* compile.c, cont.c, doc, man: fix common misspelling.
+	  [ruby-core:72466] [Bug #11870]
+
+Thu Feb 25 17:48:16 2016  Eric Wong  <e@80x24.org>
+
+	* ext/socket/init.c (rsock_init_sock): reject reserved FDs
+	  [ruby-core:72445] [Bug #11862]
+
+Thu Feb 25 17:38:59 2016  Eric Wong  <e@80x24.org>
+
+	* ext/socket/init.c (rsock_init_sock): check FD after validating
+	* test/socket/test_basicsocket.rb (test_for_fd): new
+	  [ruby-core:72418] [Bug #11854]
+
+Thu Feb 25 17:33:38 2016  SHIBATA Hiroshi  <hsbt@ruby-lang.org>
+
+	* cont.c: fix a double word typo.
+	  [Bug #11313][ruby-core:69749]
+
+Thu Feb 25 17:32:23 2016  SHIBATA Hiroshi  <hsbt@ruby-lang.org>
+
+	* ext/tk/lib/multi-tk.rb: fix typos.
+	  [Bug #11764][ruby-core:71800]
+
+Thu Feb 25 16:46:37 2016  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	* re.c (reg_names_iter): should consider encoding of regexp.
+	  [ruby-core:72185] [Bug #11825]
+
+Wed Dec 23 14:13:59 2015  NAKAMURA Usaku  <usa@ruby-lang.org>
+
+	* version.h: bump to 2.1.9.  may this version be the last of 2.1.
+
 Wed Dec 16 21:10:03 2015  CHIKANAGA Tomoyuki  <nagachika@ruby-lang.org>
 
 	* ext/fiddle/handle.c: check tainted string arguments.

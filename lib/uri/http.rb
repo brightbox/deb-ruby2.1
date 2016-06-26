@@ -2,7 +2,7 @@
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
 # License:: You can redistribute it and/or modify it under the same term as Ruby.
-# Revision:: $Id: http.rb 37472 2012-11-05 01:19:09Z zzak $
+# Revision:: $Id: http.rb 54395 2016-03-29 12:09:08Z usa $
 #
 # See URI for general documentation
 #
@@ -62,6 +62,7 @@ module URI
       return super(tmp)
     end
 
+=begin
     #
     # == Description
     #
@@ -74,8 +75,8 @@ module URI
     #
     # Example:
     #
-    #     uri = URI::HTTP.new('http', nil, "www.example.com", nil, "/path",
-    #       "query", 'fragment')
+    #     uri = URI::HTTP.new("http", nil, "www.example.com", nil, nil,
+    #                         "/path", nil, "query", "fragment")
     #
     #
     # See also URI::Generic.new
@@ -83,6 +84,7 @@ module URI
     def initialize(*arg)
       super(*arg)
     end
+=end
 
     #
     # == Description
