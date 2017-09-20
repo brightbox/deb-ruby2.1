@@ -1,3 +1,11 @@
+ruby2.1 (2.1.9-1bbox2~xenial1) xenial; urgency=medium
+
+  * Backported fixes for CVE-2017-0898, CVE-2017-10784, CVE-2017-14033, CVE-2017-14064
+  * Updated rubygems to 2.4.5.3 to fix CVE-2017-0902, CVE-2017-0899,
+    CVE-2017-0900 and CVE-2017-0901
+
+ -- John Leach <john@brightbox.co.uk>  Wed, 20 Sep 2017 15:30:33 +0100
+
 ruby2.1 (2.1.9-1bbox1~xenial1) xenial; urgency=medium
 
   * New upstream release
