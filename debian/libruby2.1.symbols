@@ -1378,6 +1378,7 @@ libruby-2.1.so.2.1 libruby2.1 #MINVER#
  ruby_release_date@Base 2.1.0
  ruby_run_node@Base 2.1.0
  ruby_safe_level_4_warning@Base 2.1.0
+ ruby_scan_digits@Base 2.1.9
  ruby_scan_hex@Base 2.1.0
  ruby_scan_oct@Base 2.1.0
  ruby_script@Base 2.1.0
