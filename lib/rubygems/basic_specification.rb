@@ -15,6 +15,11 @@ class Gem::BasicSpecification
   attr_writer :extension_dir # :nodoc:
 
   ##
+  # Is this specification ignored for activation purposes?
+
+  attr_writer :ignored # :nodoc:
+
+  ##
   # The path this gemspec was loaded from.  This attribute is not persisted.
 
   attr_reader :loaded_from
@@ -53,14 +58,28 @@ class Gem::BasicSpecification
   # Return true if this spec can require +file+.
 
   def contains_requirable_file? file
-    build_extensions
+    @contains_requirable_file ||= {}
+    @contains_requirable_file[file] ||=
+    begin
+      if instance_variable_defined?(:@ignored) or
+         instance_variable_defined?('@ignored') then
+        return false
+      elsif missing_extensions? then
+        @ignored = true
 
-    suffixes = Gem.suffixes
+        warn "Ignoring #{full_name} because its extensions are not built.  " +
+             "Try: gem pristine #{name} --version #{version}"
+        return false
+      end
 
-    full_require_paths.any? do |dir|
-      base = "#{dir}/#{file}"
-      suffixes.any? { |suf| File.file? "#{base}#{suf}" }
-    end
+      suffixes = Gem.suffixes
+
+      full_require_paths.any? do |dir|
+        base = "#{dir}/#{file}"
+        suffixes.any? { |suf| File.file? "#{base}#{suf}" }
+      end
+    end ? :yes : :no
+    @contains_requirable_file[file] == :yes
   end
 
   def default_gem?
@@ -120,13 +139,38 @@ class Gem::BasicSpecification
   # activated.
 
   def full_require_paths
-    full_paths = @require_paths.map do |path|
-      File.join full_gem_path, path
+    @full_require_paths ||=
+    begin
+      full_paths = raw_require_paths.map do |path|
+        File.join full_gem_path, path
+      end
+
+      full_paths.unshift extension_dir unless @extensions.nil? || @extensions.empty?
+
+      full_paths
     end
+  end
 
-    full_paths.unshift extension_dir unless @extensions.empty?
+  ##
+  # Full path of the target library file.
+  # If the file is not in this gem, return nil.
 
-    full_paths
+  def to_fullpath path
+    if activated? then
+      @paths_map ||= {}
+      @paths_map[path] ||=
+      begin
+        fullpath = nil
+        suffixes = Gem.suffixes
+        full_require_paths.find do |dir|
+          suffixes.find do |suf|
+            File.file?(fullpath = "#{dir}/#{path}#{suf}")
+          end
+        end ? fullpath : nil
+      end
+    else
+      nil
+    end
   end
 
   ##
@@ -176,7 +220,7 @@ class Gem::BasicSpecification
   end
 
   def raw_require_paths # :nodoc:
-    @require_paths
+    Array(@require_paths)
   end
 
   ##
@@ -197,13 +241,9 @@ class Gem::BasicSpecification
   #   spec.require_path = '.'
 
   def require_paths
-    return @require_paths if @extensions.empty?
+    return raw_require_paths if @extensions.nil? || @extensions.empty?
 
-    relative_extension_dir =
-      File.join '..', '..', 'extensions', Gem::Platform.local.to_s,
-                Gem.extension_api_version, full_name
-
-    [relative_extension_dir].concat @require_paths
+    [extension_dir].concat raw_require_paths
   end
 
   ##

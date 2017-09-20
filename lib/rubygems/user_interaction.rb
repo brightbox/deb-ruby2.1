@@ -157,6 +157,14 @@ module Gem::UserInteraction
   def terminate_interaction exit_code = 0
     ui.terminate_interaction exit_code
   end
+
+  ##
+  # Calls +say+ with +msg+ or the results of the block if really_verbose
+  # is true.
+
+  def verbose msg = nil
+    say(msg || yield) if Gem.configuration.really_verbose
+  end
 end
 
 ##
@@ -310,7 +318,6 @@ class Gem::StreamUI
   elsif Gem.win_platform?
     def _gets_noecho
       require "Win32API"
-      char = nil
       password = ''
 
       while char = Win32API.new("crtdll", "_getch", [ ], "L").Call do
@@ -378,7 +385,11 @@ class Gem::StreamUI
   # handlers that might have been defined.
 
   def terminate_interaction(status = 0)
+    close
     raise Gem::SystemExitException, status
+  end
+
+  def close
   end
 
   ##
@@ -681,6 +692,12 @@ class Gem::SilentUI < Gem::StreamUI
     end
 
     super reader, writer, writer, false
+  end
+
+  def close
+    super
+    @ins.close
+    @outs.close
   end
 
   def download_reporter(*args) # :nodoc:
