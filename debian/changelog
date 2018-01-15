@@ -1,3 +1,10 @@
+ruby2.1 (2.1.9-2bbox1~xenial1) xenial; urgency=medium
+
+  * Backported fixes for CVE-2017-17405 Net::FTP
+  * Backported Unsafe Object Deserialization Vulnerability in RubyGems
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 15 Jan 2018 16:50:10 +0000
+
 ruby2.1 (2.1.9-1bbox2~xenial1) xenial; urgency=medium
 
   * Backported fixes for CVE-2017-0898, CVE-2017-10784, CVE-2017-14033, CVE-2017-14064
