@@ -1,3 +1,13 @@
+Wed Mar 28 23:27:23 2018  Nobuyoshi Nakada  <nobu@ruby-lang.org>
+
+	dir.c: check NUL bytes
+
+	* dir.c (GlobPathValue): should be used in rb_push_glob only.
+	  other methods should use FilePathValue.
+	  https://hackerone.com/reports/302338
+
+	* dir.c (rb_push_glob): expand GlobPathValue
+
 Fri Dec 15 00:08:26 2017  NAKAMURA Usaku  <usa@ruby-lang.org>
 
 	* test/net/ftp/test_ftp.rb (process_port_or_eprt): merge a part of
