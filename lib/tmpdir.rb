@@ -116,6 +116,8 @@ class Dir
       else
         raise ArgumentError, "unexpected prefix_suffix: #{prefix_suffix.inspect}"
       end
+      prefix = prefix.delete("#{File::SEPARATOR}#{File::ALT_SEPARATOR}")
+      suffix &&= suffix.delete("#{File::SEPARATOR}#{File::ALT_SEPARATOR}")
       t = Time.now.strftime("%Y%m%d")
       path = "#{prefix}#{t}-#{$$}-#{rand(0x100000000).to_s(36)}"
       path << "-#{n}" if n
