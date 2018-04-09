@@ -1,3 +1,17 @@
+ruby2.1 (2.1.9-3bbox1~xenial1) xenial; urgency=medium
+
+  * Backported CVE-2017-17742: HTTP response splitting in
+    WEBrick
+  * Backported CVE-2018-6914: Unintentional file and directory
+    creation with directory traversal in tempfile and tmpdir
+  * Backported CVE-2018-8778: Buffer under-read in String#unpack
+  * Backported CVE-2018-8779: Unintentional socket creation by poisoned
+    NUL byte in UNIXServer and UNIXSocket
+  * Backported CVE-2018-8780: Unintentional directory traversal by
+    poisoned NUL byte in Dir
+
+ -- John Leach <john@brightbox.co.uk>  Mon, 09 Apr 2018 17:48:55 +0100
+
 ruby2.1 (2.1.9-2bbox1~xenial1) xenial; urgency=medium
 
   * Backported fixes for CVE-2017-17405 Net::FTP
